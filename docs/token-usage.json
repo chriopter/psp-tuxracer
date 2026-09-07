@@ -1,0 +1,13 @@
+{
+  "scope": "First bootable classic Tux Racer prototype, before the switch to Extreme Tux Racer; not ETR port costs. Main-thread response usage, deduplicated by response ID.",
+  "from_utc": "2026-09-07T08:04:59.574Z",
+  "until_utc_exclusive": "2026-09-07T08:14:02.504Z",
+  "responses": 44,
+  "input_tokens": 5381836,
+  "cached_input_tokens": 5289472,
+  "output_tokens": 14907,
+  "reasoning_output_tokens": 2802,
+  "total_tokens": 5396743,
+  "uncached_input_tokens": 92364,
+  "note": "Input includes repeatedly read conversation context. Reasoning tokens are part of output, not additional. No monetary cost is inferred."
+}

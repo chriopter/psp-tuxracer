@@ -1,0 +1,17 @@
+# Publish only the ETR source port and its documentation. Local experiments,
+# SDK/emulator installations, recordings, profiles and old ports stay local.
+/*
+!/.gitignore
+!/README.md
+!/LICENSE
+!/build-extremetuxracer.sh
+!/start-extremetuxracer.sh
+!/start-extremetuxracer-background.sh
+!/docs/
+!/tools/
+/tools/*
+!/tools/stage-extremetuxracer.py
+!/tools/test-etr-numerics.py
+!/ports/
+/ports/*
+!/ports/extremetuxracer/

@@ -1,0 +1,13 @@
+{
+  "date": "2026-09-07",
+  "upstream": "Extreme Tux Racer 0.8.4",
+  "checks": {
+    "clean_source_build": "PASS: documented build script, pinned SDK container",
+    "clean_asset_staging": "PASS: documented Python script, original data only",
+    "numerics": "PASS: actual numerical game sources with UBSan",
+    "manual_controls": "PASS: held Start pauses stably, resume, Triangle reset, Circle abort, steering and brake",
+    "ui": "Main menu, course selection, configuration, help, race and results visually inspected"
+  },
+  "final_eboot_sha256": "7308af6a908a22330fafee2fe0d678e16f8e76f20b81f7814742d63097697534",
+  "benchmark_note": "Path of Daggers was measured after the held-button fix. Final build additionally removes overlapping configuration hint text; racing code unchanged. Benchmark JSON files retain hashes of the binaries actually measured."
+}

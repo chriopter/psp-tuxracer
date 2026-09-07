@@ -1,0 +1,132 @@
+# Italian translation
+
+*[idx] 0 [engl] Press any key to start [trans] Premere un tasto qualsiasi per iniziare
+*[idx] 1 [engl] Enter an event [trans] Concorrenza
+*[idx] 2 [engl] Practice [trans] Pratica
+*[idx] 3 [engl] Configuration [trans] Configurazione
+*[idx] 4 [engl] Credits [trans] Crediti
+*[idx] 5 [engl] Quit [trans] Smettere
+*[idx] 6 [engl] Select an event [trans] Scegli una concorrenza
+*[idx] 7 [engl] Select a cup [trans] Scegli una coppa
+*[idx] 8 [engl] Back [trans] Indietro
+*[idx] 9 [engl] Continue [trans] Continua
+*[idx] 10 [engl] You cannot enter this cup yet [trans] Non puoi ancora entrare in questo coppa
+
+*[idx] 11 [engl] Herring: [trans] Aringhe:
+*[idx] 12 [engl] Time: [trans] Tempo:
+*[idx] 13 [engl] Race! [trans] Andiamo !
+*[idx] 14 [engl] seconds [trans] secondi
+*[idx] 15 [engl] Ok [trans] Convalidare
+*[idx] 16 [engl] Congratulations! You won the cup! [trans] Congratulazioni! Hai vinto la coppa!
+*[idx] 17 [engl] You have reached level [trans] Hai raggiunto il livello
+*[idx] 18 [engl] Sorry, you didn't advance [trans] Spiacente, non hai avanzato
+*[idx] 19 [engl] You don't have any lives left [trans] Non ti rimangono vite
+*[idx] 20 [engl] Select a race [trans] Scegli una gara
+
+*[idx] 21 [engl] Failed, -1 Tuxlive [trans] Fallito, -1 Tuxvita
+*[idx] 22 [engl] Success, +/- 0 Tuxlive [trans] Riuscito, +/- 0 Tuxvita
+*[idx] 23 [engl] Success, +1 Tuxlive [trans] Riuscito, +1 Tuxvita
+*[idx] 24 [engl] Success, +2 Tuxlive [trans] Riuscito, +2 Tuxvita
+*[idx] 25 [engl] Race aborted [trans] Gara interrotta
+*[idx] 26 [engl] Score: [trans] Punteggio:
+*[idx] 27 [engl] points [trans] punti
+
+*[idx] 28 [engl] Cancel [trans] Annulla
+*[idx] 29 [engl] Loading [trans] Caricamento
+*[idx] 30 [engl] Please wait... [trans] Per favore aspetta...
+
+*[idx] 31 [engl] Fullscreen: [trans] Schermo intero:
+*[idx] 32 [engl] Resolution: [trans] Risoluzione:
+*[idx] 33 [engl] Music volume: [trans] Volume musica:
+*[idx] 34 [engl] Sound volume: [trans] Volume suono:
+*[idx] 35 [engl] Language: [trans] Lingua:
+*[idx] 36 [engl] Level of detail: [trans] Livello di dettaglio:
+*[idx] 37 [engl] Contributed by: [trans] Autore:
+*[idx] 38 [engl] Event: [trans] Concorrenza:
+*[idx] 39 [engl] Cup: [trans] Coppa:
+*[idx] 40 [engl] Race Over [trans] Gara Terminata
+
+*[idx] 41 [engl] For more configuration options, please edit the [trans] Per più opzioni di configurazione, si prega di modificare il
+*[idx] 42 [engl] file 'options.txt' and read the documentation. [trans] documento «options.txt» e leggi la documentazione.
+*[idx] 43 [engl] Help [trans] Aiuto
+*[idx] 44 [engl] 1, 2, 3 - change view mode [trans] 1, 2, 3 - cambia di prospettiva
+*[idx] 45 [engl] F - hide/show fps display [trans] F - nascondi/mostra il indicatore degli fotogrammi per secondo (fps)
+*[idx] 46 [engl] H - hide/show hud display [trans] H - nascondi/mostra l'interfaccia
+*[idx] 47 [engl] C - screenshot [trans] C - cattura schermo
+*[idx] 48 [engl] U - toggle ui snow [trans] U - attiva neve iu
+*[idx] 49 [engl] P - set pause mode [trans] P - attivare la modalità pausa
+*[idx] 50 [engl] T - trick [trans] T - figura acrobatica
+*[idx] 51 [engl] ESC - abort Race [trans] ESC - interrompere gara
+*[idx] 52 [engl] SPACE - jump [trans] SPAZIO - saltare
+*[idx] 53 [engl] CRSR Left - turn left [trans] CURSORE Sinistra - gira a sinistra
+*[idx] 54 [engl] CRSR Right - turn right [trans] CURSORE Destra - gira a destra
+*[idx] 55 [engl] CRSR Up - accelerate [trans] CURSORE Alto - accelerare
+*[idx] 56 [engl] CRSR down - brake [trans] CURSORE Basso - freno
+*[idx] 57 [engl] Keyboard Functions [trans] Funzioni della tastiera
+
+*[idx] 58 [engl] Select your player name: [trans] Seleziona il tuo nome utente:
+*[idx] 59 [engl] Select a character: [trans] Seleziona un personaggio:
+*[idx] 60 [engl] Enter [trans] Invio
+*[idx] 61 [engl] Register a new player [trans] Registrare un nuovo giocatore
+
+*[idx] 62 [engl] Highscore list [trans] Lista dei punteggi migliori
+*[idx] 63 [engl] No entries for this race [trans] Nessuna iscrizione per questa gara
+*[idx] 64 [engl] Back [trans] Indietro
+
+*[idx] 65 [engl] Press any key to return to the main menu [trans] Premere un tasto qualsiasi per tornare al menu principale
+
+*[idx] 66 [engl] Enter a name for the new player and select an avatar: [trans] Inserisci un nome utente per il nuovo giocatore e seleziona un avatar:
+
+*[idx] 67 [engl] Loading resources, [trans] Caricamento risorse,
+*[idx] 68 [engl] please wait ... [trans] per favore aspetta ...
+
+*[idx] 69 [engl] Mirror track: Off [trans] Traccia speculare: disattivare
+*[idx] 70 [engl] Mirror track: On [trans] Traccia speculare: attivare
+
+*[idx] 71 [engl] Light: Sunny [trans] Luce: soleggiato
+*[idx] 72 [engl] Light: Cloudy [trans] Luce: nuvoloso
+*[idx] 73 [engl] Light: Evening [trans] Luce: sera
+*[idx] 74 [engl] Light: Night [trans] Luce: notte
+
+*[idx] 75 [engl] Snow: No [trans] Neve: nessuna
+*[idx] 76 [engl] Snow: A little [trans] Neve: un tocco
+*[idx] 77 [engl] Snow: Some [trans] Neve: un po'
+*[idx] 78 [engl] Snow: A lot [trans] Neve: molto
+
+*[idx] 79 [engl] Wind: No [trans] Vento: nessuno
+*[idx] 80 [engl] Wind: Breeze [trans] Vento: brezza
+*[idx] 81 [engl] Wind: Strong [trans] Vento: forte
+*[idx] 82 [engl] Wind: Blustery [trans] Vento: tempesta
+
+*[idx] 83 [engl] Randomize settings [trans] Impostazioni casuali
+
+*[idx] 84 [engl] Score [trans] Punteggio
+*[idx] 85 [engl] Herring [trans] Aringhe
+*[idx] 86 [engl] Time [trans] Tempo
+*[idx] 87 [engl] Path length [trans] Lunghezza sentiero
+*[idx] 88 [engl] Average speed [trans] Velocità media
+*[idx] 89 [engl] Position [trans] Posizione
+*[idx] 90 [engl] in highscore list [trans] nella lista dei punteggi migliori
+
+*[idx] 91 [engl] Author [trans] Autore/i
+
+*[idx] 92 [engl] Loading courses failed. [trans] Caricamento gare fallito.
+*[idx] 93 [engl] Loading characters failed. [trans] Caricamento personaggi fallito.
+*[idx] 94 [engl] Loading environments failed. [trans] Caricamento ambienti fallito.
+*[idx] 95 [engl] Loading terrains failed. [trans] Caricamento terreni fallito.
+*[idx] 96 [engl] Loading avatars failed. [trans] Caricamento avatar fallito.
+*[idx] 97 [engl] herrings [trans] aringhe
+*[idx] 98 [engl] sec [trans] sec
+
+*[idx] 99 [engl] 1st [trans] 1º
+*[idx] 100 [engl] 2nd [trans] 2º
+*[idx] 101 [engl] 3rd [trans] 3º
+*[idx] 102 [engl] 4th [trans] 4º
+*[idx] 103 [engl] 5th [trans] 5º
+*[idx] 104 [engl] 6th [trans] 6º
+*[idx] 105 [engl] 7th [trans] 7º
+*[idx] 106 [engl] 8th [trans] 8º
+*[idx] 107 [engl] 9th [trans] 9º
+*[idx] 108 [engl] 10th [trans] 10º
+
+*[idx] 109 [engl] Unknown [trans] Sconosciuto

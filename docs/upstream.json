@@ -1,0 +1,15 @@
+{
+  "project": "Extreme Tux Racer",
+  "version": "0.8.4",
+  "source": "https://downloads.sourceforge.net/project/extremetuxracer/releases/0.8.4/etr-0.8.4.tar.xz",
+  "sha256": "fa3285cc0c755a5aff529f3f2cea3516481114c6b4b8e1ec0769feeff04773e5",
+  "license": "GPL-2.0-or-later, with permissive quadtree license",
+  "debian_original": "https://deb.debian.org/debian/pool/main/e/extremetuxracer/extremetuxracer_0.8.4.orig.tar.xz",
+  "debian_sha256": "09ba674d4b3a21f053174c4f06e450659f0fdaf361305f64e2a117aab003e401",
+  "asset_comparison": {
+    "files": 466,
+    "different": 0,
+    "excluded": "Makefile.am and Makefile.in"
+  },
+  "psp_source_modifications": "PSP platform layer; single-precision numerical core; native vertex layouts; PSP resource limits"
+}
