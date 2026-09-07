@@ -2,7 +2,9 @@
 
 An unofficial PSP homebrew port of **Extreme Tux Racer 0.8.4**, based on the official C++ PC sources. Tested in **PPSSPP 1.20.4 at 333 MHz**, at native PSP resolution with music enabled. This codebase replaces the earlier Tux Racer 0.61 experiment.
 
-![Extreme Tux Racer for PSP running in PPSSPP](docs/images/extreme-tux-racer-psp.png)
+![Five seconds of downhill gameplay in Extreme Tux Racer for PSP](docs/images/descent-5s.gif)
+
+Five seconds of gameplay captured in PPSSPP at 333 MHz. [Still screenshot](docs/images/extreme-tux-racer-psp.png).
 
 ## CI downloads
 
