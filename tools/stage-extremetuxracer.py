@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 """Stage official ETR data for PSP; originals remain untouched."""
 from pathlib import Path
-import shutil, subprocess, math
+import argparse, shutil, subprocess, math
 root=Path(__file__).resolve().parent.parent
 source=root/'ports/extremetuxracer'
-target=root/'state/extremetuxracer/config/ppsspp/PSP/GAME/ExtremeTuxRacer'
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--output', type=Path, default=root/'state/extremetuxracer/config/ppsspp/PSP/GAME/ExtremeTuxRacer')
+target=parser.parse_args().output.resolve()
+magick=shutil.which('magick')
+identify=[magick, 'identify'] if magick else ['identify']
+convert=[magick] if magick else ['convert']
+if not (source/'psp/EBOOT.PBP').is_file():
+    raise SystemExit('Build EBOOT.PBP before staging.')
 target.mkdir(parents=True,exist_ok=True)
 shutil.copytree(source/'data',target/'data',dirs_exist_ok=True)
 for p in (target/'data').rglob('elev.png'):
-    w,h=map(int,subprocess.check_output(['magick','identify','-format','%w %h',str(p)],text=True).split())
+    w,h=map(int,subprocess.check_output(identify+['-format','%w %h',str(p)],text=True).split())
     if w*h>16000:
         scale=math.sqrt(16000/(w*h));size=f'{max(2,int(w*scale))}x{max(2,int(h*scale))}!'
         for name in ('elev.png','terrain.png'):
             f=p.parent/name
-            subprocess.run(['magick',str(f),'-filter','point','-resize',size,str(f)],check=True)
+            subprocess.run(convert+[str(f),'-filter','point','-resize',size,str(f)],check=True)
 for p in (target/'data/music').glob('*.ogg'):
     subprocess.run(['ffmpeg','-v','error','-y','-i',str(p),'-ar','22050','-ac','1',str(p.with_suffix('.wav'))],check=True)
     p.unlink()

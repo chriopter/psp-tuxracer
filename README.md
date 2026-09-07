@@ -4,6 +4,14 @@ Inoffizieller PSP-Homebrew-Port von **Extreme Tux Racer 0.8.4**, auf Basis der o
 
 ![Extreme Tux Racer auf PSP in PPSSPP](docs/images/extreme-tux-racer-psp.png)
 
+## CI-Downloads
+
+[![PSP build](https://github.com/chriopter/tuxracer-psp/actions/workflows/psp.yml/badge.svg)](https://github.com/chriopter/tuxracer-psp/actions/workflows/psp.yml)
+
+Unter **Actions → PSP build → erfolgreicher Lauf → Artifacts** liegt das vollständige Paket: Spiel-ZIP, passende Quellen und Prüfsummen. Das ZIP enthält `PSP/GAME/ExtremeTuxRacer/` und lässt sich auf die PSP kopieren oder in PPSSPP öffnen. Tags `v*` erzeugen zusätzlich ein [Release](https://github.com/chriopter/tuxracer-psp/releases).
+
+Die CI baut und prüft bei jedem Push auf `main`; Artefakte bleiben 30 Tage verfügbar. Quellen und Lizenzbeigaben werden gemeinsam mit der Binary hochgeladen. [Paketinhalt und Nachbau](docs/binary-distribution.md).
+
 ## Bauen und starten
 
 Benötigt: Docker, Python 3, FFmpeg, ImageMagick und PPSSPPSDL. Das SDK-Containerimage ist per Digest fixiert.
