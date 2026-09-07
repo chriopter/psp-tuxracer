@@ -61,16 +61,16 @@ Measurements record the intervals between presented frames **inside the emulated
 
 | PSP profile | Course | Frames | Average FPS | Steering FPS | Worst frame | Over 35 ms |
 |---|---|---:|---:|---:|---:|---:|
-| 32 MB | Frozen River | 2,890 | 59.940 | 59.942 | 17.627 ms | 0 |
-| 32 MB | Path Of Daggers | 3,599 | 59.890 | 59.875 | 33.367 ms | 0 |
-| 64 MB | Frozen River | 2,890 | 59.940 | 59.942 | 17.627 ms | 0 |
-| 64 MB | Path Of Daggers | 3,599 | 59.890 | 59.875 | 33.367 ms | 0 |
+| 32 MB | Frozen River | 2,892 | 59.940 | 59.942 | 17.626 ms | 0 |
+| 32 MB | Path Of Daggers | 3,599 | 59.874 | 59.807 | 33.367 ms | 0 |
+| 64 MB | Frozen River | 2,892 | 59.940 | 59.942 | 17.626 ms | 0 |
+| 64 MB | Path Of Daggers | 3,599 | 59.874 | 59.807 | 33.367 ms | 0 |
 
-The current native-save build leaves **4.18 MiB of free PSP system memory** in these runs, with a sampled game-heap peak of about **11.46 MiB**. The pre-swap work interval is below 5.1 ms at the 95th percentile in PPSSPP; this is not a real-hardware CPU/GPU benchmark. The SDK heap threshold is set explicitly, skyboxes are resized before decoding, and normal races do not write periodic timing logs.
+The startup-fix candidate passed **26 independent emulator runs across all 22 courses**, totaling **26,160 measured frames** with music active throughout. The worst recorded interval was **33.367 ms**. These runs leave **4.18 MiB of free PSP system memory**, with a sampled game-heap peak of **12.04 MiB**. The full matrix and limitations are in the [startup validation](docs/startup-validation.md) and [raw results](docs/benchmarks/startup-stress.json). A separate clean rebuild produced the identical EBOOT.
 
 Raw measurements and build hashes: [benchmark data](docs/benchmarks/). **These are not measurements from a physical PSP.** The emulated CPU is set to 333 MHz; this does not guarantee equivalent performance on real hardware. PSP VSync runs at approximately 59.94 Hz.
 
-The [audio capture analysis](docs/benchmarks/audio.json) confirms a non-silent signal without clipping. Music remained active in every measured frame of the current runs.
+The [audio capture analysis](docs/benchmarks/audio.json) confirms a non-silent signal without clipping. Music remained active in every measured frame of those runs.
 
 To repeat a benchmark, write a setting such as `7200 frozen_river` to `.../ExtremeTuxRacer/config/benchmark` before launching the game. The test starts automatically and writes `config/benchmark-result.json`. Remove the `benchmark` file afterward to play normally.
 
@@ -88,6 +88,12 @@ The requested first version refers to the **first bootable classic Tux Racer pro
 
 Input includes conversation context read multiple times. Reasoning tokens are already included in output. These figures **do not represent monetary costs** or the work on the later Extreme Tux Racer port. See [scope and aggregated measurements](docs/token-usage.json); private conversation logs are not included.
 
+## Hardware startup report
+
+A hardware test (exact build and PSP model not yet confirmed) reported failed character, terrain and environment loading after the common textures, on firmware reported as 6.60 ME-1.3. This update removes eager loading of all ten music streams: only the playing track keeps a file open, and it closes before the next track opens. A controlled eight-handle test reproduces the same failed-loading screen with v0.3.0 sources. The fixed build reaches a race under the same limit and peaks at four held application handles. Claude independently identified the same leading cause. The actual device still needs a retest; see the [investigation and fault-injection evidence](docs/startup-validation.md).
+
+`etr-errors.log` now records the startup firmware, working directory, memory availability and exact path/errno for resource-open/read failures. The `GL_EXT_compiled_vertex_array extension NOT supported` message refers to an optional optimization; the renderer has a standard-array fallback. Install the complete release ZIP, keeping `data/` and `config/` alongside `EBOOT.PBP`.
+
 ## Sources, changes, and limitations
 
 The game and its data are licensed under **GPL-2.0-or-later**, with a separate permissive license for the quadtree implementation. Original author notices are preserved. All 466 game data files match the separately license-documented Debian 0.8.4 source archive byte for byte. See [licenses and provenance](docs/licensing.md), [checksums](docs/upstream.json), and the [GPL](LICENSE).
@@ -97,6 +103,7 @@ The PSP port uses single-precision math, native vertex layouts, batched snow par
 ```sh
 python3 tools/test-etr-numerics.py
 python3 tools/test-psp-save.py
+python3 tools/test-psp-music.py
 python3 tools/test-release.py
 ```
 

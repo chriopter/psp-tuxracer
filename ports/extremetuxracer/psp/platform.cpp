@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // PSP platform layer for the official Extreme Tux Racer PC sources.
 #include "course.h"
+#include <cerrno>
 #include "savedata.hpp"
 #include "game_ctrl.h"
 #include "game_type_select.h"
@@ -111,6 +112,11 @@ int main(int argc, char **argv) {
   freopen("etr-errors.log", "w", stderr);
   setvbuf(stdout, nullptr, _IONBF, 0);
   setvbuf(stderr, nullptr, _IONBF, 0);
+  char working_directory[1024]{};
+  getcwd(working_directory, sizeof(working_directory));
+  fprintf(stderr, "ETR startup: firmware=0x%08x cwd=%s argv0=%s\n",
+          sceKernelDevkitVersion(), working_directory,
+          argc > 0 && argv && argv[0] ? argv[0] : "(none)");
   mkdir("config", 0777);
   scePowerSetClockFrequency(333, 333, 166);
   int t = sceKernelCreateThread("ETR callbacks", callbacks, 0x11, 0x1000, 0,
@@ -119,24 +125,36 @@ int main(int argc, char **argv) {
     sceKernelStartThread(t, 0, nullptr);
   sceCtrlSetSamplingCycle(0);
   sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
-  SDL_Init(SDL_INIT_AUDIO | SDL_INIT_TIMER);
-  TTF_Init();
-  Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 1024);
-  Mix_AllocateChannels(12);
+  if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0)
+    fprintf(stderr, "SDL initialization failed: %s\n", SDL_GetError());
+  if (TTF_Init() < 0)
+    fprintf(stderr, "Font initialization failed: %s\n", TTF_GetError());
+  if (Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 1024) < 0)
+    fprintf(stderr, "Audio initialization failed: %s\n", Mix_GetError());
+  if (Mix_AllocateChannels(12) != 12)
+    fprintf(stderr, "Audio channel allocation failed: %s\n", Mix_GetError());
+  auto memory = mallinfo();
+  fprintf(stderr, "ETR memory: heap_total=%u heap_used=%u free_user=%u largest_free=%u\n",
+          (unsigned)memory.arena, (unsigned)memory.uordblks,
+          sceKernelTotalFreeMemSize(), sceKernelMaxFreeMemSize());
   FILE *bf = fopen("config/benchmark", "r");
   if (bf) {
     char course[128] = {};
-    fscanf(bf, "%u %127s", &benchmark, course);
-    if (course[0])
-      benchcourse = course;
+    int parsed = fscanf(bf, "%u %127s", &benchmark, course);
     fclose(bf);
-    benchmark = std::max(60u, std::min(7200u, benchmark));
-    benchmark_recording = true;
-    benchmark_times.reserve(7200);
-    benchmark_work.reserve(7200);
-    benchmark_steering.reserve(7200);
-    remove("config/timing.log");
-    remove("config/benchmark-result.json");
+    if (parsed >= 1 && benchmark > 0) {
+      if (course[0]) benchcourse = course;
+      benchmark = std::max(60u, std::min(7200u, benchmark));
+      benchmark_recording = true;
+      benchmark_times.reserve(7200);
+      benchmark_work.reserve(7200);
+      benchmark_steering.reserve(7200);
+      remove("config/timing.log");
+      remove("config/benchmark-result.json");
+    } else {
+      benchmark = 0;
+      fprintf(stderr, "Ignoring empty or invalid config/benchmark\n");
+    }
   }
   PspSave::SetBenchmark(benchmark != 0);
   printf("ETR PSP: CPU %d MHz\n", scePowerGetCpuClockFrequencyInt());
@@ -383,17 +401,25 @@ bool Font::loadFromFile(const std::string &p) {
 FloatRect Text::getLocalBounds() const {
   if (!font || !font->impl)
     return {};
-  float w = 0;
-  for (auto c : value)
-    w += font->impl->glyph[c < 256 ? c : '?'].advance;
-  return {0, size * 0.15f, w * size / 24.f, (float)size};
+  float width = 0, line = 0, height = size;
+  for (auto c : value) {
+    if (c == '\r') continue;
+    if (c == '\n') {
+      width = std::max(width, line); line = 0; height += size * 1.25f;
+    } else line += font->impl->glyph[c < 256 ? c : '?'].advance * size / 24.f;
+  }
+  return {0, size * 0.15f, std::max(width, line), height};
 }
 Vector2f Text::findCharacterPos(std::size_t i) const {
-  float w = 0;
+  float x = 0, y = 0;
   if (font && font->impl)
-    for (size_t k = 0; k < std::min(i, value.getSize()); k++)
-      w += font->impl->glyph[value[k] < 256 ? value[k] : '?'].advance;
-  return {position.x + w * size / 24.f, position.y};
+    for (size_t k = 0; k < std::min(i, value.getSize()); k++) {
+      auto c = value[k];
+      if (c == '\r') continue;
+      if (c == '\n') { x = 0; y += size * 1.25f; }
+      else x += font->impl->glyph[c < 256 ? c : '?'].advance * size / 24.f;
+    }
+  return {position.x + x, position.y + y};
 }
 void Text::render(const RenderStates &) const {
   if (!font || !font->impl)
@@ -403,6 +429,8 @@ void Text::render(const RenderStates &) const {
   v.reserve(value.getSize() * 6);
   float x = position.x - origin.x, y = position.y - origin.y, s = size / 24.f;
   for (auto c : value) {
+    if (c == '\r') continue;
+    if (c == '\n') { x = position.x - origin.x; y += size * 1.25f; continue; }
     auto &g = font->impl->glyph[c < 256 ? c : '?'];
     quad(v, x + g.left * s, y + g.top * s, g.w * s, g.h * s, g.x / 512.f,
          g.y / 512.f, g.w / 512.f, g.h / 512.f, color);
@@ -700,28 +728,53 @@ void Sound::stop() {
   channel = -1;
 }
 struct Music::Data {
+  static Data *active;
+  std::string filename;
   Mix_Music *music = nullptr;
-  ~Data() {
-    if (music)
-      Mix_FreeMusic(music);
+  void close() {
+    if (active == this) {
+      Mix_HaltMusic();
+      active = nullptr;
+    }
+    if (music) { Mix_FreeMusic(music); music = nullptr; }
   }
+  ~Data() { close(); }
 };
+Music::Data *Music::Data::active = nullptr;
 bool Music::openFromFile(const std::string &p) {
+  // Validate without retaining a file handle for every track in music.lst.
+  FILE *file = fopen(p.c_str(), "rb");
+  if (!file) {
+    fprintf(stderr, "music file %s: errno=%d (%s)\n", p.c_str(), errno, strerror(errno));
+    return false;
+  }
+  fclose(file);
   data = std::make_shared<Data>();
-  data->music = Mix_LoadMUS(p.c_str());
-  if (!data->music)
-    fprintf(stderr, "music %s: %s\n", p.c_str(), Mix_GetError());
-  return data->music;
+  data->filename = p;
+  return true;
 }
 void Music::setVolume(float v) {
   volume = v;
-  Mix_VolumeMusic(v * 128 / 100);
+  if (data && Data::active == data.get()) Mix_VolumeMusic(v * 128 / 100);
 }
 void Music::play() {
-  if (data && data->music) {
-    Mix_VolumeMusic(volume * 128 / 100);
-    Mix_PlayMusic(data->music, loop ? -1 : 0);
+  if (!data) return;
+  // Close the old stream BEFORE opening the next one: real PSP storage has
+  // tighter file-handle limits than PPSSPP's host filesystem.
+  if (Data::active) Data::active->close();
+  data->music = Mix_LoadMUS(data->filename.c_str());
+  if (!data->music) {
+    fprintf(stderr, "music decode %s: %s\n", data->filename.c_str(), Mix_GetError());
+    return;
   }
+  Mix_VolumeMusic(volume * 128 / 100);
+  if (Mix_PlayMusic(data->music, loop ? -1 : 0) < 0) {
+    fprintf(stderr, "music play %s: %s\n", data->filename.c_str(), Mix_GetError());
+    data->close();
+    return;
+  }
+  Data::active = data.get();
 }
-void Music::stop() { Mix_HaltMusic(); }
+void Music::stop() { if (data) data->close(); }
+
 } // namespace sf

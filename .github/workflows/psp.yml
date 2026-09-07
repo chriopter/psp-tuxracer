@@ -22,10 +22,11 @@ jobs:
           persist-credentials: false
       - name: Install staging and test tools
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg imagemagick g++
-      - name: Test game numerics and release automation
+      - name: Test game numerics, saves, music and release automation
         run: |
           python3 tools/test-etr-numerics.py
           python3 tools/test-psp-save.py
+          python3 tools/test-psp-music.py
           python3 tools/test-release.py
       - name: Build PSP executable
         run: ./build-extremetuxracer.sh

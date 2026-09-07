@@ -25,4 +25,4 @@ The target is approximately 59.94 FPS, with occasional intervals around 33.4 ms 
 - Check unavailable/full Memory Stick errors without sacrificing an existing save. Deliberately damaged-data tests belong on a copy.
 - Check HOME exit and suspend/resume during menus and racing. Unexpected power loss during a write has not been validated; the local working-file rollback is not a guarantee of atomic native storage.
 
-Hardware results remain pending until this is exercised on physical devices.
+Initial hardware feedback (exact build/model not yet confirmed): character, terrain and environment loading failed after common textures on firmware reported as 6.60 ME-1.3. A synthetic file-handle quota reproduces the same failure in the old code; the one-stream fix passes that test, but still requires an on-device retest. See [startup investigation](startup-validation.md). Passing physical performance and savedata results remain pending.

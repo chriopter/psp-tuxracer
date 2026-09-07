@@ -92,8 +92,10 @@ void CEnvironment::SetupLight() {
 void CEnvironment::SetupFog() {
 	glEnable(GL_FOG);
 	glFogi(GL_FOG_MODE, fog.mode);
-	glFogf(GL_FOG_START, fog.start);
+	// PSPGL starts with a zero far plane; setting a zero start first divides
+	// by zero internally and raises GL_INVALID_VALUE. Set the far plane first.
 	glFogf(GL_FOG_END, fog.end);
+	glFogf(GL_FOG_START, fog.start);
 	glFogfv(GL_FOG_COLOR, fog.color);
 
 	if (param.perf_level > 1) {

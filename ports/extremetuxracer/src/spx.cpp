@@ -26,6 +26,9 @@ GNU General Public License for more details.
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
 
 const std::string emptyString = "";
 const std::string errorString = "error";
@@ -383,9 +386,12 @@ void CSPList::Print() const {
 }
 
 bool CSPList::Load(const std::string &filepath) {
+	errno = 0;
 	std::ifstream tempfile(filepath);
 
 	if (!tempfile) {
+		const int error = errno;
+		fprintf(stderr, "RESOURCE OPEN FAILED: %s: errno=%d (%s)\n", filepath.c_str(), error, strerror(error));
 		Message("CSPList::Load - unable to open " + filepath);
 		return false;
 	} else {
@@ -418,6 +424,10 @@ bool CSPList::Load(const std::string &filepath) {
 					backflag = fwdflag;
 				}
 			}
+		}
+		if (tempfile.bad()) {
+			fprintf(stderr, "RESOURCE READ FAILED: %s: errno=%d (%s)\n", filepath.c_str(), errno, strerror(errno));
+			return false;
 		}
 		return true;
 	}

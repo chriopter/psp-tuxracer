@@ -1,0 +1,23 @@
+[
+  {
+    "case": "empty",
+    "native_startup_restored": true,
+    "native_save_unchanged": true,
+    "benchmark_disabled": true,
+    "eboot_sha256": "37e9de288b6a3be4af650bca3ebd4ada862dc8d0dadec59722acaa15e2a609bd"
+  },
+  {
+    "case": "garbled",
+    "native_startup_restored": true,
+    "native_save_unchanged": true,
+    "benchmark_disabled": true,
+    "eboot_sha256": "37e9de288b6a3be4af650bca3ebd4ada862dc8d0dadec59722acaa15e2a609bd"
+  },
+  {
+    "case": "zero",
+    "native_startup_restored": true,
+    "native_save_unchanged": true,
+    "benchmark_disabled": true,
+    "eboot_sha256": "37e9de288b6a3be4af650bca3ebd4ada862dc8d0dadec59722acaa15e2a609bd"
+  }
+]
