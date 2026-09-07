@@ -6,13 +6,15 @@ An unofficial PSP homebrew port of **Extreme Tux Racer 0.8.4**, based on the off
 
 Five seconds of gameplay captured in PPSSPP at 333 MHz. [Still screenshot](docs/images/extreme-tux-racer-psp.png).
 
-## CI downloads
+## Downloads
 
 [![PSP build](https://github.com/chriopter/tuxracer-psp/actions/workflows/psp.yml/badge.svg)](https://github.com/chriopter/tuxracer-psp/actions/workflows/psp.yml)
 
-Go to **Actions → PSP build → a successful run → Artifacts** to download the complete package: the game ZIP, corresponding sources, and checksums. The ZIP contains `PSP/GAME/ExtremeTuxRacer/`, which you can copy to your PSP or open in PPSSPP. Tags matching `v*` also create a [release](https://github.com/chriopter/tuxracer-psp/releases).
+Download the game ZIP, corresponding sources, and checksums from the [latest release](https://github.com/chriopter/tuxracer-psp/releases/latest). The ZIP contains `PSP/GAME/ExtremeTuxRacer/`, which you can copy to your PSP or open in PPSSPP.
 
-CI builds and tests every push to `main`; artifacts remain available for 30 days. Corresponding sources and license notices are uploaded together with the binary. See [package contents and rebuilding instructions](docs/binary-distribution.md).
+Every successful push or manual build on `main` automatically publishes a release named `build-<run number>-<attempt>`, pointing to the exact commit that was built. Tags matching `v*` still produce named version releases. Pull requests produce test artifacts without publishing releases.
+
+The same files are also available under **Actions → PSP build → a successful run → Artifacts** for 30 days. Corresponding sources and license notices are uploaded together with the binary. See [package contents and rebuilding instructions](docs/binary-distribution.md).
 
 ## Building and running
 

@@ -6,7 +6,7 @@ Die CI baut jeden Push auf `main`, Pull Requests und manuell ausgelöste Läufe.
 - `sources.tar.gz`: vollständige Spielquellen des gebauten Commits, Bibliotheksquellen, PSP-Patches/Buildrezepte, SDK-/Laufzeitquellen und Buildnachweise.
 - `SHA256SUMS`: Prüfsummen beider Pakete.
 
-Bei Tags `v*` hängt ein eigener Job diese Dateien gemeinsam an ein GitHub-Release. Normale CI-Artefakte bleiben 30 Tage verfügbar; Quell- und Spielpaket haben dieselbe Aufbewahrung. Beim Weitergeben beide Pakete zusammen behalten. Die Quellbeigabe enthält auch die Lizenztexte von PSPSDK, Newlib und GCC einschließlich dessen Runtime Library Exception.
+Jeder erfolgreiche Push oder manuelle Build auf `main` veröffentlicht diese Dateien gemeinsam als eigenes GitHub-Release `build-<Laufnummer>-<Versuch>`. Der automatisch erzeugte Tag verweist auf den tatsächlich gebauten Commit. Tags `v*` erzeugen weiterhin benannte Versions-Releases. Pull Requests erzeugen nur Test-Artefakte. Laufende Builds werden bei weiteren Pushes nicht abgebrochen, damit die Veröffentlichung fertig werden kann. Normale CI-Artefakte bleiben 30 Tage verfügbar; Quell- und Spielpaket haben dieselbe Aufbewahrung. Beim Weitergeben beide Pakete zusammen behalten. Die Quellbeigabe enthält auch die Lizenztexte von PSPSDK, Newlib und GCC einschließlich dessen Runtime Library Exception.
 
 ## Herkunft der Bibliotheken
 
