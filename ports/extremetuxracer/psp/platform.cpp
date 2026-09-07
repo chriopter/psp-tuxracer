@@ -359,11 +359,16 @@ bool Font::loadFromFile(const std::string &p) {
   }
   impl = std::make_shared<Impl>();
   impl->ascent = TTF_FontAscent(f);
-  std::vector<Uint8> pixels(512 * 512 * 4, 0);
+  // Transparent white gutters prevent neighboring glyphs and dark fringes
+  // from leaking into text under bilinear filtering.
+  std::vector<Uint8> pixels(512 * 512 * 4, 255);
+  for (size_t i = 3; i < pixels.size(); i += 4) pixels[i] = 0;
+  int atlasX = 1, atlasY = 1, rowHeight = 0;
   for (unsigned c = 32; c < 256; c++) {
     int minx, maxx, miny, maxy, advance;
     auto &g = impl->glyph[c];
-    TTF_GlyphMetrics(f, c, &minx, &maxx, &miny, &maxy, &advance);
+    if (TTF_GlyphMetrics(f, c, &minx, &maxx, &miny, &maxy, &advance) < 0)
+      continue;
     g.advance = advance;
     g.left = minx;
     g.top = impl->ascent - maxy;
@@ -371,12 +376,20 @@ bool Font::loadFromFile(const std::string &p) {
     SDL_Surface *s = TTF_RenderGlyph_Blended(f, c, white);
     if (!s)
       continue;
-    g.x = (c % 16) * 32;
-    g.y = (c / 16) * 32;
-    g.w = std::min(s->w, 32);
-    g.h = std::min(s->h, 32);
-    g.top = 0;
-    g.left = 0;
+    if (atlasX + s->w + 1 > 512) {
+      atlasX = 1; atlasY += rowHeight + 2; rowHeight = 0;
+    }
+    if (s->w + 2 > 512 || atlasY + s->h + 1 > 512) {
+      fprintf(stderr, "Font atlas overflow: %s, glyph %u\n", p.c_str(), c);
+      SDL_FreeSurface(s); TTF_CloseFont(f); impl.reset();
+      return false;
+    }
+    g.x = atlasX; g.y = atlasY;
+    g.w = s->w; g.h = s->h;
+    atlasX += s->w + 2;
+    rowHeight = std::max(rowHeight, s->h);
+    // SDL_ttf returns a cropped glyph bitmap, not a complete text line.
+    // Retain minx and ascent-maxy so punctuation and descenders align.
     for (int y = 0; y < g.h; y++)
       for (int x = 0; x < g.w; x++) {
         Uint32 q;

@@ -66,7 +66,7 @@ Measurements record the intervals between presented frames **inside the emulated
 | 64 MB | Frozen River | 2,892 | 59.940 | 59.942 | 17.626 ms | 0 |
 | 64 MB | Path Of Daggers | 3,599 | 59.874 | 59.807 | 33.367 ms | 0 |
 
-The startup-fix candidate passed **26 independent emulator runs across all 22 courses**, totaling **26,160 measured frames** with music active throughout. The worst recorded interval was **33.367 ms**. These runs leave **4.18 MiB of free PSP system memory**, with a sampled game-heap peak of **12.04 MiB**. The full matrix and limitations are in the [startup validation](docs/startup-validation.md) and [raw results](docs/benchmarks/startup-stress.json). A separate clean rebuild produced the identical EBOOT.
+The v0.4.0 startup-fix build passed **26 independent emulator runs across all 22 courses**, totaling **26,160 measured frames** with music active throughout. The worst recorded interval was **33.367 ms**. These runs leave **4.18 MiB of free PSP system memory**, with a sampled game-heap peak of **12.04 MiB**. The full matrix and limitations are in the [startup validation](docs/startup-validation.md) and [raw results](docs/benchmarks/startup-stress.json). A separate clean rebuild produced the identical EBOOT.
 
 Raw measurements and build hashes: [benchmark data](docs/benchmarks/). **These are not measurements from a physical PSP.** The emulated CPU is set to 333 MHz; this does not guarantee equivalent performance on real hardware. PSP VSync runs at approximately 59.94 Hz.
 
@@ -108,3 +108,11 @@ python3 tools/test-release.py
 ```
 
 This test checks the actual numerical game sources against analytical solutions and known geometry cases. This project is not affiliated with the Extreme Tux Racer Team or Sony.
+
+## Text rendering and desktop audio
+
+The PSP font atlas preserves glyph bearings and baseline positions, including punctuation and descenders. Glyphs are packed without clipping, with transparent gutters for linear filtering, within the existing 512 × 512 atlas. [Updated text layout](docs/images/font-layout.png).
+
+On Linux, PPSSPP can leave its shared-memory instance counter behind after an abrupt stop, then silence the next launch as a secondary instance. The desktop starter clears an owned stale counter only when no recognizable PPSSPP process is running and no detected user holds the mapping; it warns if another PPSSPP process is active. This follows PPSSPP's [instance-counter implementation](https://github.com/hrydgard/ppsspp/blob/v1.20.4/Core/Instance.cpp) and [secondary-instance audio behavior](https://github.com/hrydgard/ppsspp/blob/v1.20.4/Core/Config.cpp#L1457). The background launcher remains silent by default; use `TUXRACER_BACKGROUND_AUDIO=1` for background sound.
+
+The font-fix build also passed a 30-second 32 MB Frozen River check at 59.940 FPS, with music active throughout and unchanged 4.18 MiB system reserve ([measurement](docs/benchmarks/font-fix-frozen-river-32mb.json)). The desktop audio fix was verified on PPSSPP’s isolated output stream ([measurement](docs/benchmarks/launcher-audio.json)).

@@ -20,4 +20,18 @@ else
     echo 'Install PPSSPPSDL or set PPSSPP_BIN to its executable.' >&2
     exit 1
 fi
+# PPSSPP's Linux shared-memory instance counter survives an abrupt stop.
+# A stale counter makes the next launch mute itself as a secondary instance.
+# Never reset it while another PPSSPP process is alive.
+if [[ -d /dev/shm ]] && command -v pgrep >/dev/null; then
+    if pgrep -ix 'ppsspp.*' >/dev/null; then
+        printf '%s\n' 'Another PPSSPP instance is running; PPSSPP may mute this window. Close other instances for sound.' >&2
+    elif [[ -f /dev/shm/PPSSPP_ID && -O /dev/shm/PPSSPP_ID && ! -L /dev/shm/PPSSPP_ID ]]; then
+        if command -v fuser >/dev/null && fuser -s /dev/shm/PPSSPP_ID; then
+            printf '%s\n' 'PPSSPP instance state is still in use; leaving it unchanged.' >&2
+        else
+            rm -f -- /dev/shm/PPSSPP_ID
+        fi
+    fi
+fi
 exec "$emulator_bin" --windowed --log="$project_dir/logs/etr-ppsspp.log" "$XDG_CONFIG_HOME/ppsspp/PSP/GAME/ExtremeTuxRacer/EBOOT.PBP"
