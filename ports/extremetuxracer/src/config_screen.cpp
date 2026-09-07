@@ -50,6 +50,7 @@ Then edit the below functions:
 #include "gui.h"
 #include "font.h"
 #include "winsys.h"
+#include "savedata.hpp"
 
 CGameConfig GameConfig;
 static std::string res_names[NUM_RESOLUTIONS];
@@ -91,6 +92,7 @@ void SetConfig() {
 			Trans.ChangeLanguage(param.language);
 		}
 		SaveConfigFile();
+		PspSave::Save(false);
 	}
 	State::manager.RequestEnterState(*State::manager.PreviousState());
 }

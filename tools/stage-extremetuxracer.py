@@ -14,6 +14,7 @@ if not (source/'psp/EBOOT.PBP').is_file():
     raise SystemExit('Build EBOOT.PBP before staging.')
 target.mkdir(parents=True,exist_ok=True)
 shutil.copytree(source/'data',target/'data',dirs_exist_ok=True)
+shutil.copy2(source/'psp/icon0.png',target/'data/psp-icon.png')
 for p in (target/'data').rglob('elev.png'):
     w,h=map(int,subprocess.check_output(identify+['-format','%w %h',str(p)],text=True).split())
     if w*h>16000:
@@ -21,6 +22,23 @@ for p in (target/'data').rglob('elev.png'):
         for name in ('elev.png','terrain.png'):
             f=p.parent/name
             subprocess.run(convert+[str(f),'-filter','point','-resize',size,str(f)],check=True)
+# Match the runtime's 256-pixel skybox cap before decoding on the PSP.
+# This avoids keeping two full 512x512 RGBA images during texture upload.
+for p in (target/'data/env').rglob('*.png'):
+    w,h=map(int,subprocess.check_output(identify+['-format','%w %h',str(p)],text=True).split())
+    if w>256 or h>256:
+        subprocess.run(convert+[str(p),'-filter','point','-resize',f'{min(w,256)}x{min(h,256)}!',str(p)],check=True)
+# Upstream environments supply three sides. PSP turns can expose all six.
+# Extend the existing artwork instead of binding missing/uninitialized textures.
+for front in (target/'data/env').rglob('front.png'):
+    w,h=map(int,subprocess.check_output(identify+['-format','%w %h',str(front)],text=True).split())
+    for name,y in (('top.png',0),('bottom.png',h-1)):
+        face=front.parent/name
+        if not (source/'data'/face.relative_to(target/'data')).exists():
+            subprocess.run(convert+[str(front),'-crop',f'{w}x1+0+{y}','+repage','-scale',f'{w}x{h}!',str(face)],check=True)
+    back=front.parent/'back.png'
+    if not (source/'data'/back.relative_to(target/'data')).exists():
+        subprocess.run(convert+[str(front),'-flop',str(back)],check=True)
 for p in (target/'data/music').glob('*.ogg'):
     subprocess.run(['ffmpeg','-v','error','-y','-i',str(p),'-ar','22050','-ac','1',str(p.with_suffix('.wav'))],check=True)
     p.unlink()

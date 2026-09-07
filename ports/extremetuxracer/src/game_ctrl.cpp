@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -183,9 +185,10 @@ bool CPlayers::LoadPlayers() {
 		plyr[i].name = SPStrN(*line, "name", "unknown");
 		plyr[i].funlocked = SPStrN(*line, "unlocked");
 		plyr[i].avatar = FindAvatar(SPStrN(*line, "avatar"));
+		if (!plyr[i].avatar) plyr[i].avatar = FindAvatar("avatar01.png");
 		plyr[i].ctrl = nullptr;
 		int active = SPIntN(*line, "active", 0);
-		if (active > 0) g_game.start_player = plyr.size()-1;
+		if (active > 0) g_game.start_player = i;
 	}
 	if (plyr.empty()) {
 		SetDefaultPlayers();
@@ -195,7 +198,7 @@ bool CPlayers::LoadPlayers() {
 	return true;
 }
 
-void CPlayers::SavePlayers() const {
+bool CPlayers::SavePlayers() const {
 	std::string playerfile = param.config_dir + SEP "players";
 	CSPList list;
 	for (std::size_t i=0; i<plyr.size(); i++) {
@@ -206,7 +209,7 @@ void CPlayers::SavePlayers() const {
 		else item += "[active]0";
 		list.Add(item);
 	}
-	list.Save(playerfile);
+	return list.Save(playerfile);
 }
 
 const TAvatar* CPlayers::FindAvatar(const std::string& name) const {
@@ -334,6 +337,17 @@ bool CCharacter::LoadCharacterList() {
 		}
 	}
 	return !CharList.empty();
+}
+
+void CCharacter::LoadCharacterPreviews() {
+	for (auto &character : CharList) {
+		if (character.preview) continue;
+		character.preview = new TTexture();
+		if (!character.preview->Load(MakePathStr(param.char_dir, character.dir) + SEP "preview.png", false)) {
+			delete character.preview;
+			character.preview = nullptr;
+		}
+	}
 }
 
 void CCharacter::FreeCharacterPreviews() {

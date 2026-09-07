@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef GUI_H
 #define GUI_H
@@ -51,6 +53,7 @@ protected:
 	bool interactive;
 public:
 	bool focus;
+	bool locksLR = false, locksUD = false;
 
 	TWidget(int x, int y, int width, int height, bool interactive_ = true);
 	virtual ~TWidget() {}
@@ -121,6 +124,7 @@ public:
 	void Focussed();
 	void UpdateCursor(float timestep);
 	const sf::String& Text() const { return text.getString(); }
+	void SetText(const sf::String &value) { text.setString(value); SetCursorPos(value.getSize()); }
 };
 TTextField* AddTextField(const sf::String& text, int x, int y, int width, int height);
 

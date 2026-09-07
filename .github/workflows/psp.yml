@@ -25,6 +25,7 @@ jobs:
       - name: Test game numerics and release automation
         run: |
           python3 tools/test-etr-numerics.py
+          python3 tools/test-psp-save.py
           python3 tools/test-release.py
       - name: Build PSP executable
         run: ./build-extremetuxracer.sh

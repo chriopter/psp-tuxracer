@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef GAME_CTRL_H
 #define GAME_CTRL_H
@@ -129,7 +131,7 @@ public:
 	void AddPassedCup(const std::string& cup);
 	void AddPlayer(const std::string& name, const std::string& avatar);
 	bool LoadPlayers();
-	void SavePlayers() const;
+	bool SavePlayers() const;
 	void ResetControls();
 	void AllocControl(std::size_t player);
 	bool LoadAvatars();
@@ -164,6 +166,7 @@ public:
 
 	bool LoadCharacterList();
 	void FreeCharacterPreviews();
+	void LoadCharacterPreviews();
 };
 
 extern CCharacter Char;

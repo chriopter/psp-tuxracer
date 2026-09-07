@@ -26,6 +26,20 @@ Der Gleichungslöser prüft zusätzlich den letzten Pivot, bevor die Rückwärts
 
 ## Bisheriger Umfang
 
-Getestet werden PPSSPP, Menüs, Training, Rennen, Lenkung, Reset/Pause, Musik und Ergebnisse. Keine Messung auf physischer PSP-Hardware. Für neue Spieler wird ein fortlaufender Name vorgeschlagen; eine PSP-Bildschirmtastatur ist noch nicht eingebunden. Die Schriftanbindung deckt den Latin-1-Zeichensatz ab. Screenshots werden über PPSSPP aufgenommen.
+Getestet werden PPSSPP, Menüs, Training, Rennen, Lenkung, Reset/Pause, Musik und Ergebnisse. Keine Messung auf physischer PSP-Hardware. Neue Spielernamen werden über die native PSP-Bildschirmtastatur eingegeben (maximal 24 Zeichen). Die Taste zum Öffnen muss vor der Übergabe losgelassen sein, damit sie nicht zusätzlich ein Zeichen eingibt. Die Schriftanbindung deckt den Latin-1-Zeichensatz ab. Screenshots werden über PPSSPP aufgenommen.
 
 Die alte Tux-Racer-0.61/Dreamcast-basierte Versuchsversion bleibt lokal als Vergleich erhalten, gehört aber weder zum Quellpaket noch zum Build dieses Repositories.
+
+## Native Spielstände
+
+`psp/savedata.cpp` verwendet `sceUtilitySavedata*` für automatische und interaktive Speicherung. Ein nativer Save (`ETRX00001PROFILE/PROFILE.DAT`) enthält Spieler, freigeschaltete Cups, Highscores und Einstellungen. Die PSP-Utility erzeugt Metadaten und übernimmt die native Dateiverarbeitung; das Spielpaket liefert keine persönlichen Spielstände mit.
+
+Der innere Container hat einen 28-Byte-Header mit Formatversion, drei Längen und CRC32 über Header und Nutzdaten. Grenze: 256 KiB. Ungültige Daten werden vor dem Ersetzen lokaler Dateien abgewiesen. Lokale Dateien werden vollständig temporär geschrieben und mit Rücksicherung ersetzt; das native Save bleibt die maßgebliche Kopie. Ein fehlgeschlagenes Laden deaktiviert automatisches Überschreiben. Fehler beim Schreiben oder Schließen der Arbeitsdateien verhindern eine neue native Speicherung.
+
+Der Heap lässt initial 4 MiB frei für PSP-Systemutilities über `PSP_HEAP_THRESHOLD_SIZE_KB(4096)`. Im gepinnten SDK bedeutet eine beliebige negative `PSP_HEAP_SIZE_KB` lediglich maximalen Heap; ohne explizite Schwelle bleiben standardmäßig nur 512 KiB übrig. Siehe die [gepinnten SDK-Quellen](https://github.com/pspdev/pspsdk/blob/09f02b88b9f30055bea916c5ddbdbddcdef9e31f/src/libcglue/glue.c#L696). Laden stellt auch den aktiven Spieler korrekt wieder her; wiederholtes Laden ersetzt Highscores, statt sie erneut anzuhängen. Charaktervorschauen werden nach dem Laden wieder aufgebaut. Die Controller-Navigation berücksichtigt die aktuell fokussierte Eingabe statt alle Eingaben eines Menüs gleichzeitig.
+
+Normale Rennen schreiben keine periodischen Timing-Protokolle mehr auf den Memory Stick. Nur der explizite Benchmark-Modus erfasst Präsentationsintervalle, Arbeit vor dem Swap und Heap-/freien User-Speicher (alle 60 Frames). Speicherwerte sind Stichproben, keine nachgewiesenen absoluten Spitzen. In PPSSPP gemessene Arbeitszeiten sind kein Zyklusmodell der echten PSP-CPU/GPU.
+
+Skybox-PNGs werden bereits beim Staging auf die vom Renderer ohnehin verwendeten maximal 256 × 256 Pixel reduziert. Dadurch entfallen temporäre volle 512 × 512-Dekodier- und RGBA-Kopien beim Streckenladen, was den kleineren PSP-1000-Heap mit echter Systemreserve entlastet.
+
+Die Upstream-Umgebungen enthalten nur drei Skybox-Seiten. Für die vollständige PSP-Skybox ergänzt das Staging obere/untere Flächen aus den Randzeilen und eine gespiegelte Rückseite aus der vorhandenen Frontgrafik. Dadurch werden beim Umdrehen keine fehlenden/uninitialisierten Texturen mehr gebunden; die Rückseite ist eine wiederholte Kulisse, kein neues Panorama.

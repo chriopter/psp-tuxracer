@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // PSP platform layer for the official Extreme Tux Racer PC sources.
 #include "course.h"
+#include "savedata.hpp"
 #include "game_ctrl.h"
 #include "game_type_select.h"
 #include "intro.h"
@@ -30,16 +31,22 @@
 #undef main
 PSP_MODULE_INFO("Extreme Tux Racer", 0, 0, 84);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
-PSP_HEAP_SIZE_KB(-2048);
+// Negative heap size means maximum; only the threshold reserves utility memory.
+PSP_HEAP_SIZE_KB(-1);
+PSP_HEAP_THRESHOLD_SIZE_KB(4096);
 static EGLDisplay egl_display;
 static EGLSurface surface;
-static bool running = true, gui = false;
+static volatile bool running = true;
+static bool gui = false;
+bool PspIsRunning() { return running; }
 static unsigned benchmark = 0, benchframe = 0, benchstateframe = 0;
 static std::string benchcourse = "frozen_river";
 static State *benchstate = nullptr;
 static bool benchmark_recording = false;
 static std::vector<unsigned> benchmark_times, benchmark_steering;
 static unsigned benchmark_music_frames = 0;
+static std::vector<unsigned> benchmark_work;
+static unsigned heap_peak = 0, free_user_min = ~0u;
 static void finish_benchmark() {
   if (!benchmark_recording || benchmark_times.empty())
     return;
@@ -75,13 +82,19 @@ static void finish_benchmark() {
   statistics(benchmark_times, f);
   fprintf(f, ",\"steering\":");
   statistics(benchmark_steering, f);
-  fprintf(f, "}\n");
+  std::sort(benchmark_work.begin(), benchmark_work.end());
+  fprintf(f, ",\"work\":{\"median_us\":%u,\"p95_us\":%u,\"max_us\":%u},\"heap_peak_bytes\":%u,\"min_free_user_bytes\":%u}\n",
+          benchmark_work.empty() ? 0 : benchmark_work[benchmark_work.size()/2],
+          benchmark_work.empty() ? 0 : benchmark_work[(benchmark_work.size()-1)*95/100],
+          benchmark_work.empty() ? 0 : benchmark_work.back(), heap_peak, free_user_min);
   fclose(f);
 }
 
 extern void EnterPractice();
 static std::deque<sf::Event> events;
 static bool keys[sf::Keyboard::KeyCount] = {};
+static bool inputSuppressed = false;
+void PspResetInput() { events.clear(); std::memset(keys, 0, sizeof(keys)); inputSuppressed = true; }
 static int exit_cb(int, int, void *) {
   running = false;
   return 0;
@@ -120,10 +133,12 @@ int main(int argc, char **argv) {
     benchmark = std::max(60u, std::min(7200u, benchmark));
     benchmark_recording = true;
     benchmark_times.reserve(7200);
+    benchmark_work.reserve(7200);
     benchmark_steering.reserve(7200);
     remove("config/timing.log");
     remove("config/benchmark-result.json");
   }
+  PspSave::SetBenchmark(benchmark != 0);
   printf("ETR PSP: CPU %d MHz\n", scePowerGetCpuClockFrequencyInt());
   int result = etr_main(argc, argv);
   Mix_CloseAudio();
@@ -383,7 +398,8 @@ Vector2f Text::findCharacterPos(std::size_t i) const {
 void Text::render(const RenderStates &) const {
   if (!font || !font->impl)
     return;
-  std::vector<V> v;
+  static std::vector<V> v;
+  v.clear();
   v.reserve(value.getSize() * 6);
   float x = position.x - origin.x, y = position.y - origin.y, s = size / 24.f;
   for (auto c : value) {
@@ -395,7 +411,8 @@ void Text::render(const RenderStates &) const {
   drawVertices(v, &font->impl->atlas);
 }
 void VertexArray::render(const RenderStates &s) const {
-  std::vector<V> v;
+  static std::vector<V> v;
+  v.clear();
   auto z = s.texture ? s.texture->getSize() : Vector2u{1, 1};
   for (size_t i = 0; i + 3 < vertices.size(); i += 4)
     for (int j : {0, 1, 2, 0, 2, 3}) {
@@ -431,7 +448,10 @@ void RenderWindow::create(VideoMode, const char *, unsigned, ContextSettings) {
 void RenderWindow::close() { running = false; }
 void RenderWindow::display() {
   ResetRenderMode();
+  auto before_present = benchmark_recording ? sceKernelGetSystemTimeWide() : 0;
   eglSwapBuffers(egl_display, surface);
+  // Never write profiling logs to the Memory Stick during normal play.
+  if (!benchmark_recording) return;
   static uint64_t last = 0, total = 0;
   static unsigned frames = 0, worst = 0;
   static State *previous = nullptr;
@@ -441,6 +461,11 @@ void RenderWindow::display() {
     unsigned dt = now - last;
     if (benchmark_recording) {
       benchmark_times.push_back(dt);
+      benchmark_work.push_back(before_present - last);
+      if (benchmark_times.size() % 60 == 1) {
+        heap_peak = std::max(heap_peak, (unsigned)mallinfo().uordblks);
+        free_user_min = std::min(free_user_min, (unsigned)sceKernelTotalFreeMemSize());
+      }
       if (keys[Keyboard::Left] || keys[Keyboard::Right])
         benchmark_steering.push_back(dt);
       if (Mix_PlayingMusic())
@@ -567,6 +592,10 @@ bool RenderWindow::pollEvent(Event &e) {
   SceCtrlData p;
   sceCtrlPeekBufferPositive(&p, 1);
   unsigned b = p.Buttons;
+  if (inputSuppressed) {
+    if (b || p.Lx < 75 || p.Lx > 180 || p.Ly < 75 || p.Ly > 180) return false;
+    inputSuppressed = false;
+  }
   if (benchmark && State::manager.CurrentState() == &Racing) {
     unsigned phase = benchframe++ % 240;
     b = PSP_CTRL_UP;

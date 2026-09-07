@@ -131,7 +131,7 @@ void AddComment(CSPList &list, const std::string& comment) {
 	list.Add(line);
 }
 
-void SaveConfigFile() {
+bool SaveConfigFile() {
 	CSPList liste;
 
 	liste.Add("# ------------------------------------------------------------------");
@@ -260,7 +260,7 @@ void SaveConfigFile() {
 	liste.Add();
 
 	// ---------------------------------------
-	liste.Save(param.config_dir + SEP "options.txt");
+	return liste.Save(param.config_dir + SEP "options.txt");
 }
 
 // --------------------------------------------------------------------

@@ -24,6 +24,7 @@ GNU General Public License for more details.
 #include <sys/stat.h>
 
 #include "winsys.h"
+#include "savedata.hpp"
 #include "course.h"
 #include "game_ctrl.h"
 #include "score.h"
@@ -141,6 +142,7 @@ void CWinsys::Quit() {
 	Score.SaveHighScore();
 	SaveMessages();
 	if (g_game.argument < 1) Players.SavePlayers();
+	PspSave::Save(false);
 	window.close();
 }
 

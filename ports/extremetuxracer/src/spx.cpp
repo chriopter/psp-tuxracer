@@ -436,7 +436,8 @@ bool CSPList::Save(const std::string &filepath) const {
 		for (const_iterator line = cbegin(); line != cend(); ++line) {
 			tempfile << *line << '\n';
 		}
-		return true;
+		tempfile.close();
+		return bool(tempfile);
 	}
 }
 

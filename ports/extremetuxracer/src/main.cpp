@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #include "tools.h"
 #include "ogl_test.h"
 #include "winsys.h"
+#include "savedata.hpp"
 #include <iostream>
 #include <ctime>
 #include <cstring>
@@ -71,6 +72,7 @@ int etr_main(int argc, char **argv) {
 	InitConfig();
 	InitGame(argc, argv);
 	Winsys.Init();
+	PspSave::LoadStartup();
 	InitOpenglExtensions();
 
 	// For checking the joystick and the OpgenGL version (the info is written on the console):

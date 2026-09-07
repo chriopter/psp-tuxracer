@@ -1,0 +1,37 @@
+{
+  "game": "Extreme Tux Racer 0.8.4",
+  "course": "path_of_daggers",
+  "cpu_mhz": 333,
+  "music_frames": 3599,
+  "all": {
+    "frames": 3599,
+    "fps": 59.89,
+    "median_us": 16683,
+    "p95_us": 16684,
+    "max_us": 33367,
+    "over35ms": 0
+  },
+  "steering": {
+    "frames": 900,
+    "fps": 59.875,
+    "median_us": 16683,
+    "p95_us": 16684,
+    "max_us": 33367,
+    "over35ms": 0
+  },
+  "work": {
+    "median_us": 4417,
+    "p95_us": 5024,
+    "max_us": 16478
+  },
+  "heap_peak_bytes": 11990728,
+  "min_free_user_bytes": 4386816,
+  "staging_script_sha256": "bce2ad2fab2ae79789af79505467be7eb6d8d0dd37c9e0d9a4fa8ba9770608a8",
+  "emulator": "PPSSPP 1.20.4",
+  "psp_model": "PSP-1000 (32 MB)",
+  "internal_resolution": 1,
+  "frameskip": 0,
+  "date": "2026-09-07",
+  "eboot_sha256": "0b0e5cdc074984e14042a7e474d76800796639961a6652ed4ab72948f0986844",
+  "method": "Guest presentation intervals including VSync; work measured before swap. Loading and first race frame excluded. Paddle held, left/right 30 frames per 240-frame cycle. Heap samples every 60 frames. Not physical PSP measurements."
+}

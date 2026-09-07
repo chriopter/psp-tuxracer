@@ -33,6 +33,7 @@ GNU General Public License for more details.
 #include "game_type_select.h"
 #include "newplayer.h"
 #include "winsys.h"
+#include "savedata.hpp"
 
 CRegist Regist;
 
@@ -46,6 +47,7 @@ void QuitRegistration() {
 	g_game.player = Players.GetPlayer(player->GetValue());
 
 	g_game.character = &Char.CharList[character->GetValue()];
+	PspSave::Save(false);
 	Char.FreeCharacterPreviews(); // From here on, character previews are no longer required
 	State::manager.RequestEnterState(GameTypeSelect);
 }
@@ -95,6 +97,7 @@ static TFramedText* sPlayerFrame;
 static TFramedText* sCharFrame;
 
 void CRegist::Enter() {
+	Char.LoadCharacterPreviews();
 	Winsys.ShowCursor(!param.ice_cursor);
 	Music.Play(param.menu_music, true);
 

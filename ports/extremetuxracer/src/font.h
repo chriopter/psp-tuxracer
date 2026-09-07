@@ -15,6 +15,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef FONT_H
 #define FONT_H
@@ -56,7 +58,7 @@ public:
 	void SetProps(const std::string &fontname, unsigned int size, const sf::Color& col);
 	void SetProps(const std::string &fontname, unsigned int size);
 	void SetColor(const sf::Color& col) { curr_col = col; }
-	void SetSize(unsigned int size) { curr_size = size; }
+	void SetSize(unsigned int size) { curr_size = std::max(18u, size); }
 	void SetFont(const std::string& fontname);
 	void SetFontFromSettings();
 

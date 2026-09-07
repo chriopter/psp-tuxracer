@@ -17,3 +17,9 @@ Die PSP-Ausgabe verkleinert Höhen-/Terrainkarten und konvertiert Musik nach PCM
 Der Git-Verlauf enthält Quellen und Dokumentation. CI-Artefakte und Releases enthalten zusätzlich die gebaute Anwendung und ein zugehöriges Quellpaket. PSPDEV, PSPGL, SDL 1.2, SDL_image, SDL_ttf, SDL_mixer, FreeType und die Codec-Bibliotheken werden aus dem angegebenen SDK-Container eingebunden und behalten ihre eigenen Lizenzen. Die CI liefert die Lizenztexte und passenden Quellen der eingebundenen Bibliotheken gemeinsam mit dem Spielpaket aus. Paketrezepte, PSP-Patches und SDK-Laufzeitrevisionen sind enthalten und gegen die SDK-Buildmetadaten geprüft. Siehe [Binary-Verteilung](binary-distribution.md) und [festgeschriebene Abhängigkeiten](dependencies-lock.json).
 
 Tux Racer / Extreme Tux Racer und die ursprünglichen Autoren werden zur Kennzeichnung der Herkunft genannt. Dieses Projekt ist kein offizielles Release des Extreme Tux Racer Teams.
+
+## PSP shell and savedata icon
+
+`ports/extremetuxracer/psp/icon0.png` is a resized, centered derivative of the upstream `data/textures/menu_title.png`, generated on 2026-09-07 for the PSP shell and savedata utility. It retains the upstream GPL-2.0-or-later license. Staging copies it to `data/psp-icon.png`; original upstream assets remain unchanged.
+
+Staging supplies missing skybox top/bottom faces by extending the edge rows of each upstream front image, and a rear face by mirroring that image. These are GPL-2.0-or-later derivatives of the same upstream artwork, not separately sourced assets.

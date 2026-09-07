@@ -45,20 +45,32 @@ The ready-to-play directory is `state/extremetuxracer/config/ppsspp/PSP/GAME/Ext
 | Triangle | Reset to the course | R |
 | Start | Pause / resume | Enter |
 
+## Native PSP saved data
+
+The port uses the PSP savedata utility. **Saved data** in the main menu opens the system Save/Load dialogs, with an ETR icon. Player names can be edited with the native PSP on-screen keyboard: select the name field and press Cross; Start finishes typing. [Save dialog screenshot](docs/images/native-save.png) · [Keyboard screenshot](docs/images/native-keyboard.png).
+
+The native profile lives at `PSP/SAVEDATA/ETRX00001PROFILE/` and contains player profiles, the selected player, unlocked cups, high scores and settings. It loads automatically at startup and saves after player selection, settings changes, completed races/cups and normal exit. Saving happens outside active racing. Existing `config/` files are imported on the first save when no native profile exists. Keep the whole savedata directory together when backing up or transferring it.
+
+Cancelling a system dialog keeps the existing save. A damaged or unsupported native profile disables autosave and displays a warning; loading it does not replace the current working files. Use the system Save dialog to explicitly replace it, or restore a backup. The profile format includes a version, size checks and a CRC covering its header and contents.
+
+These flows are tested in PPSSPP, including its 32 MB PSP-1000 profile. **Physical Memory Stick operation, suspend/resume and power-loss recovery still require testing on a real PSP.** See the [hardware test procedure](docs/hardware-validation.md).
+
 ## Benchmarks
 
 Measurements record the intervals between presented frames **inside the emulated PSP**, including VSync. Loading times and the first race frame are excluded. The automated test holds paddle and steers left and right for 30 frames each per 240-frame cycle. Music and sound effects are enabled.
 
-| Course / section | Frames | Average FPS | 95th-percentile frame time | Worst frame | Over 35 ms |
-|---|---:|---:|---:|---:|---:|
-| Frozen River, complete run | 2,844 | 59.940 | 16.684 ms | 17.626 ms | 0 |
-| Steering frames only | 720 | 59.942 | 16.684 ms | 17.626 ms | 0 |
-| Path of Daggers, 60-second test | 3,599 | 59.874 | 16.684 ms | 33.367 ms | 0 |
-| Steering frames only | 900 | 59.873 | 16.684 ms | 33.367 ms | 0 |
+| PSP profile | Course | Frames | Average FPS | Steering FPS | Worst frame | Over 35 ms |
+|---|---|---:|---:|---:|---:|---:|
+| 32 MB | Frozen River | 2,890 | 59.940 | 59.942 | 17.627 ms | 0 |
+| 32 MB | Path Of Daggers | 3,599 | 59.890 | 59.875 | 33.367 ms | 0 |
+| 64 MB | Frozen River | 2,890 | 59.940 | 59.942 | 17.627 ms | 0 |
+| 64 MB | Path Of Daggers | 3,599 | 59.890 | 59.875 | 33.367 ms | 0 |
+
+The current native-save build leaves **4.18 MiB of free PSP system memory** in these runs, with a sampled game-heap peak of about **11.46 MiB**. The pre-swap work interval is below 5.1 ms at the 95th percentile in PPSSPP; this is not a real-hardware CPU/GPU benchmark. The SDK heap threshold is set explicitly, skyboxes are resized before decoding, and normal races do not write periodic timing logs.
 
 Raw measurements and build hashes: [benchmark data](docs/benchmarks/). **These are not measurements from a physical PSP.** The emulated CPU is set to 333 MHz; this does not guarantee equivalent performance on real hardware. PSP VSync runs at approximately 59.94 Hz.
 
-The [audio capture analysis](docs/benchmarks/audio.json) confirms a non-silent signal without clipping. Music was playing during all 2,844 measured frames in the Frozen River benchmark.
+The [audio capture analysis](docs/benchmarks/audio.json) confirms a non-silent signal without clipping. Music remained active in every measured frame of the current runs.
 
 To repeat a benchmark, write a setting such as `7200 frozen_river` to `.../ExtremeTuxRacer/config/benchmark` before launching the game. The test starts automatically and writes `config/benchmark-result.json`. Remove the `benchmark` file afterward to play normally.
 
@@ -80,10 +92,12 @@ Input includes conversation context read multiple times. Reasoning tokens are al
 
 The game and its data are licensed under **GPL-2.0-or-later**, with a separate permissive license for the quadtree implementation. Original author notices are preserved. All 466 game data files match the separately license-documented Debian 0.8.4 source archive byte for byte. See [licenses and provenance](docs/licensing.md), [checksums](docs/upstream.json), and the [GPL](LICENSE).
 
-The PSP port uses single-precision math, native vertex layouts, batched snow particles, 16-bit textures, capped heightmap sizes, and PCM music. See the [porting notes](docs/porting.md) for implementation details and remaining limitations, including the missing on-screen keyboard.
+The PSP port uses single-precision math, native vertex layouts, batched snow particles, 16-bit textures, capped heightmap sizes, and PCM music. See the [porting notes](docs/porting.md) for implementation details and remaining limitations, including hardware validation limits.
 
 ```sh
 python3 tools/test-etr-numerics.py
+python3 tools/test-psp-save.py
+python3 tools/test-release.py
 ```
 
 This test checks the actual numerical game sources against analytical solutions and known geometry cases. This project is not affiliated with the Extreme Tux Racer Team or Sony.

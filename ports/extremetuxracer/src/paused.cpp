@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -34,6 +36,9 @@ GNU General Public License for more details.
 #include "racing.h"
 #include "winsys.h"
 #include "physics.h"
+#include "font.h"
+#include "gui.h"
+#include "game_over.h"
 
 CPaused Paused;
 
@@ -60,8 +65,18 @@ void CPaused::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 		case sf::Keyboard::F8:
 			trees = !trees;
 			break;
-		default:
+		case sf::Keyboard::Escape:
+			g_game.raceaborted = true;
+			g_game.race_result = -1;
+			State::manager.RequestEnterState(GameOver);
+			break;
+		case sf::Keyboard::Return:
+		case sf::Keyboard::P:
+		case sf::Keyboard::Space:
 			State::manager.RequestEnterState(Racing);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -95,5 +110,13 @@ void CPaused::Loop(float time_step) {
 
 	DrawHud(ctrl);
 	Reshape(width, height);
+	{
+		ScopedRenderMode overlay(GUI);
+		DrawFrameX((width - 570) / 2, 170, 570, 135, 2, colDBlue, colWhite, 0.85f);
+		FT.SetColor(colWhite); FT.SetSize(34);
+		FT.DrawString(CENTER, 188, "Paused");
+		FT.SetSize(20);
+		FT.DrawString(CENTER, 252, "Start: resume    Circle: end race");
+	}
 	Winsys.SwapBuffers();
 }

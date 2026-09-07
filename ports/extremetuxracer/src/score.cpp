@@ -126,6 +126,8 @@ bool CScore::LoadHighScore() {
 		return false;
 	}
 
+	Scorelist.clear(); // A loaded save replaces scores instead of duplicating them.
+
 	for (CSPList::const_iterator line = list.cbegin(); line != list.cend(); ++line) {
 		std::string group = SPStrN(*line, "group", "default");
 		std::string course = SPStrN(*line, "course", "unknown");
