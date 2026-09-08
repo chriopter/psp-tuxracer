@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include <etr_config.h>
 #endif
 
+// PSP port modifications, 2026-09-07: resource-loading diagnostic checkpoints.
 #include "keyframe.h"
 #include "course.h"
 #include "spx.h"
@@ -109,6 +110,8 @@ void CKeyframe::Reset() {
 bool CKeyframe::Load(const std::string& dir, const std::string& filename) {
 	if (loaded && loadedfile == filename) return true;
 	CSPList list;
+	const std::string diagnostic_path = dir + "/" + filename;
+	PspTraceResource("animation begin", diagnostic_path.c_str());
 
 	if (list.Load(dir, filename)) {
 		frames.resize(list.size());
@@ -142,10 +145,12 @@ bool CKeyframe::Load(const std::string& dir, const std::string& filename) {
 		}
 		loaded = true;
 		loadedfile = filename;
+		PspTraceResource("animation ready", diagnostic_path.c_str());
 		return true;
 	} else {
 		Message("keyframe not found:", filename);
 		loaded = false;
+		PspTraceResource("animation failed", diagnostic_path.c_str());
 		return false;
 	}
 }

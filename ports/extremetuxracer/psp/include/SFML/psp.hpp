@@ -9,6 +9,8 @@
 #include <pspkernel.h>
 #include <string>
 #include <vector>
+// Resource-loading checkpoints only; never call from the per-frame render path.
+void PspTraceResource(const char *phase, const char *path);
 namespace sf {
 using Uint8 = uint8_t;
 using Uint32 = uint32_t;

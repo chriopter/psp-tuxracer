@@ -48,6 +48,14 @@ static std::vector<unsigned> benchmark_times, benchmark_steering;
 static unsigned benchmark_music_frames = 0;
 static std::vector<unsigned> benchmark_work;
 static unsigned heap_peak = 0, free_user_min = ~0u;
+void PspTraceResource(const char *phase, const char *path) {
+  const auto memory = mallinfo();
+  fprintf(stderr,
+          "RESOURCE %s: %s heap_used=%u heap_free=%u free_user=%u largest_free=%u stack_check=%d\n",
+          phase, path, (unsigned)memory.uordblks, (unsigned)memory.fordblks,
+          sceKernelTotalFreeMemSize(), sceKernelMaxFreeMemSize(),
+          sceKernelCheckThreadStack());
+}
 static void finish_benchmark() {
   if (!benchmark_recording || benchmark_times.empty())
     return;
@@ -208,11 +216,16 @@ void Image::create(unsigned w, unsigned h, Color c) {
     memcpy(&pixels[i * 4], &c, 4);
 }
 bool Image::loadFromFile(const std::string &p) {
+  PspTraceResource("decode begin", p.c_str());
   SDL_Surface *s = IMG_Load(p.c_str());
   if (!s) {
     fprintf(stderr, "image %s: %s\n", p.c_str(), IMG_GetError());
     return false;
   }
+  fprintf(stderr, "IMAGE decoded: %s width=%d height=%d pitch=%u bpp=%u\n",
+          p.c_str(), s->w, s->h, (unsigned)s->pitch,
+          (unsigned)s->format->BytesPerPixel);
+  PspTraceResource("convert begin", p.c_str());
   create(s->w, s->h);
   SDL_LockSurface(s);
   for (unsigned y = 0; y < size.y; y++)
@@ -228,6 +241,7 @@ bool Image::loadFromFile(const std::string &p) {
     }
   SDL_UnlockSurface(s);
   SDL_FreeSurface(s);
+  PspTraceResource("image ready", p.c_str());
   return true;
 }
 void Image::flipVertically() {
@@ -258,7 +272,12 @@ bool Texture::loadFromFile(const std::string &p) {
   if (p.find("preview.png") != std::string::npos)
     maxSize = 128;
   printf("texture %s\n", p.c_str());
-  return i.loadFromFile(p) && loadFromImage(i);
+  if (!i.loadFromFile(p))
+    return false;
+  PspTraceResource("upload begin", p.c_str());
+  const bool loaded = loadFromImage(i);
+  PspTraceResource(loaded ? "upload returned" : "upload failed", p.c_str());
+  return loaded;
 }
 static unsigned pot(unsigned n) {
   unsigned p = 8;

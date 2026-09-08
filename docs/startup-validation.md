@@ -2,6 +2,18 @@
 
 Physical report: an Extreme Tux Racer logo followed by failed character, terrain and environment loading; the last texture line was `data/textures/snow3.png`. Firmware was reported as 6.60 ME-1.3. The exact PSP model and installed build have not been confirmed. A passing physical-device retest is still required.
 
+## v0.5.0 physical shutdown report
+
+On September 7, 2026, a tester reported that v0.5.0 displays the logo and loading screen, then the PSP powers off. The last reported `etr.log` line is `texture data/char/samuel/preview.png`. The complete logs have not been supplied; an empty or uninformative `etr-errors.log` is not yet verified. The model, repeatability and firmware for this particular run remain unconfirmed.
+
+The texture line is emitted **before** PNG decoding and uploading. After this preview, the same character's `shape.lst`, `start.lst`, `finish.lst`, `wonrace.lst` and `lostrace.lst` load without another texture line. Thus the report does not establish that the preview itself caused the shutdown. The earlier file-handle regression test and emulator benchmarks do not reproduce or explain this new shutdown.
+
+The diagnostic changes add `RESOURCE` checkpoints to `etr-errors.log` before PNG decoding, pixel conversion, texture upload, character-shape loading and each animation, and after those stages return. Decoded dimensions, pitch and pixel size are recorded as well. Each checkpoint includes heap usage/free space, free kernel user memory, its largest block, and the raw result of `sceKernelCheckThreadStack`. These are snapshots, not measured allocation peaks. `upload returned` means the CPU-side call returned; it does not prove GPU completion. No new synchronization or rendering changes are introduced.
+
+These changes are diagnostic, **not a confirmed crash fix**. Both logs should be copied before relaunching because startup truncates them. A power-off can prevent the last writes from reaching the Memory Stick even though C stdio buffering is disabled. This instrumentation is not a CPU exception handler and cannot guarantee a crash dump.
+
+Pre-commit validation: the checkpoint helper compiled and passed a host-side output check with stubbed PSP memory APIs; whitespace checks passed. A local PSP build was unavailable because access to the Docker socket was denied. The diagnostic changes have not been emulator-tested or validated on physical hardware; CI build results are tracked separately.
+
 ## Reproducing the failure
 
 Two temporary PSP builds were run in PPSSPP 1.20.4 with the 32 MB model. Both linked [the same test-only wrapper](tests/psp-fd-quota.cpp), which rejects application Memory Stick opens once eight handles are held. Eight is an artificial test limit, **not a claim about the user's firmware**. The wrapper does not count filesystem operations performed internally by PSP utilities.

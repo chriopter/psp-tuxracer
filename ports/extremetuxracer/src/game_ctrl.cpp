@@ -319,12 +319,14 @@ bool CCharacter::LoadCharacterList() {
 //				texid = Tex.TexID (NO_PREVIEW);
 			}
 
+			PspTraceResource("shape begin", charpath.c_str());
 			ch->shape = new CCharShape;
 			if (ch->shape->Load(charpath, "shape.lst", false) == false) {
 				delete ch->shape;
 				ch->shape = nullptr;
 				Message("could not load character shape");
 			}
+			PspTraceResource(ch->shape ? "shape ready" : "shape failed", charpath.c_str());
 
 			ch->frames[0].Load(charpath, "start.lst");
 			ch->finishframesok = true;
@@ -334,6 +336,7 @@ bool CCharacter::LoadCharacterList() {
 			if (ch->frames[2].loaded == false) ch->finishframesok = false;
 			ch->frames[3].Load(charpath, "lostrace.lst");
 			if (ch->frames[3].loaded == false) ch->finishframesok = false;
+			PspTraceResource("character ready", charpath.c_str());
 		}
 	}
 	return !CharList.empty();
