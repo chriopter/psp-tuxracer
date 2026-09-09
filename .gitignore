@@ -26,5 +26,4 @@
 
 # psp-devloop integration (https://github.com/chriopter/psp-devloop)
 !/psp-devloop.conf
-!/tools/devloop-ppsspp.sh
-!/tools/devloop-jpcsp.sh
+!/psp-devloop/
