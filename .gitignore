@@ -25,4 +25,4 @@
 !/tools/test-psp-music.py
 
 # psp-devloop integration (https://github.com/chriopter/psp-devloop)
-!/psp-devloop/
+!/psp-devloop.config
