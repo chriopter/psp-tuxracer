@@ -7,7 +7,7 @@
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 devloop_root="${PSP_DEVLOOP_ROOT:-$project_dir/../psp-devloop}"
-waiter="$devloop_root/02-emulator/run-until-result"
+waiter="$devloop_root/lib/run-until-result"
 
 ms0_dir="$project_dir/state/extremetuxracer/config/ppsspp/PSP"
 game_dir="$ms0_dir/GAME/ExtremeTuxRacer"
