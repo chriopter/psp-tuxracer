@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "id": "de.chriopter.extremetuxracer",
+  "id": "io.github.chriopter.extremetuxracer",
   "rev": 1789034382,
   "url": "https://github.com/chriopter/psp-tuxracer/releases/download/v0.16.0/extremetuxracer-psp.zip",
   "sha256": "2cd0a663535b613a2449fcd68c111b9f4301465aefdda4c6c3fce33e5cd8d231",
@@ -8,7 +8,6 @@
   "requires": { "ram_mb": 64 },
   "display": {
     "version": "0.16.0",
-    "homepage": "https://github.com/chriopter/psp-tuxracer",
     "notes": "First release listed in PSPDX."
   }
 }
