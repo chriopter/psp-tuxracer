@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": "https://chriopter.github.io/pspdx/v1",
   "id": "io.github.chriopter.extremetuxracer",
   "rev": 1789034382,
   "url": "https://github.com/chriopter/psp-tuxracer/releases/download/v0.16.0/extremetuxracer-psp.zip",
