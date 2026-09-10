@@ -1,5 +1,5 @@
 {
-  "schema": "https://github.com/chriopter/pspdx/blob/master/docs/manifest.md",
+  "schema": "https://github.com/chriopter/pspdx/blob/master/manifest.md",
   "id": "io.github.chriopter.extremetuxracer",
   "rev": 1789034382,
   "url": "https://github.com/chriopter/psp-tuxracer/releases/download/v0.16.0/extremetuxracer-psp.zip",
