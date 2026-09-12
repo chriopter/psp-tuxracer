@@ -8,10 +8,10 @@
   "license":  "GPL-2.0",
   "repo":     "https://github.com/chriopter/psp-tuxracer",
 
-  "version":  "0.24.0",
-  "rev":      1789071038,
-  "url":      "https://github.com/chriopter/psp-tuxracer/releases/download/v0.24.0/etr.zip",
-  "sha256":   "807b7e08e3ac6e791b12025cef617a72c920c0d98fd5d38c59d70784262c5be2",
-  "size":     44048464,
+  "version":  "0.25.0",
+  "rev":      1789200775,
+  "url":      "https://github.com/chriopter/psp-tuxracer/releases/download/v0.25.0/extremetuxracer-psp.zip",
+  "sha256":   "f4cd79fd7805b02be42c9c2fbe583048101863c306ac30d926258c15bc091af9",
+  "size":     44444586,
   "root":     "PSP/GAME/ExtremeTuxRacer/"
 }
