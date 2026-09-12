@@ -1,5 +1,5 @@
 {
-  "schema": "https://github.com/chriopter/pspdx/blob/master/schema/v1.pspdx",
+  "schema": "https://github.com/chriopter/pspdx-schema/blob/master/schema/v1.pspdx",
   "source": "https://github.com/chriopter/psp-tuxracer",
   "name": "Extreme Tux Racer",
   "summary": "Downhill racing with Tux, ported to the PSP.",
