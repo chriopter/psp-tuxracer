@@ -16,7 +16,7 @@ Download the game ZIP, corresponding sources, and checksums from the [latest rel
 
 Every successful push or manual build on `main` automatically publishes the next `v0.x.0` release (for example, `v0.2.0`, then `v0.3.0`), pointing to the exact commit that was built. Release notes include the commit messages since the previous version. Releases are created exclusively by CI; pushing a version tag does not start a separate build. Re-running the same CI run resumes its release instead of allocating another version. Releases become public only after all three assets have uploaded. Pull requests produce test artifacts without publishing releases.
 
-The game is listed in [PSPDX](https://github.com/chriopter/pspdx): `app.pspdx` in the repository root describes it, and the release action fills in the release half after every published release.
+The game is listed in [PSPDX](https://github.com/chriopter/pspdx); the release's zip with the EBOOT is all it needs.
 
 The same files are also available under **Actions → PSP build → a successful run → Artifacts** for 30 days. Corresponding sources and license notices are uploaded together with the binary. See [package contents and rebuilding instructions](docs/binary-distribution.md).
 

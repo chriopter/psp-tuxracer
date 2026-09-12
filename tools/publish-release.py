@@ -42,13 +42,6 @@ def notes(commit, previous):
             'performance require hardware testing; emulator results are documented in the repository.\n')
 
 
-def output(tag):
-    """Hand the tag to the next workflow step; the pspdx action reads it."""
-    if os.environ.get('GITHUB_OUTPUT'):
-        with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as stream:
-            stream.write(f'tag={tag}\n')
-
-
 def main():
     repo = os.environ['GH_REPO']
     commit = os.environ['GITHUB_SHA']
@@ -60,7 +53,6 @@ def main():
     existing = next((r for r in releases if marker in (r.get('body') or '')), None)
     if existing and not existing['draft']:
         print(f'Release {existing["tag_name"]} already published for this run.')
-        output(existing['tag_name'])
         return
     assets = [Path('dist') / name for name in
               ('extremetuxracer-psp.zip', 'sources.tar.gz', 'SHA256SUMS')]
@@ -79,7 +71,6 @@ def main():
     # Keep incomplete uploads private; a retry resumes the same draft.
     subprocess.run(['gh', 'release', 'upload', version, *map(str, assets), '--clobber'], check=True)
     subprocess.run(['gh', 'release', 'edit', version, '--draft=false', '--latest'], check=True)
-    output(version)
 
 
 if __name__ == '__main__':
