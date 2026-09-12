@@ -1,13 +1,17 @@
 {
-  "schema": "https://github.com/chriopter/pspdx/blob/master/manifest.md",
-  "id": "io.github.chriopter.extremetuxracer",
-  "rev": 1789034382,
-  "url": "https://github.com/chriopter/psp-tuxracer/releases/download/v0.16.0/extremetuxracer-psp.zip",
-  "sha256": "2cd0a663535b613a2449fcd68c111b9f4301465aefdda4c6c3fce33e5cd8d231",
-  "size": 44048460,
-  "requires": { "ram_mb": 64 },
-  "display": {
-    "version": "0.16.0",
-    "notes": "First release listed in PSPDX."
-  }
+  "schema":   "https://github.com/chriopter/pspdx/blob/master/manifest.md",
+  "id":       "io.github.chriopter.extremetuxracer",
+  "name":     "Extreme Tux Racer",
+  "author":   "chriopter",
+  "summary":  "Downhill racing with a penguin.",
+  "category": "games",
+  "license":  "GPL-2.0",
+  "repo":     "https://github.com/chriopter/psp-tuxracer",
+
+  "version":  "0.24.0",
+  "rev":      1789071038,
+  "url":      "https://github.com/chriopter/psp-tuxracer/releases/download/v0.24.0/etr.zip",
+  "sha256":   "807b7e08e3ac6e791b12025cef617a72c920c0d98fd5d38c59d70784262c5be2",
+  "size":     44048464,
+  "root":     "PSP/GAME/ExtremeTuxRacer/"
 }

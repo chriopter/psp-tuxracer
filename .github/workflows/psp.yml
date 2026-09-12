@@ -51,7 +51,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          persist-credentials: false
       - name: Download the complete build artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -60,7 +59,12 @@ jobs:
           COMMIT: ${{ github.sha }}
         run: gh run download "$RUN_ID" --name "extremetuxracer-psp-$COMMIT" --dir dist
       - name: Publish next v0.x release with commit notes
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: python3 tools/publish-release.py
+      - name: Record the release in app.pspdx
+        uses: chriopter/pspdx/action@master
+        with:
+          tag: ${{ steps.publish.outputs.tag }}
