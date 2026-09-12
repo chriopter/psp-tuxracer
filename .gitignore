@@ -2,6 +2,7 @@
 # SDK/emulator installations, recordings, profiles and old ports stay local.
 /*
 !/.gitignore
+!/.pspdx
 !/README.md
 !/LICENSE
 !/build-extremetuxracer.sh
