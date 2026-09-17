@@ -82,7 +82,7 @@ void Controls(int x,int y) {
     Hint(x,y+162,Triangle,"Reset to course");
     Hint(x,y+202,ShoulderL,"Brake / D-pad down");
     Hint(x,y+242,ShoulderR,"Paddle / D-pad up");
-    Hint(x,y+282,Start,"Start / Circle: pause");
+    Hint(x,y+282,Start,"Start: pause / controls");
 }
 void Confirm(const char* title,const char* detail) {
     Box(0,0,854,480,sf::Color(5,13,23,220));

@@ -7,6 +7,7 @@ import tempfile
 root = Path(__file__).resolve().parent.parent
 source = (root / 'ports/extremetuxracer/src/quadtree.cpp').read_text()
 implementation = source[source.index('GLubyte *VNCArray;'):source.index('void quadsquare::InitArrayCounters()')]
+implementation += source[source.index('inline void quadsquare::MakeNoBlendTri('):source.index('\nvoid quadsquare::RenderAux(')]
 shim = r'''
 #include <algorithm>
 #include <cassert>
@@ -28,10 +29,19 @@ struct quadsquare {
  static GLuint *VertexArrayIndices;
  static GLuint VertexArrayCounter;
  static void DrawTris();
+ static void MakeNoBlendTri(int,int,int,int);
 };
+GLuint VertexIndices[9]={0,1,2};
+int VertexTerrains[9];
+static std::vector<std::vector<GLuint>> opaqueTerrainIndices(8);
+#define colorval(j,ch) VNCArray[(j)*STRIDE_GL_ARRAY+8+(ch)]
+#define setalphaval(i) colorval(VertexIndices[i],3)=(terrain<=VertexTerrains[i])?255:0
+#define update_min_max(i) do {} while(0)
 GLuint* quadsquare::VertexArrayIndices;
 GLuint quadsquare::VertexArrayCounter;
 void glTexCoordPointer(int,int,int,const void*) {}
+void glFlush() {}
+void PspProfileTerrain(unsigned) {}
 void glColorPointer(int,int,int,const void*) {}
 void glNormalPointer(int,int,const void*) {}
 static const unsigned char* active_vertices;
@@ -92,6 +102,22 @@ static float area() {
  return result;
 }
 int main() {
+ // The one-pass opaque buckets must exactly match the original repeated
+ // per-material selection for every combination of three terrain corners.
+ for(int a=0;a<8;++a)for(int b=0;b<8;++b)for(int c=0;c<8;++c) {
+  GLubyte vertices[3*STRIDE_GL_ARRAY]={};GLuint indices[3]={};
+  VNCArray=vertices;quadsquare::VertexArrayIndices=indices;
+  VertexTerrains[0]=a;VertexTerrains[1]=b;VertexTerrains[2]=c;
+  for(auto& bucket:opaqueTerrainIndices)bucket.clear();
+  quadsquare::MakeNoBlendTri(0,1,2,-2);
+  for(int material=0;material<8;++material) {
+   quadsquare::VertexArrayCounter=0;
+   quadsquare::MakeNoBlendTri(0,1,2,material);
+   assert(opaqueTerrainIndices[material].size()==quadsquare::VertexArrayCounter);
+   for(unsigned i=0;i<quadsquare::VertexArrayCounter;++i)
+    assert(opaqueTerrainIndices[material][i]==indices[i]);
+  }
+ }
  run(0,0,.5f,0,0,.5f);assert(drawn.size()==3 && std::fabs(area()-.125f)<1e-6f);
  run(-2,-2,4,-2,-2,4);assert(std::fabs(area()-4)<1e-5f);
  run(2,2,3,2,2,3);assert(drawn.empty());

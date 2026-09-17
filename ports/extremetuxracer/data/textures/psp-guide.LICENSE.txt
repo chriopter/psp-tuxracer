@@ -1,0 +1,15 @@
+PSP control-guide background (psp-guide.png)
+
+Reference: SonyPSP.jpg by Stefano Palazzo, Sony PlayStation Portable PSP-1004.
+https://commons.wikimedia.org/wiki/File:SonyPSP.jpg
+Licensed under Creative Commons Attribution-ShareAlike 2.5 Generic.
+https://creativecommons.org/licenses/by-sa/2.5/
+
+Supplemental reference: Sony-PSP-1000-Body.png by Evan-Amos (public domain).
+https://commons.wikimedia.org/wiki/File:Sony-PSP-1000-Body.png
+
+Changes made 2026-09-17: image-model reconstruction of a front-on original PSP,
+new winter background, blank screen and runtime resizing. This adapted
+background is distributed under CC BY-SA 2.5. No photographer or Sony endorsement.
+The real gameplay capture psp-guide-gameplay.png is separate and retains the
+underlying Extreme Tux Racer artwork licenses; it was not image-model generated.

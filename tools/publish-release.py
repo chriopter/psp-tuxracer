@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish one v0.x.0 release per successful CI run, with full commit messages."""
+"""Publish complete v0.x.0 releases with concise, delta-only release notes."""
 import json
 import os
 from pathlib import Path
@@ -37,41 +37,53 @@ def next_version(releases):
 
 
 def notes(commit, previous):
-    base = previous
-    history_reset = False
     ancestry = subprocess.run(
         ['git', 'merge-base', '--is-ancestor', previous, commit],
         check=False) if previous else None
     if ancestry and ancestry.returncode not in (0, 1):
         ancestry.check_returncode()
-    if ancestry and ancestry.returncode == 1:
-        # After a history reset, describe changes from the recorded import.
-        base = json.loads(Path('docs/upstream.json').read_text())['git_base']
-        subprocess.run(['git', 'merge-base', '--is-ancestor', base, commit], check=True)
-        history_reset = True
-    elif not previous and Path('docs/upstream.json').exists():
-        base = json.loads(Path('docs/upstream.json').read_text()).get('git_base')
-        if base:
-            subprocess.run(['git', 'merge-base', '--is-ancestor', base, commit], check=True)
-            history_reset = True
-    revision = f'{base}..{commit}' if base else commit
+    base = previous if ancestry and ancestry.returncode == 0 else None
+    curated = Path('docs/release-notes.md')
+    if curated.is_file():
+        changed = subprocess.run(
+            ['git', 'diff', '--quiet', base, commit, '--', str(curated)],
+            check=False) if base else None
+        if changed and changed.returncode not in (0, 1):
+            changed.check_returncode()
+        if not changed or changed.returncode == 1:
+            return curated.read_text(encoding='utf-8').rstrip() + '\n'
+    # Without an ancestral release, describe the current change only. Import
+    # commits and retired histories are not user-facing release notes.
+    revision = [f'{base}..{commit}'] if base else ['-1', commit]
     messages = subprocess.check_output(
-        ['git', 'log', '--reverse', '--format=%h%n%B%x00', revision], text=True)
-    entries = []
+        ['git', 'log', '--reverse', '--format=%h%n%s%x00', *revision], text=True)
+    added, fixed = [], []
+    repo = os.environ.get('GH_REPO', 'chriopter/psp-tuxracer')
     for message in messages.split('\0'):
         lines = message.strip().splitlines()
         if len(lines) >= 2:
-            entries.append(f'- {lines[1]} ({lines[0]})' +
-                           ''.join('\n  ' + line for line in lines[2:]))
-    changes = '\n'.join(entries) or '- Rebuild of the same commit; no new commits.'
-    heading = 'Initial PSP port' if history_reset else f'Commits since {previous or "the beginning"}'
-    return (f'Automated PSP build from `{commit}`.\n\n'
-            f'## {heading}\n\n{changes}\n\n'
-            '## Downloads\n\n'
-            '- Game ZIP with EBOOT.PBP, game data and licenses\n'
-            '- Corresponding source package\n- SHA-256 checksums\n\n'
-            'Build and automated tests passed. Physical PSP compatibility and '
-            'performance require hardware testing; emulator results are documented in the repository.\n')
+            target = fixed if re.match(r'(?i)(fix|repair|prevent|correct|avoid)\b', lines[1]) else added
+            target.append(f'- {lines[1]} ([{lines[0]}](https://github.com/{repo}/commit/{lines[0]})).')
+    changes = ''
+    if added:
+        changes += '✨ New\n\n' + '\n'.join(added) + '\n\n'
+    if fixed:
+        changes += '🐛 Fixed\n\n' + '\n'.join(fixed) + '\n\n'
+    if not changes:
+        changes = '🔧 Build\n\n- Rebuild of the same commit; no new commits.\n\n'
+    compare = (f'[Changes since {previous}](https://github.com/{repo}/compare/{previous}...{commit}).'
+               if base else f'[Build commit](https://github.com/{repo}/commit/{commit}).')
+    return ('The release in five lines:\n\n'
+            '- 🎮 Extreme Tux Racer for PSP and PPSSPP.\n'
+            '- 📝 Only changes for this build are listed below.\n'
+            '- 🧪 Build and automated regression tests passed.\n'
+            '- 🔬 Automated CI does not verify physical PSP compatibility or performance.\n'
+            '- 📦 Game, corresponding sources and SHA-256 checksums are included.\n\n'
+            + changes + compare + '\n\n'
+            '📦 Downloads\n\n'
+            '- `extremetuxracer-psp.zip` — EBOOT.PBP, game data and licenses.\n'
+            '- `sources.tar.gz` — corresponding sources and build records.\n'
+            '- `SHA256SUMS` — checksums for both archives.\n')
 
 
 def main():
@@ -98,7 +110,7 @@ def main():
         path = Path('release-notes.md')
         path.write_text(notes(commit, previous) + '\n' + marker + '\n', encoding='utf-8')
         subprocess.run(['gh', 'release', 'create', version, '--draft',
-                        '--target', commit, '--title', f'Extreme Tux Racer PSP {version}',
+                        '--target', commit, '--title', version,
                         '--notes-file', str(path)], check=True)
     # Keep incomplete uploads private; a retry resumes the same draft.
     upload_assets(version, assets)

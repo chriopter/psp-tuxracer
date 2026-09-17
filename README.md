@@ -4,7 +4,9 @@ An unofficial PSP port of [Extreme Tux Racer](https://sourceforge.net/projects/e
 
 ![Downhill gameplay in PPSSPP](docs/images/descent-5s.gif)
 
-Tested in PPSSPP at 333 MHz. Real PSP compatibility is still under investigation: a shutdown during loading was reported for v0.5.0. See the [hardware status](docs/startup-validation.md#v050-physical-shutdown-report).
+Tested in PPSSPP and on a physical PSP at 333 MHz. Two hardware-only startup
+exceptions are fixed; performance depends on the course and settings. See the
+[hardware measurements and limitations](docs/psp-hardware-validation.md).
 
 ## Play
 
@@ -16,13 +18,15 @@ Download the game ZIP from the [latest release](https://github.com/chriopter/psp
 | Up / R | Paddle |
 | Down / L | Brake |
 | Cross | Hold and release to jump / confirm |
-| Circle | Back / pause race / resume from pause |
+| Circle | Back in menus / resume from pause (no action while racing) |
 | Square + direction | Trick |
 | Triangle | Reset to the course |
 | Start | Pause / resume |
 
 The first visit to the main menu is preceded by an illustrated PSP control guide.
 Press **Start** to continue; **Help** reopens the guide later.
+During a race, press **Start**, then select **Controls**. The race stays paused
+while viewing the guide; closing it returns to the pause menu.
 Start, Square, Triangle and the shoulder buttons do not activate normal menu items.
 To leave a race, pause, select **End race**, then confirm with Cross (Circle cancels).
 Quitting the game also requires confirmation. The original snowy main menu is retained.

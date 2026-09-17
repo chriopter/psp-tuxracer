@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include "textures.h"
 #include "course.h"
 #include "physics.h"
+#include "clip_polygon.h"
 #include <list>
 
 #define TRACK_WIDTH 0.7
@@ -93,7 +94,8 @@ static T decrementRingIterator(T q) {
 }
 
 void DrawTrackmarks() {
-	if (param.perf_level < 3 || track_marks.quads.empty())
+	// The snow trench is core game feedback, including the PSP default profile.
+	if (track_marks.quads.empty())
 		return;
 
 	TTexture* textures[NUM_TRACK_TYPES];
@@ -108,74 +110,77 @@ void DrawTrackmarks() {
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	for (std::list<track_quad_t>::const_iterator q = track_marks.quads.begin(); q != track_marks.quads.end(); ++q) {
-		if (q->alpha != track_colour.a) {
-			track_colour.a = q->alpha;
-			set_material_diffuse(track_colour);
+	struct TrackVertex {
+		float uv[2]; GLubyte color[4]; float normal[3], position[3];
+	};
+	static_assert(sizeof(TrackVertex)==36, "native PSP track vertex");
+	static std::vector<TrackVertex> batch;
+	batch.clear();
+	int bound_type=-1;
+	auto flush = [&]() {
+		if (batch.empty()) return;
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
+		glEnableClientState(GL_NORMAL_ARRAY);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glTexCoordPointer(2,GL_FLOAT,sizeof(TrackVertex),batch[0].uv);
+		glColorPointer(4,GL_UNSIGNED_BYTE,sizeof(TrackVertex),batch[0].color);
+		glNormalPointer(GL_FLOAT,sizeof(TrackVertex),batch[0].normal);
+		glVertexPointer(3,GL_FLOAT,sizeof(TrackVertex),batch[0].position);
+		glDrawArrays(GL_TRIANGLES,0,batch.size());
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+		glDisableClientState(GL_NORMAL_ARRAY);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		batch.clear();
+	};
+	const TPlane* planes=get_view_clip_planes();
+	auto interpolate=[](const TrackVertex& a,const TrackVertex& b,float t) {
+		TrackVertex v;
+		for(int k=0;k<2;++k)v.uv[k]=a.uv[k]+t*(b.uv[k]-a.uv[k]);
+		for(int k=0;k<4;++k)v.color[k]=a.color[k]+t*(b.color[k]-a.color[k]);
+		for(int k=0;k<3;++k){
+			v.normal[k]=a.normal[k]+t*(b.normal[k]-a.normal[k]);
+			v.position[k]=a.position[k]+t*(b.position[k]-a.position[k]);
 		}
-		textures[q->track_type]->Bind();
-
-		if ((q->track_type == TRACK_HEAD) || (q->track_type == TRACK_TAIL)) {
-			glBegin(GL_QUADS);
-
-			glNormal3(q->n1);
-			glTexCoord2(q->t1);
-			glVertex3(q->v1);
-
-			glNormal3(q->n2);
-			glTexCoord2(q->t2);
-			glVertex3(q->v2);
-
-			glNormal3(q->n4);
-			glTexCoord2(q->t4);
-			glVertex3(q->v4);
-
-			glNormal3(q->n3);
-			glTexCoord2(q->t3);
-			glVertex3(q->v3);
-
-			glEnd();
-
-		} else {
-			glBegin(GL_QUAD_STRIP);
-			glNormal3(q->n2);
-			glTexCoord2(q->t2);
-			glVertex3(q->v2);
-
-			glNormal3(q->n1);
-			glTexCoord2(q->t1);
-			glVertex3(q->v1);
-
-			glNormal3(q->n4);
-			glTexCoord2(q->t4);
-			glVertex3(q->v4);
-
-			glNormal3(q->n3);
-			glTexCoord2(q->t3);
-			glVertex3(q->v3);
-
-			std::list<track_quad_t>::const_iterator qnext = q;
-			++qnext;
-			while (qnext != track_marks.quads.end() && qnext->track_type != TRACK_TAIL) {
-				q = qnext;
-				if (q->alpha != track_colour.a) {
-					track_colour.a = q->alpha;
-					set_material_diffuse(track_colour);
-				}
-
-				glNormal3(q->n4);
-				glTexCoord2(q->t4);
-				glVertex3(q->v4);
-
-				glNormal3(q->n3);
-				glTexCoord2(q->t3);
-				glVertex3(q->v3);
-
-				++qnext;
+		return v;
+	};
+	for (const auto& q : track_marks.quads) {
+		if (!q.alpha || !textures[q.track_type]) continue;
+		const TVector3d positions[]={q.v1,q.v2,q.v4,q.v3};
+		unsigned boundary=0;
+		bool rejected=false;
+		for(unsigned p=0;p<6;++p) {
+			unsigned outside=0;
+			for(const auto& v:positions)
+				outside += v.x*planes[p].nml.x+v.y*planes[p].nml.y+
+				           v.z*planes[p].nml.z+planes[p].d > 0;
+			if(outside==4) { rejected=true; break; }
+			if(outside) boundary|=1u<<p;
+		}
+		if(rejected) continue; // Reject only wholly invisible quads, not old visible tracks.
+		const TVector3d normals[]={q.n1,q.n2,q.n4,q.n3};
+		const TVector2d uv[]={q.t1,q.t2,q.t4,q.t3};
+		TrackVertex vertices[4];
+		for(unsigned j=0;j<4;++j) {
+			vertices[j]={{uv[j].x,uv[j].y},{255,255,255,q.alpha},
+			             {normals[j].x,normals[j].y,normals[j].z},
+			             {positions[j].x,positions[j].y,positions[j].z}};
+		}
+		if(bound_type!=q.track_type) {
+			flush(); textures[q.track_type]->Bind(); bound_type=q.track_type;
+		}
+		// Retain the original diagonal, UVs, normals and depth-dependent alpha.
+		for(unsigned j=1;j<3;++j) {
+			TrackVertex polygon[12]={vertices[0],vertices[j],vertices[j+1]};
+			int count=boundary ? clip_polygon(polygon,3,planes,boundary,interpolate) : 3;
+			for(int k=1;k+1<count;++k) {
+				batch.push_back(polygon[0]);batch.push_back(polygon[k]);batch.push_back(polygon[k+1]);
 			}
-			glEnd();
 		}
+		if(batch.size()>=1536) flush();
 	}
+	flush();
 }
 
 void break_track_marks() {
@@ -199,9 +204,6 @@ void break_track_marks() {
 }
 
 void add_track_mark(const CControl *ctrl, int *id) {
-	if (param.perf_level < 3)
-		return;
-
 	*id = Course.GetTerrainIdx(ctrl->cpos.x, ctrl->cpos.z, 0.5);
 	if (*id < 1) {
 		break_track_marks();
@@ -292,10 +294,7 @@ void add_track_mark(const CControl *ctrl, int *id) {
 }
 
 void UpdateTrackmarks(const CControl *ctrl) {
-	if (param.perf_level < 3)
-		return;
-
-	int trackid;
+	int trackid = -1;
 	TTerrType *TerrList = &Course.TerrList[0];
 
 	add_track_mark(ctrl, &trackid);

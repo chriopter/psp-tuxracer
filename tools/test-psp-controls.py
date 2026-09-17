@@ -8,6 +8,7 @@ root = Path(__file__).resolve().parent.parent
 platform = (root / 'ports/extremetuxracer/psp/platform.cpp').read_text()
 mapping = platform[platform.index('  bool racing = State::manager.CurrentState() == &Racing;'):]
 mapping = mapping[:mapping.index('  for (int i = 0; i < Keyboard::KeyCount; i++)')]
+analog = platform[platform.index('  if (!scriptedInput && p.Lx < 75)'):platform.index('  bool racing = State::manager.CurrentState() == &Racing;')]
 buttons = 'LEFT RIGHT UP DOWN CROSS CIRCLE SQUARE TRIANGLE START LTRIGGER RTRIGGER'.split()
 defines = '\n'.join(f'constexpr unsigned PSP_CTRL_{name} = 1u << {i};' for i, name in enumerate(buttons))
 source = r'''
@@ -22,6 +23,11 @@ struct State {
 };
 State::Manager State::manager;
 // DEFINES
+unsigned analog_sample(bool scriptedInput,int x,int y) {
+  struct {int Lx,Ly;} p{x,y}; unsigned b=0;
+  // ANALOG
+  return b;
+}
 std::array<bool,Keyboard::KeyCount> sample(const int* state, unsigned b) {
   State::manager.state=state;
   // MAPPING
@@ -32,8 +38,14 @@ std::array<bool,Keyboard::KeyCount> sample(const int* state, unsigned b) {
 void release() { sample(&Menu,0); }
 int main() {
   using namespace Keyboard;
+  for(int x : {0,128,255})for(int y : {0,128,255}) {
+    assert(analog_sample(true,x,y)==0);
+    const unsigned expected=(x<75?PSP_CTRL_LEFT:0)|(x>180?PSP_CTRL_RIGHT:0)|
+                            (y<75?PSP_CTRL_UP:0)|(y>180?PSP_CTRL_DOWN:0);
+    assert(analog_sample(false,x,y)==expected);
+  }
   const Key menu[] = {Left,Right,Up,Down,Return,Escape,Unknown,Unknown,Unknown,Unknown,Unknown};
-  const Key race[] = {Left,Right,Up,Down,Space,P,T,R,P,Down,Up};
+  const Key race[] = {Left,Right,Up,Down,Space,Unknown,T,R,P,Down,Up};
   const Key pause[] = {Left,Right,Up,Down,Return,Escape,Unknown,Unknown,P,Unknown,Unknown};
   for (int context=0;context<3;context++) {
     const int* state=context==0?&Menu:context==1?&Racing:&Paused;
@@ -54,7 +66,7 @@ int main() {
   held=sample(&Racing,PSP_CTRL_START);
   for(bool down:held) assert(!down); // Ignored menu press stays ignored until release.
   release(); sample(&Racing,PSP_CTRL_CIRCLE);
-  held=sample(&Paused,PSP_CTRL_CIRCLE); assert(held[P] && !held[Escape]);
+  held=sample(&Paused,PSP_CTRL_CIRCLE); assert(!held[P] && !held[Escape]);
   release(); assert(sample(&Paused,PSP_CTRL_CIRCLE)[Escape]);
   release(); held=sample(&Racing,PSP_CTRL_CROSS|PSP_CTRL_SQUARE|PSP_CTRL_LEFT);
   assert(held[Space] && held[T] && held[Left]);
@@ -70,7 +82,7 @@ int main() {
   assert(held[P] && !held[Return]); // Start must not select a menu entry on arrival.
   std::cout << "PASS: 55 bindings, guide Start gate, disabled menu actions, held-state transitions and simultaneous controls\n";
 }
-'''.replace('// DEFINES', defines).replace('// MAPPING', mapping)
+'''.replace('// DEFINES', defines).replace('// MAPPING', mapping).replace('// ANALOG',analog)
 with tempfile.TemporaryDirectory(prefix='etr-controls-') as temp:
     path = Path(temp)
     (path / 'controls.cpp').write_text(source)

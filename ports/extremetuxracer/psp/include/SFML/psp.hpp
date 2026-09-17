@@ -118,6 +118,7 @@ class Image {
 
 public:
   bool loadFromFile(const std::string &);
+  bool loadTextureFromFile(const std::string &, unsigned limit, Vector2u &original);
   void create(unsigned w, unsigned h, Color c = Color());
   Vector2u getSize() const { return size; }
   const Uint8 *getPixelsPtr() const { return pixels.data(); }
@@ -130,7 +131,8 @@ class Texture {
   struct Data;
   std::shared_ptr<Data> data;
   Vector2u size;
-  bool smooth = false, repeated = false;
+  bool smooth = false, repeated = false, mipmaps = false;
+  bool videoMemory = false;
   unsigned maxSize = 256;
 
 public:

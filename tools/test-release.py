@@ -22,7 +22,7 @@ class ReleaseTests(unittest.TestCase):
         releases.append({'tag_name': 'v0.11.0', 'draft': True})
         self.assertEqual(publish.next_version(releases), ('v0.12.0', 'v0.10.2'))
 
-    def test_real_commit_subjects_and_bodies(self):
+    def test_real_commit_subjects_without_body_dump(self):
         with tempfile.TemporaryDirectory() as directory:
             old = os.getcwd()
             os.chdir(directory)
@@ -40,9 +40,12 @@ class ReleaseTests(unittest.TestCase):
                 git('commit', '--allow-empty', '-qm', 'Tune UI')
                 result = publish.notes('HEAD', 'v0.1.0')
                 self.assertNotIn('Old commit', result)
-                for line in ('Fix steering', 'Preserve curves and ümlauts.', 'Second body line.', 'Tune UI'):
+                for line in ('Fix steering', 'Tune UI', '✨ New', '🐛 Fixed'):
                     self.assertIn(line, result)
-                self.assertLess(result.index('Fix steering'), result.index('Tune UI'))
+                for line in ('Preserve curves and ümlauts.', 'Second body line.'):
+                    self.assertNotIn(line, result)
+                self.assertIn('The release in five lines:', result)
+                self.assertEqual(result.split('✨ New')[0].count('\n- '), 5)
                 self.assertIn('no new commits', publish.notes('v0.1.0', 'v0.1.0'))
             finally:
                 os.chdir(old)
@@ -71,7 +74,7 @@ class ReleaseTests(unittest.TestCase):
                 fork = git('rev-parse', 'HEAD')
                 result = publish.notes('HEAD', 'v0.35.0')
                 self.assertIn('Port Extreme Tux Racer to PSP', result)
-                self.assertIn('Initial PSP port', result)
+                self.assertNotIn('Initial PSP port', result)
                 self.assertNotIn('Legacy PSP history', result)
                 self.assertNotIn('Original SVN release', result)
                 self.assertEqual(publish.notes('HEAD', None), result)
@@ -82,6 +85,17 @@ class ReleaseTests(unittest.TestCase):
                 self.assertIn('Next PSP improvement', result)
                 self.assertNotIn('Port Extreme Tux Racer to PSP', result)
                 self.assertNotIn('Initial PSP port', result)
+                # An explicitly edited release note replaces the fallback, but
+                # an unchanged note must never leak into the next release.
+                Path('docs/release-notes.md').write_text('Curated hardware findings.\n')
+                git('add', 'docs/release-notes.md')
+                git('commit', '-qm', 'Document tested release')
+                self.assertEqual(publish.notes('HEAD', 'v0.36.0'), 'Curated hardware findings.\n')
+                git('tag', 'v0.37.0')
+                git('commit', '--allow-empty', '-qm', 'Fix next issue')
+                result = publish.notes('HEAD', 'v0.37.0')
+                self.assertNotIn('Curated hardware findings', result)
+                self.assertIn('Fix next issue', result)
             finally:
                 os.chdir(old)
 
@@ -120,6 +134,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue(all(c[3] == 'v0.2.0' for c in calls))
         self.assertIn('--draft', calls[0])
         self.assertIn('abc123', calls[0])
+        self.assertEqual(calls[0][calls[0].index('--title') + 1], 'v0.2.0')
         self.assertIn('--draft=false', calls[-1])
         self.assertEqual(self.run_publish([], missing=True), [])
 

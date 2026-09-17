@@ -371,7 +371,9 @@ static void CalcTrickControls(CControl *ctrl, float time_step, bool airborne) {
 //					loop
 // ====================================================================
 
+extern void PspProfileMark(unsigned section);
 void CRacing::Loop(float time_step) {
+	PspProfileMark(8);
 	CControl *ctrl = g_game.player->ctrl;
 	float ycoord = Course.FindYCoord(ctrl->cpos.x, ctrl->cpos.z);
 	bool airborne = (bool)(ctrl->cpos.y > (ycoord + JUMP_MAX_START_HEIGHT));
@@ -386,6 +388,7 @@ void CRacing::Loop(float time_step) {
 
 //  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	ctrl->UpdatePlayerPos(time_step);
+	PspProfileMark(0);
 //  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 	if (g_game.finish) IncCameraDistance(time_step);
@@ -396,21 +399,31 @@ void CRacing::Loop(float time_step) {
 	if (sky) Env.DrawSkybox(ctrl->viewpos);
 	if (fog) Env.DrawFog();
 	Env.SetupLight();
+	// Submit early so the GE renders the sky while the CPU prepares terrain.
+	glFlush();
+	PspProfileMark(1);
 	if (terr) RenderCourse();
+	glFlush();
+	PspProfileMark(2);
 	DrawTrackmarks();
 	if (trees) DrawTrees();
+	PspProfileMark(3);
 	if (param.perf_level > 2) {
 		update_particles(time_step);
 		draw_particles(ctrl);
 	}
 	g_game.character->shape->Draw();
+	PspProfileMark(4);
 	UpdateWind(time_step);
 	UpdateSnow(time_step, ctrl);
 	DrawSnow(ctrl);
+	PspProfileMark(5);
 	DrawHud(ctrl);
+	PspProfileMark(6);
 
 	Reshape(Winsys.resolution.width, Winsys.resolution.height);
 	Winsys.SwapBuffers();
+	PspProfileMark(7);
 	if (g_game.finish == false) g_game.time += time_step;
 }
 

@@ -98,7 +98,8 @@ def main():
         shutil.copy2(ROOT / 'docs/upstream-copyright.txt', game_root / 'LICENSES/upstream-copyright.txt')
         (game_root / 'INSTALL.txt').write_text(
             'Copy PSP/GAME/ExtremeTuxRacer to the PSP memory stick or open its EBOOT.PBP in PPSSPP.\n'
-            'Requires PSP homebrew support. Tested in PPSSPP at 333 MHz, not physical hardware.\n'
+            'Requires PSP homebrew support. Hardware and PPSSPP validation: docs/psp-hardware-validation.md in the corresponding game sources.\n'
+            'CI verifies builds/tests; physical PSP performance varies by course and settings.\n'
             'The optional PSP/SYSTEM files are PPSSPP defaults; keep your existing settings if preferred.\n'
             'Distribute the accompanying sources.tar.gz and its license/build records with this game.\n')
         metadata = {'commit': commit, 'eboot_sha256': sha256(eboot), 'sdk_image': lock['sdk_image'],

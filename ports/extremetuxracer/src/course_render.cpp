@@ -43,6 +43,7 @@ void setup_course_tex_gen() {
 
 void RenderCourse() {
 	ScopedRenderMode rm(COURSE);
+	if (param.perf_level == 1) glDisable(GL_BLEND);
 	setup_course_tex_gen();
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	set_material(colWhite, colBlack, 1.0);
@@ -62,25 +63,53 @@ void DrawTrees() {
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	set_material(colWhite, colBlack, 1.0);
 
+	struct ObjectVertex { float uv[2], normal[3], position[3]; };
+	static std::vector<ObjectVertex> batch;
+	batch.clear();
+	auto flush = [&]() {
+		if (batch.empty()) return;
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_NORMAL_ARRAY);
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glTexCoordPointer(2, GL_FLOAT, sizeof(ObjectVertex), batch[0].uv);
+		glNormalPointer(GL_FLOAT, sizeof(ObjectVertex), batch[0].normal);
+		glVertexPointer(3, GL_FLOAT, sizeof(ObjectVertex), batch[0].position);
+		glDrawArrays(GL_TRIANGLES, 0, batch.size());
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_NORMAL_ARRAY);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		batch.clear();
+	};
+	auto append = [&](const GLfloat* vtx, const GLshort* tex, const TVector3d& pos,
+	                  const TVector3d& normal, float sine=0.f, float cosine=1.f) {
+		for (int j : {0,1,2,0,2,3}) {
+			const float x=vtx[j*3], z=vtx[j*3+2];
+			batch.push_back({{float(tex[j*2]),float(tex[j*2+1])},
+			                {normal.x,normal.y,normal.z},
+			                {pos.x+x*cosine+z*sine,pos.y+vtx[j*3+1],pos.z-x*sine+z*cosine}});
+		}
+	};
+	const float sine = param.perf_level>1 ? std::sin(ANGLES_TO_RADIANS(1.f)) : 0.f;
+	const float cosine = param.perf_level>1 ? std::cos(ANGLES_TO_RADIANS(1.f)) : 1.f;
 	// Trees
 	for (std::size_t i = 0; i< Course.CollArr.size(); i++) {
 		if (clip_course) {
 			if (ctrl->viewpos.z - Course.CollArr[i].pt.z > fwd_clip_limit) continue;
 			if (Course.CollArr[i].pt.z - ctrl->viewpos.z > bwd_clip_limit) continue;
+			const auto& tree=Course.CollArr[i];
+			const float radius=tree.diam*0.75f; // Includes the optional 1-degree rotation.
+			if (clip_aabb_to_view_frustum(tree.pt+TVector3d(-radius,0,-radius),
+			                            tree.pt+TVector3d(radius,tree.height,radius))==NotVisible) continue;
 		}
 
 		if (Course.CollArr[i].tree_type != tree_type) {
+			flush();
 			tree_type = Course.CollArr[i].tree_type;
 			Course.ObjTypes[tree_type].texture->Bind();
 		}
 
-		glPushMatrix();
-		glTranslate(Course.CollArr[i].pt);
-		if (param.perf_level > 1) glRotatef(1, 0, 1, 0);
-
 		float treeRadius = Course.CollArr[i].diam / 2.0;
 		float treeHeight = Course.CollArr[i].height;
-		glNormal3f(0, 0, 1);
 
 		static const GLshort tex[] = {
 			0, 1,
@@ -104,21 +133,11 @@ void DrawTrees() {
 			    0.0,         treeHeight, -treeRadius
 		    };
 
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		glVertexPointer(3, GL_FLOAT, 0, vtx);
-		glTexCoordPointer(2, GL_SHORT, 0, tex);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
- glVertexPointer(3, GL_FLOAT, 0, vtx+12);
- glTexCoordPointer(2, GL_SHORT, 0, tex+8);
- glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
-
-		glPopMatrix();
+		const TVector3d normal(sine,0,cosine);
+		append(vtx,tex,Course.CollArr[i].pt,normal,sine,cosine);
+		append(vtx+12,tex+8,Course.CollArr[i].pt,normal,sine,cosine);
 	}
+	flush();
 
 	// Items
 	const TObjectType* item_type = nullptr;
@@ -128,15 +147,18 @@ void DrawTrees() {
 		if (clip_course) {
 			if (ctrl->viewpos.z - Course.NocollArr[i].pt.z > fwd_clip_limit) continue;
 			if (Course.NocollArr[i].pt.z - ctrl->viewpos.z > bwd_clip_limit) continue;
+			const auto& item=Course.NocollArr[i];
+			const float radius=item.diam*0.5f;
+			if (clip_aabb_to_view_frustum(item.pt+TVector3d(-radius,0,-radius),
+			                            item.pt+TVector3d(radius,item.height,radius))==NotVisible) continue;
 		}
 
 		if (&Course.NocollArr[i].type != item_type) {
+			flush();
 			item_type = &Course.NocollArr[i].type;
 			item_type->texture->Bind();
 		}
 
-		glPushMatrix();
-		glTranslate(Course.NocollArr[i].pt);
 		float itemRadius = Course.NocollArr[i].diam / 2;
 		float itemHeight = Course.NocollArr[i].height;
 
@@ -147,7 +169,7 @@ void DrawTrees() {
 			normal = ctrl->viewpos - Course.NocollArr[i].pt;
 			normal.Norm();
 		}
-		glNormal3(normal);
+		const TVector3d lightNormal = normal;
 		normal.y = 0.0;
 		normal.Norm();
 
@@ -173,15 +195,7 @@ void DrawTrees() {
 			static_cast<GLfloat>(itemHeight),
 			static_cast<GLfloat>(itemRadius*normal.x)
 		};
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		glVertexPointer(3, GL_FLOAT, 0, vtx);
-		glTexCoordPointer(2, GL_SHORT, 0, tex);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glPopMatrix();
+		append(vtx,tex,Course.NocollArr[i].pt,lightNormal);
 	}
+	flush();
 }

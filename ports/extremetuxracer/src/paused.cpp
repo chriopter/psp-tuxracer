@@ -40,6 +40,7 @@ GNU General Public License for more details.
 #include "gui.h"
 #include "game_over.h"
 #include "psp_ui.h"
+#include "controls_guide.h"
 
 CPaused Paused;
 
@@ -47,13 +48,19 @@ static bool sky = true;
 static bool fog = true;
 static bool terr = true;
 static bool trees = true;
-static bool endSelected = false;
+static int selection = 0;
 static bool confirmEnd = false;
+static bool showControls = false;
 
-void CPaused::Enter() { endSelected = false; confirmEnd = false; }
+void CPaused::Enter() { selection = 0; confirmEnd = false; showControls = false; }
 
 void CPaused::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 	if (release) return;
+	if (showControls) {
+		if (key == sf::Keyboard::Escape || key == sf::Keyboard::P || key == sf::Keyboard::Return)
+			showControls = false;
+		return;
+	}
 	if (confirmEnd) {
 		if (key == sf::Keyboard::Escape || key == sf::Keyboard::P) confirmEnd = false;
 		if (key == sf::Keyboard::Return) {
@@ -65,8 +72,10 @@ void CPaused::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 	}
 	switch (key) {
 		case sf::Keyboard::Up:
+			selection = (selection + 2) % 3;
+			break;
 		case sf::Keyboard::Down:
-			endSelected = !endSelected;
+			selection = (selection + 1) % 3;
 			break;
 		case sf::Keyboard::C:
 			Winsys.TakeScreenshot();
@@ -89,7 +98,8 @@ void CPaused::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 			break;
 		case sf::Keyboard::Return:
 		case sf::Keyboard::Space:
-			if (endSelected) confirmEnd = true;
+			if (selection == 2) confirmEnd = true;
+			else if (selection == 1) showControls = true;
 			else State::manager.RequestEnterState(Racing);
 			break;
 		default:
@@ -104,6 +114,13 @@ void CPaused::Mouse(int button, int state, int x, int y) {
 // ====================================================================
 
 void CPaused::Loop(float time_step) {
+	if (showControls) {
+		ScopedRenderMode mode(GUI);
+		ClearRenderContext();
+		DrawControlsGuide(false);
+		Winsys.SwapBuffers();
+		return;
+	}
 	CControl *ctrl = g_game.player->ctrl;
 	int width = Winsys.resolution.width;
 	int height = Winsys.resolution.height;
@@ -129,11 +146,12 @@ void CPaused::Loop(float time_step) {
 	Reshape(width, height);
 	{
 		ScopedRenderMode overlay(GUI);
-		PspUI::Box(137,113,580,264,sf::Color(18,36,53));
-		PspUI::Text(169,132,"PAUSED",34);
-		PspUI::Box(163,endSelected?246:194,528,46,sf::Color(30,72,98));
-		PspUI::Text(185,201,"Resume",28);
-		PspUI::Text(185,253,"End race",28);
+		PspUI::Box(137,91,580,286,sf::Color(18,36,53));
+		PspUI::Text(169,106,"PAUSED",34);
+		PspUI::Box(163,160+selection*50,528,46,sf::Color(30,72,98));
+		PspUI::Text(185,167,"Resume",28);
+		PspUI::Text(185,217,"Controls",28);
+		PspUI::Text(185,267,"End race",28);
 		PspUI::Hint(169,328,PspUI::Cross,"Select");
 		PspUI::Hint(420,328,PspUI::Circle,"Resume");
 		if (confirmEnd) PspUI::Confirm("END THIS RACE?", "This run will not count as a finish.");

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // PSP platform layer for the official Extreme Tux Racer PC sources.
+#define GL_GLEXT_PROTOTYPES
 #include "course.h"
 #include <cerrno>
 #include "savedata.hpp"
@@ -49,20 +50,43 @@ static bool benchmark_recording = false;
 static std::vector<unsigned> benchmark_times, benchmark_steering;
 static unsigned benchmark_music_frames = 0;
 static std::vector<unsigned> benchmark_work;
+static uint64_t profile_last = 0, profile_sum[8] = {};
+static unsigned profile_count[8] = {};
+static bool profile_sync = false;
+static uint64_t terrain_vertices = 0;
+void PspProfileTerrain(unsigned count) { if (benchmark_recording) terrain_vertices += count; }
+void PspProfileMark(unsigned section) {
+  if (!benchmark_recording) return;
+  if (profile_sync) glFinish();
+  const auto now = sceKernelGetSystemTimeWide();
+  if (section < 8 && profile_last) {
+    profile_sum[section] += now - profile_last;
+    ++profile_count[section];
+  }
+  profile_last = now;
+}
 static unsigned heap_peak = 0, free_user_min = ~0u;
+extern "C" size_t __pspgl_vidmem_avail(void);
 void PspTraceResource(const char *phase, const char *path) {
   const auto memory = mallinfo();
   fprintf(stderr,
-          "RESOURCE %s: %s heap_used=%u heap_free=%u free_user=%u largest_free=%u stack_check=%d\n",
+          "RESOURCE %s: %s heap_used=%u heap_free=%u free_user=%u largest_free=%u stack_check=%d free_vram=%u\n",
           phase, path, (unsigned)memory.uordblks, (unsigned)memory.fordblks,
           sceKernelTotalFreeMemSize(), sceKernelMaxFreeMemSize(),
-          sceKernelCheckThreadStack());
+          sceKernelCheckThreadStack(), (unsigned)__pspgl_vidmem_avail());
 }
 static void finish_benchmark() {
   if (!benchmark_recording || benchmark_times.empty())
     return;
   benchmark_recording = false;
   benchmark = 0;
+  FILE *raw = fopen("config/frame-times-us.json", "w");
+  if (raw) {
+    fputc('[', raw);
+    for (std::size_t i=0;i<benchmark_times.size();++i)
+      fprintf(raw,"%s%u",i?",":"",benchmark_times[i]);
+    fputs("]\n",raw); fclose(raw);
+  }
   auto statistics = [](std::vector<unsigned> &values, FILE *f) {
     uint64_t sum = 0;
     unsigned slow = 0;
@@ -99,6 +123,15 @@ static void finish_benchmark() {
           benchmark_work.empty() ? 0 : benchmark_work[(benchmark_work.size()-1)*95/100],
           benchmark_work.empty() ? 0 : benchmark_work.back(), heap_peak, free_user_min);
   fclose(f);
+  f = fopen("config/profile.json", "w");
+  if (f) {
+    const char* sections[]={"physics","view_sky","terrain","objects","character","snow","hud","present"};
+    fprintf(f, "{\"synchronous_gpu\":%s,\"mean_us\":{",profile_sync?"true":"false");
+    for (unsigned i=0;i<8;++i)
+      fprintf(f, "%s\"%s\":%llu", i ? "," : "",sections[i], (unsigned long long)(profile_count[i] ? profile_sum[i]/profile_count[i] : 0));
+    fprintf(f, "},\"terrain_vertices_per_frame\":%llu}\n", (unsigned long long)(profile_count[2] ? terrain_vertices/profile_count[2] : 0));
+    fclose(f);
+  }
 }
 
 extern void EnterPractice();
@@ -148,6 +181,8 @@ int main(int argc, char **argv) {
           (unsigned)memory.arena, (unsigned)memory.uordblks,
           sceKernelTotalFreeMemSize(), sceKernelMaxFreeMemSize());
   FILE *bf = fopen("config/benchmark", "r");
+  FILE *sync = fopen("config/profile-sync", "r");
+  if (sync) { profile_sync = true; fclose(sync); }
   if (bf) {
     char course[128] = {};
     int parsed = fscanf(bf, "%u %127s", &benchmark, course);
@@ -217,7 +252,13 @@ void Image::create(unsigned w, unsigned h, Color c) {
   for (unsigned i = 0; i < w * h; i++)
     memcpy(&pixels[i * 4], &c, 4);
 }
+static unsigned pot(unsigned n);
 bool Image::loadFromFile(const std::string &p) {
+  Vector2u original;
+  return loadTextureFromFile(p, 0, original);
+}
+bool Image::loadTextureFromFile(const std::string &p, unsigned limit,
+                                Vector2u &original) {
   PspTraceResource("decode begin", p.c_str());
   SDL_Surface *s = IMG_Load(p.c_str());
   if (!s) {
@@ -228,13 +269,18 @@ bool Image::loadFromFile(const std::string &p) {
           p.c_str(), s->w, s->h, (unsigned)s->pitch,
           (unsigned)s->format->BytesPerPixel);
   PspTraceResource("convert begin", p.c_str());
-  create(s->w, s->h);
+  original = {unsigned(s->w), unsigned(s->h)};
+  // Match Texture::loadFromImage's texel selection exactly, without keeping
+  // a second full-resolution RGBA copy alongside SDL's decoded surface.
+  create(limit ? std::min(limit, pot(original.x)) : original.x,
+         limit ? std::min(limit, pot(original.y)) : original.y);
   SDL_LockSurface(s);
   for (unsigned y = 0; y < size.y; y++)
     for (unsigned x = 0; x < size.x; x++) {
       Uint32 c = 0;
       memcpy(&c,
-             (char *)s->pixels + y * s->pitch + x * s->format->BytesPerPixel,
+             (char *)s->pixels + (y * original.y / size.y) * s->pitch +
+                 (x * original.x / size.x) * s->format->BytesPerPixel,
              s->format->BytesPerPixel);
       SDL_GetRGBA(c, s->format, &pixels[(y * size.x + x) * 4],
                   &pixels[(y * size.x + x) * 4 + 1],
@@ -271,13 +317,25 @@ struct Texture::Data {
 GLuint Texture::id() const { return data ? data->id : 0; }
 bool Texture::loadFromFile(const std::string &p) {
   Image i;
+  mipmaps = p.find("/objects/") != std::string::npos;
+  // Reserve scarce EDRAM for the full-detail repeated course textures.
+  // Menu art, font atlases and previews keep exactly the same pixels in RAM.
+  videoMemory = p.find("/terrains/") != std::string::npos ||
+                p.find("/objects/") != std::string::npos ||
+                p.find("/env/") != std::string::npos ||
+                p.find("/textures/snowstart.png") != std::string::npos ||
+                p.find("/textures/snowtrack.png") != std::string::npos ||
+                p.find("/textures/snowstop.png") != std::string::npos;
   if (p.find("preview.png") != std::string::npos)
     maxSize = 128;
   printf("texture %s\n", p.c_str());
-  if (!i.loadFromFile(p))
+  Vector2u original;
+  if (!i.loadTextureFromFile(p, maxSize, original))
     return false;
   PspTraceResource("upload begin", p.c_str());
   const bool loaded = loadFromImage(i);
+  if (loaded)
+    size = original; // Sprite rectangles still use the source image dimensions.
   PspTraceResource(loaded ? "upload returned" : "upload failed", p.c_str());
   return loaded;
 }
@@ -293,12 +351,17 @@ bool Texture::loadFromImage(const Image &i) {
     return false;
   unsigned w = std::min(maxSize, pot(size.x)),
            h = std::min(maxSize, pot(size.y));
-  std::vector<Uint8> p(w * h * 4);
   const Uint8 *src = i.getPixelsPtr();
-  for (unsigned y = 0; y < h; y++)
-    for (unsigned x = 0; x < w; x++)
-      memcpy(&p[(y * w + x) * 4],
-             &src[((y * size.y / h) * size.x + x * size.x / w) * 4], 4);
+  std::vector<Uint8> rgba;
+  const Uint8 *p = src;
+  if (w != size.x || h != size.y) {
+    rgba.resize(w * h * 4);
+    for (unsigned y = 0; y < h; y++)
+      for (unsigned x = 0; x < w; x++)
+        memcpy(&rgba[(y * w + x) * 4],
+               &src[((y * size.y / h) * size.x + x * size.x / w) * 4], 4);
+    p = rgba.data();
+  }
   data = std::make_shared<Data>();
   bind(this);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -315,13 +378,77 @@ bool Texture::loadFromImage(const Image &i) {
                   ((p[k * 4 + 2] >> 3) << 11))
                : ((p[k * 4] >> 4) | ((p[k * 4 + 1] >> 4) << 4) |
                   ((p[k * 4 + 2] >> 4) << 8) | ((p[k * 4 + 3] >> 4) << 12));
-  glTexImage2D(GL_TEXTURE_2D, 0, opaque ? GL_RGB : GL_RGBA, w, h, 0,
+  // Preserve the accepted terrain appearance. Automatic terrain mip levels
+  // currently erase visible snow detail on hardware and are not a valid
+  // performance tradeoff. Object mipmaps remain independent of terrain.
+  const bool mipmapped = mipmaps;
+  auto upload = [&](unsigned level, unsigned width, unsigned height) {
+    if (mipmapped || !videoMemory) {
+      // Supply native linear storage with a complete 16-byte-wide, 8-row
+      // tile even for the smallest levels. PSPGL's ordinary upload packs
+      // those levels tightly while retaining the texture's swizzle flag.
+      const unsigned stride=std::max(8u,width), rows=std::max(8u,height);
+      std::vector<uint16_t> pixels;
+      const uint16_t *uploadPixels = packed.data();
+      if (stride != width || rows != height) {
+        pixels.resize(stride*rows);
+        for (unsigned y=0;y<rows;++y) for (unsigned x=0;x<stride;++x)
+          pixels[y*stride+x]=packed[std::min(y,height-1)*width+std::min(x,width-1)];
+        uploadPixels = pixels.data();
+      }
+      GLuint buffer=0;
+      glGenBuffers(1,&buffer);
+      glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB,buffer);
+      glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB,stride*rows*sizeof(uint16_t),uploadPixels,
+                   videoMemory ? GL_STATIC_DRAW : GL_DYNAMIC_DRAW);
+      if (glGetError() != GL_NO_ERROR) {
+        // PSPGL dereferences a failed PBO allocation in glTexImage2D.
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB,0);
+        glDeleteBuffers(1,&buffer);
+        return false;
+      }
+      glPixelStorei(GL_UNPACK_ROW_LENGTH,stride);
+      glTexImage2D(GL_TEXTURE_2D,level,opaque?GL_RGB:GL_RGBA,width,height,0,opaque?GL_RGB:GL_RGBA,
+                   opaque?GL_UNSIGNED_SHORT_5_6_5_REV:GL_UNSIGNED_SHORT_4_4_4_4_REV,nullptr);
+      glPixelStorei(GL_UNPACK_ROW_LENGTH,0);
+      glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB,0);
+      glDeleteBuffers(1,&buffer);
+      return glGetError() == GL_NO_ERROR;
+    }
+    glTexImage2D(GL_TEXTURE_2D, level, opaque ? GL_RGB : GL_RGBA, width, height, 0,
                opaque ? GL_RGB : GL_RGBA,
                opaque ? GL_UNSIGNED_SHORT_5_6_5_REV
                       : GL_UNSIGNED_SHORT_4_4_4_4_REV,
                packed.data());
+    return glGetError() == GL_NO_ERROR;
+  };
+  if (!upload(0,w,h))
+    return false;
+  // World objects retain their full-resolution base and distant mip levels.
+  if (mipmapped) {
+    // GE supports levels 0..7. Smaller base images still need their final
+    // 1x1 level; stopping every texture at 2x2 leaves that level undefined.
+    for (unsigned level=1; level<8 && (w>1 || h>1); ++level) {
+      const unsigned nw=std::max(1u,w/2), nh=std::max(1u,h/2);
+      std::vector<Uint8> down(nw*nh*4);
+      for (unsigned y=0;y<nh;++y) for (unsigned x=0;x<nw;++x) {
+        for (unsigned c=0;c<4;++c) {
+          unsigned sum=0;
+          for (unsigned dy=0;dy<2;++dy) for (unsigned dx=0;dx<2;++dx)
+            sum+=p[(std::min(h-1,y*2+dy)*w+std::min(w-1,x*2+dx))*4+c];
+          down[(y*nw+x)*4+c]=(sum+2)/4;
+        }
+      }
+      rgba.swap(down); p=rgba.data(); w=nw; h=nh; packed.resize(w*h);
+      for (unsigned k=0;k<w*h;++k)
+        packed[k]=opaque ? (p[k*4]>>3)|((p[k*4+1]>>2)<<5)|((p[k*4+2]>>3)<<11)
+                         : (p[k*4]>>4)|((p[k*4+1]>>4)<<4)|((p[k*4+2]>>4)<<8)|((p[k*4+3]>>4)<<12);
+      if (!upload(level,w,h))
+        return false;
+    }
+  }
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  smooth ? GL_LINEAR : GL_NEAREST);
+                  mipmapped ? GL_LINEAR_MIPMAP_NEAREST : smooth ? GL_LINEAR : GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
                   smooth ? GL_LINEAR : GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
@@ -514,14 +641,18 @@ void RenderWindow::display() {
   eglSwapBuffers(egl_display, surface);
   // Never write profiling logs to the Memory Stick during normal play.
   if (!benchmark_recording) return;
-  static uint64_t last = 0, total = 0;
-  static unsigned frames = 0, worst = 0;
+  static uint64_t last = 0;
+  static bool skip_interval = false;
   static State *previous = nullptr;
   auto now = sceKernelGetSystemTimeWide();
   auto state = State::manager.CurrentState();
   if (state == &Racing && previous == state && last) {
     unsigned dt = now - last;
-    if (benchmark_recording) {
+    if (skip_interval) {
+      // The first interval follows the startup marker write and is not a
+      // complete display interval. Do not bias the measured FPS upward.
+      skip_interval = false;
+    } else if (benchmark_recording) {
       benchmark_times.push_back(dt);
       benchmark_work.push_back(before_present - last);
       if (benchmark_times.size() % 60 == 1) {
@@ -533,30 +664,17 @@ void RenderWindow::display() {
       if (Mix_PlayingMusic())
         ++benchmark_music_frames;
     }
-    total += dt;
-    worst = std::max(worst, dt);
-    if (++frames == 300) {
-      FILE *f = fopen("config/timing.log", "a");
-      if (f) {
-        fprintf(f,
-                "ETR timing: cpu=%d frames=%u fps=%.3f worst_us=%u music=%d "
-                "position=%.2f,%.2f,%.2f\n",
-                scePowerGetCpuClockFrequencyInt(), frames,
-                frames * 1000000.f / total, worst, Mix_PlayingMusic(),
-                g_game.player->ctrl->cpos.x, g_game.player->ctrl->cpos.y,
-                g_game.player->ctrl->cpos.z);
-        fclose(f);
-      }
-      frames = 0;
-      total = 0;
-      worst = 0;
-    }
   } else {
     if (previous == &Racing)
       finish_benchmark();
-    frames = 0;
-    total = 0;
-    worst = 0;
+    if (state == &Racing) {
+      // Signal external capture tools before timing starts. No USB/Memory
+      // Stick profiling writes are allowed inside the measured frame window.
+      FILE *f=fopen("config/timing.log","w");
+      if (f) { fprintf(f,"ETR benchmark racing: %s\n",benchcourse.c_str()); fclose(f); }
+      now=sceKernelGetSystemTimeWide();
+      skip_interval=true;
+    }
   }
   previous = state;
   last = now;
@@ -663,7 +781,8 @@ bool RenderWindow::pollEvent(Event &e) {
     if (b || p.Lx < 75 || p.Lx > 180 || p.Ly < 75 || p.Ly > 180) return false;
     inputSuppressed = false;
   }
-  if (benchmark && State::manager.CurrentState() == &Racing) {
+  const bool scriptedInput = benchmark && State::manager.CurrentState() == &Racing;
+  if (scriptedInput) {
     unsigned phase = benchframe++ % 240;
     b = PSP_CTRL_UP;
     if (phase >= 60 && phase < 90)
@@ -675,13 +794,13 @@ bool RenderWindow::pollEvent(Event &e) {
       State::manager.RequestEnterState(Paused);
     }
   }
-  if (p.Lx < 75)
+  if (!scriptedInput && p.Lx < 75)
     b |= PSP_CTRL_LEFT;
-  if (p.Lx > 180)
+  if (!scriptedInput && p.Lx > 180)
     b |= PSP_CTRL_RIGHT;
-  if (p.Ly < 75)
+  if (!scriptedInput && p.Ly < 75)
     b |= PSP_CTRL_UP;
-  if (p.Ly > 180)
+  if (!scriptedInput && p.Ly > 180)
     b |= PSP_CTRL_DOWN;
   bool racing = State::manager.CurrentState() == &Racing;
   bool now[Keyboard::KeyCount] = {};
@@ -694,7 +813,7 @@ bool RenderWindow::pollEvent(Event &e) {
                          Keyboard::Up,
                          Keyboard::Down,
                          racing ? Keyboard::Space : Keyboard::Return,
-                         racing ? Keyboard::P : Keyboard::Escape,
+                         racing ? Keyboard::Unknown : Keyboard::Escape,
                          racing ? Keyboard::T : Keyboard::Unknown,
                          racing ? Keyboard::R : Keyboard::Unknown,
                          (racing || State::manager.CurrentState() == &Paused ||

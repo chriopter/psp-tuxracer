@@ -30,6 +30,7 @@ jobs:
           python3 tools/test-psp-music.py
           python3 tools/test-psp-controls.py
           python3 tools/test-psp-ui.py
+          python3 tools/test-psp-textures.py
           python3 tools/test-release.py
       - name: Build PSP executable
         run: ./build-extremetuxracer.sh
@@ -63,7 +64,7 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           COMMIT: ${{ github.sha }}
         run: gh run download "$RUN_ID" --name "extremetuxracer-psp-$COMMIT" --dir dist
-      - name: Publish next v0.x release with commit notes
+      - name: Publish next v0.x release with curated or delta notes
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

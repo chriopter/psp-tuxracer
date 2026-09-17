@@ -296,8 +296,23 @@ void CTexture::DrawNumStr(const std::string& s, int x, int y, float size, const 
 	glColor(col);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	struct DigitVertex { float u,v,x,y; float z=0; };
+	static std::vector<DigitVertex> digits;
+	digits.clear();
 	for (std::size_t i=0; i < s.size(); i++) {
-		DrawNumChr(s[i], x + (int)i*qw, y, qw, qh);
+		const char c = s[i];
+		const int idx = c >= '0' && c <= '9' ? c-'0' : c == ':' ? 10 : c == ' ' ? 11 : -1;
+		if (idx < 0) continue;
+		const float left = x + int(i)*qw, right = left + qw*0.9f;
+		const float top = Winsys.resolution.height-y, bottom = top-qh;
+		const float u = idx*22.f/256.f, v = (idx+1)*22.f/256.f;
+		const DigitVertex quad[] = {{u,1,left,bottom},{v,1,right,bottom},{v,0,right,top},{u,0,left,top}};
+		for (int j : {0,1,2,0,2,3}) digits.push_back(quad[j]);
+	}
+	if (!digits.empty()) {
+		glTexCoordPointer(2, GL_FLOAT, sizeof(DigitVertex), &digits[0].u);
+		glVertexPointer(3, GL_FLOAT, sizeof(DigitVertex), &digits[0].x);
+		glDrawArrays(GL_TRIANGLES, 0, digits.size());
 	}
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);

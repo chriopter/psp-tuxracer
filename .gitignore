@@ -4,6 +4,7 @@
 !/.gitignore
 !/.pspdx
 !/README.md
+!/TODO.md
 !/LICENSE
 !/build-extremetuxracer.sh
 !/start-extremetuxracer.sh
@@ -27,6 +28,7 @@
 !/tools/test-psp-music.py
 !/tools/test-psp-controls.py
 !/tools/test-psp-ui.py
+!/tools/test-psp-textures.py
 !/tools/fetch-upstream.sh
 !/tools/upstream/
 

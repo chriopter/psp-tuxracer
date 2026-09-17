@@ -22,6 +22,7 @@ still shaped with spheres.
 // PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
 
 
+#define GL_GLEXT_PROTOTYPES
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
 #endif
@@ -234,9 +235,16 @@ void CCharShape::ScaleNode(std::size_t node_name, const TVector3d& vec) {
 
 	TMatrix<4, 4> matrix;
 
-	matrix.SetScalingMatrix(vec.x, vec.y, vec.z);
+	// Samuel's whiskers have a -0.00 scale in the original model. A truly
+	// flat transform has no inverse and traps on the PSP FPU. Keep a tiny,
+	// signed thickness so both the rendered and collision transforms agree.
+	const auto invertible = [](float value) {
+		return std::fabs(value) < 1.0e-6f ? std::copysign(1.0e-6f, value) : value;
+	};
+	const TVector3d scale(invertible(vec.x), invertible(vec.y), invertible(vec.z));
+	matrix.SetScalingMatrix(scale.x, scale.y, scale.z);
 	node->trans = node->trans * matrix;
-	matrix.SetScalingMatrix(1.0 / vec.x, 1.0 / vec.y, 1.0 / vec.z);
+	matrix.SetScalingMatrix(1.0f / scale.x, 1.0f / scale.y, 1.0f / scale.z);
 	node->invtrans = matrix * node->invtrans;
 
 	if (newActions && useActions) AddAction(node_name, 4, vec, 0);
@@ -369,6 +377,7 @@ void CCharShape::DrawCharSphere(int num_divisions) const {
     // Cache smooth unit spheres; PSPGL has no GLU quadric implementation.
     struct Vertex { float nx,ny,nz,x,y,z; };
     static std::vector<Vertex> meshes[17];
+    static GLuint buffers[17] = {};
     int n=std::max(3,std::min(16,num_divisions));
     auto& mesh=meshes[n];
     if(mesh.empty()) {
@@ -380,10 +389,16 @@ void CCharShape::DrawCharSphere(int num_divisions) const {
             mesh.insert(mesh.end(),{p,q,r,q,t,r});
         }
     }
+    if (!buffers[n]) {
+        glGenBuffers(1, &buffers[n]);
+        glBindBuffer(GL_ARRAY_BUFFER, buffers[n]);
+        glBufferData(GL_ARRAY_BUFFER, mesh.size()*sizeof(Vertex), mesh.data(), GL_STATIC_DRAW);
+    } else glBindBuffer(GL_ARRAY_BUFFER, buffers[n]);
     glEnableClientState(GL_NORMAL_ARRAY);glEnableClientState(GL_VERTEX_ARRAY);
-    glNormalPointer(GL_FLOAT,sizeof(Vertex),&mesh[0].nx);glVertexPointer(3,GL_FLOAT,sizeof(Vertex),&mesh[0].x);
+    glNormalPointer(GL_FLOAT,sizeof(Vertex),nullptr);glVertexPointer(3,GL_FLOAT,sizeof(Vertex),reinterpret_cast<const void*>(3*sizeof(float)));
     glDrawArrays(GL_TRIANGLES,0,mesh.size());
     glDisableClientState(GL_NORMAL_ARRAY);glDisableClientState(GL_VERTEX_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void CCharShape::DrawNodes(const TCharNode *node) {

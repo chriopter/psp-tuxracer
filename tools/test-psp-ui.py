@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parent.parent
-for name, dimensions in [('psp-controls.png', (256, 128)), ('psp-guide.png', (512, 256))]:
+for name, dimensions in [('psp-controls.png', (256, 128)), ('psp-guide.png', (512, 256)), ('psp-guide-gameplay.png', (480, 272))]:
     png = (root / 'ports/extremetuxracer/data/textures' / name).read_bytes()
     assert png[:8] == b'\x89PNG\r\n\x1a\n'
     assert struct.unpack('>II', png[16:24]) == dimensions
@@ -15,6 +15,8 @@ particles = (root / 'ports/extremetuxracer/src/particles.cpp').read_text()
 draw = particles[particles.index('void draw_ui_snow()'):particles.index('\nvoid push_ui_snow(')]
 guide = (root / 'ports/extremetuxracer/src/controls_guide.cpp').read_text()
 gate = guide[guide.index('void CControlsGuide::Keyb('):guide.index('\nvoid CControlsGuide::Loop(')]
+paused = (root / 'ports/extremetuxracer/src/paused.cpp').read_text()
+pause = paused[paused.index('static bool sky ='):paused.index('\nvoid CPaused::Mouse(')]
 source = r'''
 #include <cassert>
 #include <vector>
@@ -28,7 +30,7 @@ constexpr int Quads=0;
 struct VertexArray { std::vector<Vertex> v; VertexArray(int,std::size_t n):v(n){};
   void resize(std::size_t n){v.resize(n);} Vertex& operator[](std::size_t n){return v[n];} };
 struct RenderStates { const int* texture=nullptr; };
-struct Keyboard { enum Key { P,Return,Escape,Up,Down,Left,Right,Space,T,R }; };
+struct Keyboard { enum Key { P,Return,Escape,Up,Down,Left,Right,Space,T,R,C,F5,F6,F7,F8 }; };
 }
 struct Rect {int left,top,width,height;};
 struct Sprite { sf::Vector2f p,s; Rect r;
@@ -39,15 +41,20 @@ std::vector<Particle> particles_2d;
 constexpr int SNOW_PART=1;
 struct Textures { int atlas=7; const int& GetSFTexture(int){return atlas;} } Tex;
 struct Window { int calls=0; std::vector<sf::Vertex> captured;
+  void TakeScreenshot() {}
   void draw(const sf::VertexArray& a,const sf::RenderStates& s){
     assert(s.texture==&Tex.atlas); captured=a.v; ++calls;
   } } Winsys;
 struct State { struct Manager { int requests=0; void RequestEnterState(int){++requests;} }; static Manager manager; };
 State::Manager State::manager;
 int GameTypeSelect=1;
+int Racing=2, GameOver=3;
+struct Game { bool raceaborted=false; int race_result=0; } g_game;
+struct CPaused { void Enter(); void Keyb(sf::Keyboard::Key,bool,int,int); };
 struct CControlsGuide { void Keyb(sf::Keyboard::Key,bool,int,int); };
 // DRAW
 // GATE
+// PAUSE
 int main(){
   particles_2d={{{{10,20},{2,3},{16,0,16,8}}},{{{-4,7},{1,1},{0,8,16,8}}}};
   draw_ui_snow(); assert(Winsys.calls==1 && Winsys.captured.size()==8);
@@ -68,9 +75,21 @@ int main(){
     guide.Keyb(static_cast<sf::Keyboard::Key>(key),false,0,0);
   guide.Keyb(sf::Keyboard::P,true,0,0); assert(State::manager.requests==0);
   guide.Keyb(sf::Keyboard::P,false,0,0); assert(State::manager.requests==1);
+  CPaused paused; paused.Enter(); State::manager.requests=0;
+  paused.Keyb(sf::Keyboard::Down,false,0,0);
+  paused.Keyb(sf::Keyboard::Return,false,0,0);
+  assert(showControls && State::manager.requests==0);
+  paused.Keyb(sf::Keyboard::Down,false,0,0); assert(showControls && selection==1);
+  paused.Keyb(sf::Keyboard::P,true,0,0); assert(showControls);
+  paused.Keyb(sf::Keyboard::P,false,0,0);
+  assert(!showControls && State::manager.requests==0); // Still paused.
+  paused.Keyb(sf::Keyboard::Down,false,0,0);
+  paused.Keyb(sf::Keyboard::Return,false,0,0); assert(confirmEnd && !g_game.raceaborted);
+  paused.Keyb(sf::Keyboard::Escape,false,0,0); assert(!confirmEnd && !g_game.raceaborted);
+  paused.Keyb(sf::Keyboard::P,false,0,0); assert(State::manager.requests==1);
   std::cout<<"PASS: snow geometry/UV/alpha, 4000 flakes in one batch, empty batch and Start-only introduction\n";
 }
-'''.replace('// DRAW', draw).replace('// GATE', gate)
+'''.replace('// DRAW', draw).replace('// GATE', gate).replace('// PAUSE', pause)
 with tempfile.TemporaryDirectory(prefix='etr-ui-') as directory:
     temp = Path(directory)
     (temp / 'ui.cpp').write_text(source)

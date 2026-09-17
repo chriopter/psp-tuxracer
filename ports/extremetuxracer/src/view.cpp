@@ -180,8 +180,10 @@ void update_view(CControl *ctrl, float dt) {
 	static const TVector3d mz_vec(0.0, 0.0, -1.0);
 
 	float speed = ctrl->cvel.Length();
+	// A stationary racer makes the interpolation factor zero. Desktop GL
+	// tolerates the resulting infinity; the PSP FPU raises an exception.
 	float time_constant_mult = 1.0 /
-	                            clamp(0.0,
+	                            clamp(EPS,
 	                                  (speed - NO_INTERPOLATION_SPEED) / (BASELINE_INTERPOLATION_SPEED - NO_INTERPOLATION_SPEED),
 	                                  1.0);
 

@@ -17,10 +17,39 @@ shim=r'''
 #define RADIANS_TO_ANGLES(x) (180.f/3.141592653589793f*(x))
 #define clamp(minimum,x,maximum) (std::max(std::min(x,maximum),minimum))
 '''
-test=r'''
+scale_method=(src/'tux.cpp').read_text().split('void CCharShape::ScaleNode(std::size_t node_name, const TVector3d& vec) {',1)[1].split('\nbool CCharShape::VisibleNode',1)[0]
+scale_fixture=r'''
+#include "mathlib.h"
+struct TCharNode { TMatrix<4,4> trans, invtrans; };
+struct CCharShape {
+ TCharNode node; bool newActions=false, useActions=false;
+ TCharNode* GetNode(std::size_t) { return &node; }
+ void AddAction(std::size_t,int,const TVector3d&,int) {}
+ void ScaleNode(std::size_t node_name, const TVector3d& vec);
+};
+void CCharShape::ScaleNode(std::size_t node_name, const TVector3d& vec) {
+'''+scale_method
+view_source=(src/'view.cpp').read_text()
+view_factor=view_source.split('float time_constant_mult = ',1)[1].split(';',1)[0]
+view_defines='\n'.join(line for line in view_source.splitlines() if line.startswith(('#define BASELINE_INTERPOLATION_SPEED ', '#define NO_INTERPOLATION_SPEED ')))
+test=scale_fixture+'\n'+view_defines+'\nfloat camera_factor(float speed) { return '+view_factor+'; }\n'+r'''
 #include "mathlib.h"
 #include <cstdio>
 int main(){
+ for(float speed : {0.f,1.f,2.f,2.01f,4.5f,100.f}) {
+  assert(std::isfinite(camera_factor(speed)) && camera_factor(speed)>=1.f);
+ }
+ for(float z : {0.f,-0.f,1.e-9f,-1.e-9f,.25f,-.25f}) {
+  CCharShape shape;shape.node.trans.SetIdentity();shape.node.invtrans.SetIdentity();
+  shape.ScaleNode(81,TVector3d(.36f,.01f,z));
+  auto product=shape.node.trans*shape.node.invtrans;
+  for(int r=0;r<4;r++)for(int c=0;c<4;c++) {
+   assert(std::isfinite(shape.node.trans[r][c]));
+   assert(std::isfinite(shape.node.invtrans[r][c]));
+   assert(std::fabs(product[r][c]-(r==c?1.f:0.f))<1.e-5f);
+  }
+  assert(std::signbit(shape.node.trans[2][2])==std::signbit(z));
+ }
  TOdeSolver solver;TOdeData data;float value=1;
  for(int frame=0;frame<500;frame++){
   solver.InitOdeData(&data,value,.01f);

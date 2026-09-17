@@ -713,6 +713,7 @@ void quadsquare::UpdateAux(const quadcornerdata& cd,
 
 GLuint VertexIndices[9];
 int VertexTerrains[9];
+static std::vector<std::vector<GLuint>> opaqueTerrainIndices;
 
 void quadsquare::InitVert(int i, int x, int z) {
 	if (x >= RowSize) x = RowSize-1;
@@ -761,22 +762,31 @@ static void terrain_pointers(const void* vertices) {
 }
 
 void quadsquare::DrawTris() {
-	static std::vector<GLuint> inside;
 	static std::vector<TerrainVertex> clipped;
-	inside.clear();
+	static std::vector<GLubyte> outcodes;
 	clipped.clear();
+	if (!VertexArrayCounter) return;
+	const auto highest = *std::max_element(VertexArrayIndices, VertexArrayIndices+VertexArrayCounter);
+	outcodes.assign(highest+1, 0xff);
 	const TPlane* planes = get_view_clip_planes();
 	const TerrainVertex* vertices = reinterpret_cast<const TerrainVertex*>(VNCArray);
 	for (GLuint i = 0; i < VertexArrayCounter; i += 3) {
 		unsigned codes[3] = {};
-		for (int j = 0; j < 3; ++j)
-			for (int p = 0; p < 6; ++p)
-				if (plane_distance(vertices[VertexArrayIndices[i+j]], planes[p]) > 0)
-					codes[j] |= 1u << p;
+		for (int j = 0; j < 3; ++j) {
+			const auto index = VertexArrayIndices[i+j];
+			auto& code = outcodes[index];
+			if (code == 0xff) {
+				code = 0;
+				for (int p = 0; p < 6; ++p)
+					if (plane_distance(vertices[index], planes[p]) > 0)
+						code |= 1u << p;
+			}
+			codes[j] = code;
+		}
 		if (codes[0] & codes[1] & codes[2]) continue;
 		unsigned boundary = codes[0] | codes[1] | codes[2];
 		if (!boundary) {
-			inside.insert(inside.end(), VertexArrayIndices+i, VertexArrayIndices+i+3);
+			for (int j = 0; j < 3; ++j) clipped.push_back(vertices[VertexArrayIndices[i+j]]);
 			continue;
 		}
 		TerrainVertex polygon[12];
@@ -788,11 +798,13 @@ void quadsquare::DrawTris() {
 			clipped.push_back(polygon[j+1]);
 		}
 	}
-	if (!inside.empty())
-		glDrawElements(GL_TRIANGLES, inside.size(), GL_UNSIGNED_INT, inside.data());
 	if (!clipped.empty()) {
+		extern void PspProfileTerrain(unsigned count);
+		PspProfileTerrain(clipped.size());
 		terrain_pointers(clipped.data());
 		glDrawArrays(GL_TRIANGLES, 0, clipped.size());
+		// Let the GE draw this material while the CPU clips the next bucket.
+		glFlush();
 		terrain_pointers(VNCArray);
 	}
 }
@@ -807,6 +819,25 @@ void quadsquare::Render(const quadcornerdata& cd, GLubyte *vnc_array) {
 	VNCArray = vnc_array;
 
 	std::size_t numTerrains = Course.TerrList.size();
+	if (param.perf_level == 1) {
+		// Opaque triangles belong to the minimum terrain id of their three
+		// corners. Build all material buckets in one traversal, not one
+		// identical quadtree traversal per terrain texture.
+		opaqueTerrainIndices.resize(numTerrains);
+		for (auto& indices : opaqueTerrainIndices) indices.clear();
+		RenderAux(cd, SomeClip, -2);
+		for (std::size_t j=0;j<numTerrains;++j) {
+			const auto& indices=opaqueTerrainIndices[j];
+			if (indices.empty() || !Course.TerrList[j].texture) continue;
+			InitArrayCounters();
+			std::copy(indices.begin(),indices.end(),VertexArrayIndices);
+			VertexArrayCounter=indices.size();
+			Course.TerrList[j].texture->Bind();
+			DrawTris();
+		}
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		return;
+	}
 	for (std::size_t j=0; j<numTerrains; j++) {
 		if (Course.TerrList[j].texture != nullptr) {
 			InitArrayCounters();
@@ -930,6 +961,15 @@ inline void quadsquare::MakeSpecialTri(int a, int b, int c, int terrain) {
 }
 
 inline void quadsquare::MakeNoBlendTri(int a, int b, int c, int terrain) {
+	if (terrain == -2) {
+		const int material=std::min({VertexTerrains[a],VertexTerrains[b],VertexTerrains[c]});
+		auto& indices=opaqueTerrainIndices[material];
+		for (int v : {a,b,c}) {
+			indices.push_back(VertexIndices[v]);
+			colorval(VertexIndices[v],3)=255;
+		}
+		return;
+	}
 	if ((VertexTerrains[a] == terrain ||
 	        VertexTerrains[b] == terrain ||
 	        VertexTerrains[c] == terrain) &&
