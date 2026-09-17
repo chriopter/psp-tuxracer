@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -22,6 +24,7 @@ GNU General Public License for more details.
 #include <sys/stat.h>
 
 #include "winsys.h"
+#include "savedata.hpp"
 #include "course.h"
 #include "game_ctrl.h"
 #include "score.h"
@@ -36,7 +39,7 @@ CWinsys Winsys;
 CWinsys::CWinsys()
 	: numJoysticks(0)
 	, sfmlRenders(false)
-	, auto_resolution(800, 600)
+	, auto_resolution(854, 480)
 	, scale(1.f) {
 	for (unsigned int i = 0; i < sf::Joystick::Count; i++) {
 		if (sf::Joystick::isConnected(i))
@@ -93,7 +96,7 @@ void CWinsys::SetupVideoMode(const TScreenRes& res) {
 	if (param.fullscreen)
 		style |= sf::Style::Fullscreen;
 
-	resolution = res;
+	resolution = TScreenRes(854,480);
 
 	ResetRenderMode();
 
@@ -139,6 +142,7 @@ void CWinsys::Quit() {
 	Score.SaveHighScore();
 	SaveMessages();
 	if (g_game.argument < 1) Players.SavePlayers();
+	PspSave::Save(false);
 	window.close();
 }
 

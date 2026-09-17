@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -107,8 +109,8 @@ void CGluCamera::Update(float timestep) {
 	if (turnleft) angle -= timestep * 2000;
 	if (nearer) distance -= timestep * 100;
 	if (farther) distance += timestep * 100;
-	double xx = distance * std::sin(angle * M_PI / 180);
-	double zz = distance * std::sin((90 - angle) * M_PI / 180);
+	float xx = distance * std::sin(angle * M_PI / 180);
+	float zz = distance * std::sin((90 - angle) * M_PI / 180);
 	glLoadIdentity();
 	gluLookAt(xx, 0, zz, 0, 0, 0, 0, 1, 0);
 }

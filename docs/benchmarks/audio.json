@@ -1,0 +1,9 @@
+{
+  "game": "Extreme Tux Racer 0.8.4",
+  "capture": "PPSSPP game audio only",
+  "duration_s": 81.5,
+  "peak_dbfs": -10.841558,
+  "rms_dbfs": -28.392987,
+  "non_silent": true,
+  "clipping": false
+}

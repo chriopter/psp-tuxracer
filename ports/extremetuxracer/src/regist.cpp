@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -31,6 +33,7 @@ GNU General Public License for more details.
 #include "game_type_select.h"
 #include "newplayer.h"
 #include "winsys.h"
+#include "savedata.hpp"
 
 CRegist Regist;
 
@@ -44,6 +47,7 @@ void QuitRegistration() {
 	g_game.player = Players.GetPlayer(player->GetValue());
 
 	g_game.character = &Char.CharList[character->GetValue()];
+	PspSave::Save(false);
 	Char.FreeCharacterPreviews(); // From here on, character previews are no longer required
 	State::manager.RequestEnterState(GameTypeSelect);
 }
@@ -86,13 +90,14 @@ void CRegist::Motion(int x, int y) {
 
 static int framewidth, frameheight, arrowwidth;
 static TArea area;
-static double texsize;
+static float texsize;
 static TLabel* sHelpPlayer;
 static TLabel* sHelpCharacter;
 static TFramedText* sPlayerFrame;
 static TFramedText* sCharFrame;
 
 void CRegist::Enter() {
+	Char.LoadCharacterPreviews();
 	Winsys.ShowCursor(!param.ice_cursor);
 	Music.Play(param.menu_music, true);
 

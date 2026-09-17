@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 /*
 If you want to add a new option, do this:
@@ -48,6 +50,7 @@ Then edit the below functions:
 #include "gui.h"
 #include "font.h"
 #include "winsys.h"
+#include "savedata.hpp"
 
 CGameConfig GameConfig;
 static std::string res_names[NUM_RESOLUTIONS];
@@ -89,6 +92,7 @@ void SetConfig() {
 			Trans.ChangeLanguage(param.language);
 		}
 		SaveConfigFile();
+		PspSave::Save(false);
 	}
 	State::manager.RequestEnterState(*State::manager.PreviousState());
 }
@@ -154,10 +158,13 @@ void CGameConfig::Enter() {
 	ResetGUI();
 	unsigned int siz = FT.AutoSizeN(5);
 	fullscreen = AddCheckbox(area.left, area.top, framewidth-16, Trans.Text(31));
-	fullscreen->checked = param.fullscreen;
+	fullscreen->checked = true;
+ fullscreen->SetActive(false);
 
-	resolution = AddUpDown(rightpos, area.top+dd*1, 0, NUM_RESOLUTIONS-1, (int)param.res_type);
-	mus_vol = AddUpDown(rightpos, area.top+dd*2, 0, 100, param.music_volume, 2, true);
+	resolution = AddUpDown(rightpos, area.top+dd*1, 0, 0, 0);
+	resolution->SetActive(false);
+ res_names[0]="480 x 272 (PSP)";
+ mus_vol = AddUpDown(rightpos, area.top+dd*2, 0, 100, param.music_volume, 2, true);
 	sound_vol = AddUpDown(rightpos, area.top+dd*3, 0, 100, param.sound_volume, 2, true);
 	language = AddUpDown(rightpos, area.top+dd*4, 0, (int)Trans.languages.size() - 1, (int)param.language);
 	detail_level = AddUpDown(rightpos, area.top+dd*5, 1, 4, param.perf_level, 2, true);
@@ -202,10 +209,6 @@ void CGameConfig::Loop(float time_step) {
 	FT.DrawString(columnAnchor, area.top + dd * 4 + 3, Trans.languages[language->GetValue()].language);
 	FT.DrawString(columnAnchor, area.top + dd * 5 + 3, Int_StrN(detail_level->GetValue()));
 
-	FT.SetColor(colLGrey);
-	FT.AutoSizeN(3);
-	FT.DrawString(CENTER, AutoYPosN(68), Trans.Text(41));
-	FT.DrawString(CENTER, AutoYPosN(72), Trans.Text(42));
 
 	DrawGUI();
 

@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef COURSE_H
 #define COURSE_H
@@ -24,16 +26,16 @@ GNU General Public License for more details.
 #include <unordered_map>
 
 #define FLOATVAL(i) (*(GLfloat*)(vnc_array+idx+(i)*sizeof(GLfloat)))
-#define BYTEVAL(i) (*(GLubyte*)(vnc_array+idx+8*sizeof(GLfloat) + i*sizeof(GLubyte)))
+#define BYTEVAL(i) (*(GLubyte*)(vnc_array+idx+2*sizeof(GLfloat) + i*sizeof(GLubyte)))
 #define STRIDE_GL_ARRAY (8 * sizeof(GLfloat) + 4 * sizeof(GLubyte))
 #define ELEV(x,y) (Fields[(x) + nx*(y)].elevation)
 #define NORM_INTERPOL 0.05
-#define XCD(_x) ((double)(_x) / (nx-1.0) * curr_course->size.x)
-#define ZCD(_y) (-(double)(_y) / (ny-1.0) * curr_course->size.y)
+#define XCD(_x) ((float)(_x) / (nx-1.0) * curr_course->size.x)
+#define ZCD(_y) (-(float)(_y) / (ny-1.0) * curr_course->size.y)
 #define NMLPOINT(x,y) TVector3d(XCD(x), ELEV(x,y), ZCD(y) )
 
 
-#define MAX_DESCRIPTION_LINES 8
+#define MAX_DESCRIPTION_LINES 5
 
 class TTexture;
 
@@ -47,8 +49,8 @@ struct TTerrType {
 	bool particles;
 	bool trackmarks;
 	bool shiny;
-	double friction;
-	double depth;
+	float friction;
+	float depth;
 	int vol_type;
 	int starttex;
 	int tracktex;
@@ -70,16 +72,16 @@ struct TObjectType {
 
 struct TObject {
 	TVector3d pt;
-	double height;
-	double diam;
-	TObject(double x, double y, double z, double height_, double diam_)
+	float height;
+	float diam;
+	TObject(float x, float y, float z, float height_, float diam_)
 		: pt(x, y, z), height(height_), diam(diam_)
 	{}
 };
 
 struct TCollidable : public TObject {
 	std::size_t tree_type;
-	TCollidable(double x, double y, double z, double height_, double diam_, std::size_t type)
+	TCollidable(float x, float y, float z, float height_, float diam_, std::size_t type)
 		: TObject(x, y, z, height_, diam_), tree_type(type)
 	{}
 };
@@ -87,7 +89,7 @@ struct TCollidable : public TObject {
 struct TItem : public TObject {
 	int collectable;
 	const TObjectType& type;
-	TItem(double x, double y, double z, double height_, double diam_, const TObjectType& type_)
+	TItem(float x, float y, float z, float height_, float diam_, const TObjectType& type_)
 		: TObject(x, y, z, height_, diam_), collectable(type_.collectable), type(type_)
 	{}
 };
@@ -101,12 +103,12 @@ struct TCourse {
 	TTexture* preview;
 	TVector2d size;
 	TVector2d play_size;
-	double angle;
-	double scale;
+	float angle;
+	float scale;
 	TVector2d start;
 	std::size_t env;
 	std::size_t music_theme;
-	double finish_brake;
+	float finish_brake;
 	bool use_keyframe;
 
 	void SetDescription(const std::string& description);
@@ -115,7 +117,7 @@ struct TCourse {
 
 struct CourseFields {
 	TVector3d nml;
-	double elevation;
+	float elevation;
 	uint8_t terrain;
 };
 
@@ -188,21 +190,21 @@ public:
 
 	const TVector2d& GetDimensions() const { return curr_course->size; }
 	const TVector2d& GetPlayDimensions() const { return curr_course->play_size; }
-	double GetCourseAngle() const { return curr_course->angle; }
-	double GetBaseHeight(double distance) const;
-	double GetMaxHeight(double distance) const;
+	float GetCourseAngle() const { return curr_course->angle; }
+	float GetBaseHeight(float distance) const;
+	float GetMaxHeight(float distance) const;
 	std::size_t GetEnv() const;
 	const TVector2d& GetStartPoint() const { return start_pt; }
 	const TPolyhedron& GetPoly(std::size_t type) const;
 	void MirrorCourse();
 
-	void GetIndicesForPoint(double x, double z, unsigned int* x0, unsigned int* y0, unsigned int* x1, unsigned int* y1) const;
-	void FindBarycentricCoords(double x, double z,
-	                           TVector2i *idx0, TVector2i *idx1, TVector2i *idx2, double *u, double *v) const;
-	TVector3d FindCourseNormal(double x, double z) const;
-	double FindYCoord(double x, double z) const;
-	void GetSurfaceType(double x, double z, double weights[]) const;
-	int GetTerrainIdx(double x, double z, double level) const;
+	void GetIndicesForPoint(float x, float z, unsigned int* x0, unsigned int* y0, unsigned int* x1, unsigned int* y1) const;
+	void FindBarycentricCoords(float x, float z,
+	                           TVector2i *idx0, TVector2i *idx1, TVector2i *idx2, float *u, float *v) const;
+	TVector3d FindCourseNormal(float x, float z) const;
+	float FindYCoord(float x, float z) const;
+	void GetSurfaceType(float x, float z, float weights[]) const;
+	int GetTerrainIdx(float x, float z, float level) const;
 	TPlane GetLocalCoursePlane(TVector3d pt) const;
 };
 

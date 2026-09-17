@@ -15,6 +15,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef MATHLIB_H
 #define MATHLIB_H
@@ -30,8 +32,8 @@ static constexpr TVector3d GravVec(0.0, -1.0, 0.0);
 
 struct TPlane {
 	TVector3d nml;
-	double d;
-	constexpr explicit TPlane(double nx = 0.0, double ny = 0.0, double nz = 0.0, double d_ = 0.0)
+	float d;
+	constexpr explicit TPlane(float nx = 0.0, float ny = 0.0, float nz = 0.0, float d_ = 0.0)
 		: nml(nx, ny, nz), d(d_)
 	{}
 };
@@ -49,16 +51,16 @@ TVector3d	TransformVector(const TMatrix<4, 4>& mat, const TVector3d& v);
 TVector3d	TransformNormal(const TVector3d& n, const TMatrix<4, 4>& mat);	// not used ?
 TVector3d	TransformPoint(const TMatrix<4, 4>& mat, const TVector3d& p);
 bool		IntersectPlanes(const TPlane& s1, const TPlane& s2, const TPlane& s3, TVector3d *p);
-double		DistanceToPlane(const TPlane& plane, const TVector3d& pt);
+float		DistanceToPlane(const TPlane& plane, const TVector3d& pt);
 
-TMatrix<4, 4> RotateAboutVectorMatrix(const TVector3d& u, double angle);
+TMatrix<4, 4> RotateAboutVectorMatrix(const TVector3d& u, float angle);
 
 TQuaternion MultiplyQuaternions(const TQuaternion& q, const TQuaternion& r);
 TQuaternion ConjugateQuaternion(const TQuaternion& q);
 TMatrix<4, 4> MakeMatrixFromQuaternion(const TQuaternion& q);
 TQuaternion MakeQuaternionFromMatrix(const TMatrix<4, 4>& m);
 TQuaternion MakeRotationQuaternion(const TVector3d& s, const TVector3d& t);
-TQuaternion InterpolateQuaternions(const TQuaternion& q, TQuaternion r, double t);
+TQuaternion InterpolateQuaternions(const TQuaternion& q, TQuaternion r, float t);
 TVector3d	RotateVector(const TQuaternion& q, const TVector3d& v);
 
 bool		IntersectPolygon(const TPolygon& p, std::vector<TVector3d>& v);
@@ -71,19 +73,19 @@ void		TransPolyhedron(const TMatrix<4, 4>& mat, TPolyhedron& ph);
 // --------------------------------------------------------------------
 
 struct TOdeData {
-	double k[4];
-	double init_val;
-	double h;
+	float k[4];
+	float init_val;
+	float h;
 };
 
 typedef int (*PNumEstimates)();
-typedef void (*PInitOdeData)(TOdeData *, double init_val, double h);
-typedef double (*PNextTime)(TOdeData *, int step);
-typedef double (*PNextValue)(TOdeData *, int step);
-typedef void (*PUpdateEstimate)(TOdeData *, int step, double val);
-typedef double (*PFinalEstimate)(TOdeData *);
-typedef double (*PEstimateError)(TOdeData *);
-typedef double (*PTimestepExponent)();
+typedef void (*PInitOdeData)(TOdeData *, float init_val, float h);
+typedef float (*PNextTime)(TOdeData *, int step);
+typedef float (*PNextValue)(TOdeData *, int step);
+typedef void (*PUpdateEstimate)(TOdeData *, int step, float val);
+typedef float (*PFinalEstimate)(TOdeData *);
+typedef float (*PEstimateError)(TOdeData *);
+typedef float (*PTimestepExponent)();
 
 struct TOdeSolver {
 	PNumEstimates		NumEstimates;
@@ -101,11 +103,11 @@ struct TOdeSolver {
 //			special
 // --------------------------------------------------------------------
 
-int Gauss(double *matrix, int n, double *soln);
-double LinearInterp(const double x[], const double y[], double val, int n);
+int Gauss(float *matrix, int n, float *soln);
+float LinearInterp(const float x[], const float y[], float val, int n);
 
-double	XRandom(double min, double max);
-double	FRandom();
+float	XRandom(float min, float max);
+float	FRandom();
 int		IRandom(int min, int max);
 int		ITrunc(int val, int base);
 int		IFrac(int val, int base);

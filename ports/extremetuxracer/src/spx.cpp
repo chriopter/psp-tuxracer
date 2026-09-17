@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -24,6 +26,9 @@ GNU General Public License for more details.
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
 
 const std::string emptyString = "";
 const std::string errorString = "error";
@@ -136,7 +141,7 @@ TVector2<T> Str_Vector2(const std::string &s, const TVector2<T> &def) {
 	if (is.fail()) return def;
 	else return TVector2<T>(x, y);
 }
-template TVector2<double> Str_Vector2(const std::string &s, const TVector2<double> &def);
+template TVector2<float> Str_Vector2(const std::string &s, const TVector2<float> &def);
 template TVector2<int> Str_Vector2(const std::string &s, const TVector2<int> &def);
 
 template<typename T>
@@ -147,7 +152,7 @@ TVector3<T> Str_Vector3(const std::string &s, const TVector3<T> &def) {
 	if (is.fail()) return def;
 	else return TVector3<T>(x, y, z);
 }
-template TVector3<double> Str_Vector3(const std::string &s, const TVector3<double> &def);
+template TVector3<float> Str_Vector3(const std::string &s, const TVector3<float> &def);
 template TVector3<int> Str_Vector3(const std::string &s, const TVector3<int> &def);
 
 template<typename T>
@@ -158,7 +163,7 @@ TVector4<T> Str_Vector4(const std::string &s, const TVector4<T> &def) {
 	if (is.fail()) return def;
 	else return TVector4<T>(x, y, z, w);
 }
-template TVector4<double> Str_Vector4(const std::string &s, const TVector4<double> &def);
+template TVector4<float> Str_Vector4(const std::string &s, const TVector4<float> &def);
 template TVector4<int> Str_Vector4(const std::string &s, const TVector4<int> &def);
 
 
@@ -234,21 +239,21 @@ TVector2<T> SPVector2(const std::string &s, const std::string &tag, const TVecto
 	return (Str_Vector2(SPItemN(s, tag), def));
 }
 template TVector2<int> SPVector2(const std::string &s, const std::string &tag, const TVector2<int>& def);
-template TVector2<double> SPVector2(const std::string &s, const std::string &tag, const TVector2<double>& def);
+template TVector2<float> SPVector2(const std::string &s, const std::string &tag, const TVector2<float>& def);
 
 template<typename T>
 TVector3<T> SPVector3(const std::string &s, const std::string &tag, const TVector3<T>& def) {
 	return (Str_Vector3(SPItemN(s, tag), def));
 }
 template TVector3<int> SPVector3(const std::string &s, const std::string &tag, const TVector3<int>& def);
-template TVector3<double> SPVector3(const std::string &s, const std::string &tag, const TVector3<double>& def);
+template TVector3<float> SPVector3(const std::string &s, const std::string &tag, const TVector3<float>& def);
 
 template<typename T>
 TVector4<T> SPVector4(const std::string &s, const std::string &tag, const TVector4<T>& def) {
 	return (Str_Vector4(SPItemN(s, tag), def));
 }
 template TVector4<int> SPVector4(const std::string &s, const std::string &tag, const TVector4<int>& def);
-template TVector4<double> SPVector4(const std::string &s, const std::string &tag, const TVector4<double>& def);
+template TVector4<float> SPVector4(const std::string &s, const std::string &tag, const TVector4<float>& def);
 
 sf::Color SPColorN(const std::string &s, const std::string &tag, const sf::Color& def) {
 	return (Str_ColorN(SPItemN(s, tag), def));
@@ -381,9 +386,12 @@ void CSPList::Print() const {
 }
 
 bool CSPList::Load(const std::string &filepath) {
+	errno = 0;
 	std::ifstream tempfile(filepath);
 
 	if (!tempfile) {
+		const int error = errno;
+		fprintf(stderr, "RESOURCE OPEN FAILED: %s: errno=%d (%s)\n", filepath.c_str(), error, strerror(error));
 		Message("CSPList::Load - unable to open " + filepath);
 		return false;
 	} else {
@@ -417,6 +425,10 @@ bool CSPList::Load(const std::string &filepath) {
 				}
 			}
 		}
+		if (tempfile.bad()) {
+			fprintf(stderr, "RESOURCE READ FAILED: %s: errno=%d (%s)\n", filepath.c_str(), errno, strerror(errno));
+			return false;
+		}
 		return true;
 	}
 }
@@ -434,7 +446,8 @@ bool CSPList::Save(const std::string &filepath) const {
 		for (const_iterator line = cbegin(); line != cend(); ++line) {
 			tempfile << *line << '\n';
 		}
-		return true;
+		tempfile.close();
+		return bool(tempfile);
 	}
 }
 

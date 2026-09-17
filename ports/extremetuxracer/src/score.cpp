@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -124,6 +126,8 @@ bool CScore::LoadHighScore() {
 		return false;
 	}
 
+	Scorelist.clear(); // A loaded save replaces scores instead of duplicating them.
+
 	for (CSPList::const_iterator line = list.cbegin(); line != list.cend(); ++line) {
 		std::string group = SPStrN(*line, "group", "default");
 		std::string course = SPStrN(*line, "course", "unknown");
@@ -151,7 +155,7 @@ int CScore::CalcRaceResult() {
 	}
 
 	int herringpt = g_game.herring * 10;
-	double timept = Course.GetDimensions().y - (g_game.time * 10);
+	float timept = Course.GetDimensions().y - (g_game.time * 10);
 	g_game.score = (int)(herringpt + timept);
 	if (g_game.score < 0) g_game.score = 0;
 

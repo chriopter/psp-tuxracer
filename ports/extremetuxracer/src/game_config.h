@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef GAME_CONFIG_H
 #define GAME_CONFIG_H
@@ -74,7 +76,7 @@ struct TParam {
 };
 
 void InitConfig();
-void SaveConfigFile();
+bool SaveConfigFile();
 
 extern TParam param;
 

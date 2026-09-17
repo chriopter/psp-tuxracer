@@ -15,6 +15,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
 
+// PSP port modifications, 2026-09-07. See docs/porting.md.
+
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
 #endif
@@ -40,6 +42,10 @@ sf::String reason;
 
 
 void CSplashScreen::Enter() {
+	delete Failure;
+	Failure = nullptr;
+	reason = sf::String();
+	Trans.LoadTranslations(param.language);
 	Winsys.ShowCursor(!param.ice_cursor);
 	Music.Play(param.menu_music, true);
 }
@@ -47,7 +53,6 @@ void CSplashScreen::Enter() {
 void CSplashScreen::Loop(float time_step) {
 	ScopedRenderMode rm(GUI);
 	Winsys.clear();
-	Trans.LoadTranslations(param.language);  // Before first texts are being displayed
 
 	sf::Sprite logo(Tex.GetSFTexture(TEXLOGO));
 	logo.setScale(Winsys.scale/2.f, Winsys.scale/2.f);
@@ -77,7 +82,8 @@ void CSplashScreen::Loop(float time_step) {
 		Sound.LoadSoundList();
 		if (!Char.LoadCharacterList())
 			reason += Trans.Text(93) + "\n";
-		Course.LoadObjectTypes();
+		if (!Course.LoadObjectTypes())
+			reason += "Loading objects failed\n";
 		if (!Course.LoadTerrainTypes())
 			reason += Trans.Text(95) + "\n";
 		if (Env.LoadEnvironmentList()) {
@@ -97,8 +103,9 @@ void CSplashScreen::Loop(float time_step) {
 		if (reason.isEmpty())
 			State::manager.RequestEnterState(Regist);
 		else { // Failure
-			FT.AutoSizeN(6);
-			int top = AutoYPosN(60);
+			reason += "Check etr-errors.log and the complete data folder.";
+			FT.SetSize(22);
+			int top = AutoYPosN(53);
 			Failure = new sf::Text(reason, FT.getCurrentFont(), FT.GetSize());
 			Failure->setFillColor(colDRed);
 			Failure->setOutlineColor(colDRed);

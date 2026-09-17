@@ -18,6 +18,8 @@ performance that depends on the count of different terrains. Many terrains on
 a course slow down the race appreciably. It's not urgent but anytime this
 algorithm should be replaced with a more convenient quadtree algorithm.
 --------------------------------------------------------------------- */
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef QUADTREE_H
 #define QUADTREE_H
@@ -70,7 +72,7 @@ struct quadsquare {
 	bool ForceEastVert;
 	bool ForceSouthVert;
 
-	static double ScaleX, ScaleZ;
+	static float ScaleX, ScaleZ;
 	static int RowSize, NumRows;
 	static CourseFields* Fields;
 
@@ -96,7 +98,7 @@ struct quadsquare {
 	void	Update(const quadcornerdata& cd, const TVector3d& ViewerLocation, float Detail);
 	void	Render(const quadcornerdata& cd, GLubyte *vnc_array);
 	float	GetHeight(const quadcornerdata& cd, float x, float z);
-	void	SetScale(double x, double z);
+	void	SetScale(float x, float z);
 	void	SetFields(CourseFields* fields);
 
 private:
@@ -133,8 +135,8 @@ private:
 
 void ResetQuadtree();
 void InitQuadtree(CourseFields* fields, int nx, int nz,
-                  double scalex, double scalez,
-                  const TVector3d& view_pos, double detail);
+                  float scalex, float scalez,
+                  const TVector3d& view_pos, float detail);
 
 void UpdateQuadtree(const TVector3d& view_pos, float detail);
 void RenderQuadtree();

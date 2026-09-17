@@ -1,0 +1,115 @@
+[
+  {
+    "game": "Extreme Tux Racer 0.8.4",
+    "course": "frozen_river",
+    "cpu_mhz": 333,
+    "music_frames": 0,
+    "all": {
+      "frames": 299,
+      "fps": 59.94,
+      "median_us": 16683,
+      "p95_us": 16684,
+      "max_us": 16704,
+      "over35ms": 0
+    },
+    "steering": {
+      "frames": 60,
+      "fps": 59.94,
+      "median_us": 16683,
+      "p95_us": 16684,
+      "max_us": 16704,
+      "over35ms": 0
+    },
+    "work": {
+      "median_us": 3345,
+      "p95_us": 3515,
+      "max_us": 3921
+    },
+    "heap_peak_bytes": 11993096,
+    "min_free_user_bytes": 4386816,
+    "staging_script_sha256": "bce2ad2fab2ae79789af79505467be7eb6d8d0dd37c9e0d9a4fa8ba9770608a8",
+    "emulator": "PPSSPP 1.20.4",
+    "psp_model": "PSP-1000 (32 MB)",
+    "internal_resolution": 1,
+    "frameskip": 0,
+    "date": "2026-09-07",
+    "eboot_sha256": "37e9de288b6a3be4af650bca3ebd4ada862dc8d0dadec59722acaa15e2a609bd",
+    "method": "Guest presentation intervals including VSync; work measured before swap. Loading and first race frame excluded. Paddle held, left/right 30 frames per 240-frame cycle. Heap samples every 60 frames. Not physical PSP measurements.",
+    "case": "missing-music",
+    "stderr": [
+      "ETR startup: firmware=0x06060010 cwd=ms0:/PSP/GAME/ExtremeTuxRacer argv0=ms0:/PSP/GAME/ExtremeTuxRacer/EBOOT.PBP",
+      "ETR memory: heap_total=35072 heap_used=31144 free_user=4386816 largest_free=4194304",
+      "music file data/music/credits1-cp.wav: errno=2 (No such file or directory)",
+      "music file data/music/calmrace-ks.wav: errno=2 (No such file or directory)",
+      "music file data/music/freezingpoint.wav: errno=2 (No such file or directory)",
+      "music file data/music/lostrace-ks.wav: errno=2 (No such file or directory)",
+      "music file data/music/options1-jt.wav: errno=2 (No such file or directory)",
+      "music file data/music/race1-jt.wav: errno=2 (No such file or directory)",
+      "music file data/music/raceintro-ks.wav: errno=2 (No such file or directory)",
+      "music file data/music/spunkyrace-ks.wav: errno=2 (No such file or directory)",
+      "music file data/music/start1-jt.wav: errno=2 (No such file or directory)",
+      "music file data/music/wonrace1-jt.wav: errno=2 (No such file or directory)"
+    ]
+  },
+  {
+    "game": "Extreme Tux Racer 0.8.4",
+    "course": "frozen_river",
+    "cpu_mhz": 333,
+    "music_frames": 0,
+    "all": {
+      "frames": 299,
+      "fps": 59.94,
+      "median_us": 16683,
+      "p95_us": 16684,
+      "max_us": 16703,
+      "over35ms": 0
+    },
+    "steering": {
+      "frames": 60,
+      "fps": 59.94,
+      "median_us": 16683,
+      "p95_us": 16684,
+      "max_us": 16702,
+      "over35ms": 0
+    },
+    "work": {
+      "median_us": 3353,
+      "p95_us": 3524,
+      "max_us": 4157
+    },
+    "heap_peak_bytes": 11993816,
+    "min_free_user_bytes": 4386816,
+    "staging_script_sha256": "bce2ad2fab2ae79789af79505467be7eb6d8d0dd37c9e0d9a4fa8ba9770608a8",
+    "emulator": "PPSSPP 1.20.4",
+    "psp_model": "PSP-1000 (32 MB)",
+    "internal_resolution": 1,
+    "frameskip": 0,
+    "date": "2026-09-07",
+    "eboot_sha256": "37e9de288b6a3be4af650bca3ebd4ada862dc8d0dadec59722acaa15e2a609bd",
+    "method": "Guest presentation intervals including VSync; work measured before swap. Loading and first race frame excluded. Paddle held, left/right 30 frames per 240-frame cycle. Heap samples every 60 frames. Not physical PSP measurements.",
+    "case": "invalid-music",
+    "stderr": [
+      "ETR startup: firmware=0x06060010 cwd=ms0:/PSP/GAME/ExtremeTuxRacer argv0=ms0:/PSP/GAME/ExtremeTuxRacer/EBOOT.PBP",
+      "ETR memory: heap_total=35072 heap_used=31144 free_user=4386816 largest_free=4194304",
+      "music decode data/music/start1-jt.wav: Unknown WAVE format",
+      "music decode data/music/race1-jt.wav: Unknown WAVE format"
+    ]
+  },
+  {
+    "no_race_result": true,
+    "staging_script_sha256": "bce2ad2fab2ae79789af79505467be7eb6d8d0dd37c9e0d9a4fa8ba9770608a8",
+    "emulator": "PPSSPP 1.20.4",
+    "psp_model": "PSP-1000 (32 MB)",
+    "internal_resolution": 1,
+    "frameskip": 0,
+    "date": "2026-09-07",
+    "eboot_sha256": "37e9de288b6a3be4af650bca3ebd4ada862dc8d0dadec59722acaa15e2a609bd",
+    "method": "Guest presentation intervals including VSync; work measured before swap. Loading and first race frame excluded. Paddle held, left/right 30 frames per 240-frame cycle. Heap samples every 60 frames. Not physical PSP measurements.",
+    "case": "missing-terrain",
+    "stderr": [
+      "ETR startup: firmware=0x06060010 cwd=ms0:/PSP/GAME/ExtremeTuxRacer argv0=ms0:/PSP/GAME/ExtremeTuxRacer/EBOOT.PBP",
+      "ETR memory: heap_total=35072 heap_used=31144 free_user=4386816 largest_free=4194304",
+      "RESOURCE OPEN FAILED: data/terrains/terrains.lst: errno=2 (No such file or directory)"
+    ]
+  }
+]

@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -71,7 +73,7 @@ TGuiParticle::TGuiParticle(float x, float y) {
 	sprite.setTexture(texture);
 	sprite.setPosition(x*static_cast<float>(Winsys.resolution.width), y*static_cast<float>(Winsys.resolution.height));
 	sprite.setColor(sf::Color(255, 255, 255, 76));
-	double p_dist = FRandom();
+	float p_dist = FRandom();
 
 	size = PARTICLE_MIN_SIZE + (1.0 - p_dist) * PARTICLE_SIZE_RANGE;
 
@@ -160,7 +162,7 @@ void update_ui_snow(float time_step) {
 				p = particles_2d.erase(p);
 			} else {
 				p->sprite.setPosition(static_cast<float>(Winsys.resolution.width)*FRandom(), static_cast<float>(Winsys.resolution.height) * (-FRandom()*BASE_VELOCITY));
-				double p_dist = FRandom();
+				float p_dist = FRandom();
 				p->size = PARTICLE_MIN_SIZE + (1.f - p_dist) * PARTICLE_SIZE_RANGE;
 				p->sprite.setScale(p->size / (p->sprite.getTexture()->getSize().x / 2), p->size / (p->sprite.getTexture()->getSize().x / 2));
 				p->vel.x = 0;
@@ -194,7 +196,7 @@ void push_ui_snow(const TVector2i& pos) {
 //						tux particles
 // ====================================================================
 
-#define MAX_PARTICLES 10000
+#define MAX_PARTICLES 256
 #define START_RADIUS 0.04
 #define OLD_PART_SIZE 0.12	// orig 0.07
 #define NEW_PART_SIZE 0.035	// orig 0.02
@@ -217,17 +219,17 @@ void push_ui_snow(const TVector2i& pos) {
 struct Particle {
 	TVector3d pt;
 	short type;
-	double base_size;
-	double cur_size;
-	double terrain_height;
-	double age;
-	double death;
-	double alpha;
+	float base_size;
+	float cur_size;
+	float terrain_height;
+	float age;
+	float death;
+	float alpha;
 	TVector3d vel;
 
 	void Draw(const CControl* ctrl) const;
 private:
-	void draw_billboard(const CControl *ctrl, double width, double height, bool use_world_y_axis, const GLfloat* tex) const;
+	void draw_billboard(const CControl *ctrl, float width, float height, bool use_world_y_axis, const GLfloat* tex) const;
 };
 
 static std::list<Particle> particles;
@@ -263,7 +265,7 @@ void Particle::Draw(const CControl* ctrl) const {
 	draw_billboard(ctrl, cur_size, cur_size, false, tex_coords[type]);
 }
 
-void Particle::draw_billboard(const CControl *ctrl, double width, double height, bool use_world_y_axis, const GLfloat* tex) const {
+void Particle::draw_billboard(const CControl *ctrl, float width, float height, bool use_world_y_axis, const GLfloat* tex) const {
 	TVector3d x_vec;
 	TVector3d y_vec;
 	TVector3d z_vec;
@@ -317,11 +319,9 @@ void Particle::draw_billboard(const CControl *ctrl, double width, double height,
 }
 
 void create_new_particles(const TVector3d& loc, const TVector3d& vel, std::size_t num) {
-	double speed = vel.Length();
+	float speed = vel.Length();
 
-	if (particles.size() + num > MAX_PARTICLES) {
-		Message("maximum number of particles exceeded");
-	}
+	num = std::min<std::size_t>(num, MAX_PARTICLES - std::min<std::size_t>(MAX_PARTICLES, particles.size()));
 	for (std::size_t i=0; i<num; i++) {
 		particles.emplace_back();
 		Particle* newp = &particles.back();
@@ -347,8 +347,8 @@ void update_particles(float time_step) {
 			continue;
 		}
 
-		p->pt += static_cast<double>(time_step) * p->vel;
-		double ycoord = Course.FindYCoord(p->pt.x, p->pt.z);
+		p->pt += static_cast<float>(time_step) * p->vel;
+		float ycoord = Course.FindYCoord(p->pt.x, p->pt.z);
 		if (p->pt.y < ycoord - 3)
 			p->age = p->death + 1;
 		if (p->age >= p->death) {
@@ -371,24 +371,39 @@ void draw_particles(const CControl *ctrl) {
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glColor4f(1.f, 1.f, 1.f, 0.8f);
 
-	for (std::list<Particle>::const_iterator p = particles.begin(); p != particles.end(); ++p) {
-		if (p->age >= 0)
-			p->Draw(ctrl);
-	}
+    // One native GE vertex batch for all snow spray, including while steering.
+    struct Vertex {float u,v;sf::Color color;float x,y,z;};
+    static std::vector<Vertex> batch;batch.clear();batch.reserve(MAX_PARTICLES*6);
+    TVector3d right(ctrl->view_mat[0][0],ctrl->view_mat[0][1],ctrl->view_mat[0][2]);
+    TVector3d up(ctrl->view_mat[1][0],ctrl->view_mat[1][1],ctrl->view_mat[1][2]);
+    for(const Particle&p:particles){
+        if(p.age<0)continue;
+        sf::Color color=Env.ParticleColor();color.a=(uint8_t)(color.a*clamp(0.f,p.alpha,1.f));
+        float u=(p.type%2)*0.5f,v=(p.type/2)*0.5f;
+        TVector3d a=p.pt-(p.cur_size*0.5f)*(right+up),b=a+p.cur_size*right,c=b+p.cur_size*up,d=a+p.cur_size*up;
+        Vertex va{u,v+0.5f,color,a.x,a.y,a.z},vb{u+0.5f,v+0.5f,color,b.x,b.y,b.z},vc{u+0.5f,v,color,c.x,c.y,c.z},vd{u,v,color,d.x,d.y,d.z};
+        batch.insert(batch.end(),{va,vb,vc,va,vc,vd});
+    }
+    if(!batch.empty()){
+        glDisableClientState(GL_NORMAL_ARRAY);glEnableClientState(GL_VERTEX_ARRAY);glEnableClientState(GL_TEXTURE_COORD_ARRAY);glEnableClientState(GL_COLOR_ARRAY);
+        glTexCoordPointer(2,GL_FLOAT,sizeof(Vertex),&batch[0].u);glColorPointer(4,GL_UNSIGNED_BYTE,sizeof(Vertex),&batch[0].color);glVertexPointer(3,GL_FLOAT,sizeof(Vertex),&batch[0].x);
+        glDrawArrays(GL_TRIANGLES,0,batch.size());
+        glDisableClientState(GL_COLOR_ARRAY);glDisableClientState(GL_VERTEX_ARRAY);glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
 }
 void clear_particles() {
 	particles.clear();
 }
 
-static double adjust_particle_count(double count) {
+static float adjust_particle_count(float count) {
 	if (count < 1) {
-		if (((double)std::rand()) / RAND_MAX < count) return 1.0;
+		if (((float)std::rand()) / RAND_MAX < count) return 1.0;
 		else return 0.0;
 	} else return count;
 }
 
-void generate_particles(const CControl *ctrl, double dtime, const TVector3d& pos, double speed) {
-	double surf_y = Course.FindYCoord(pos.x, pos.z);
+void generate_particles(const CControl *ctrl, float dtime, const TVector3d& pos, float speed) {
+	float surf_y = Course.FindYCoord(pos.x, pos.z);
 
 	int id = Course.GetTerrainIdx(pos.x, pos.z, 0.5);
 	if (id >= 0 && Course.TerrList[id].particles && pos.y < surf_y) {
@@ -400,20 +415,20 @@ void generate_particles(const CControl *ctrl, double dtime, const TVector3d& pos
 
 		right_part_pt.y = left_part_pt.y  = surf_y;
 
-		double brake_particles = dtime *
+		float brake_particles = dtime *
 		                         BRAKE_PARTICLES * (ctrl->is_braking ? 1.0 : 0.0)
 		                         * std::min(speed / PARTICLE_SPEED_FACTOR, 1.0);
-		double turn_particles = dtime * MAX_TURN_PARTICLES
+		float turn_particles = dtime * MAX_TURN_PARTICLES
 		                        * std::min(speed / PARTICLE_SPEED_FACTOR, 1.0);
-		double roll_particles = dtime * MAX_ROLL_PARTICLES
+		float roll_particles = dtime * MAX_ROLL_PARTICLES
 		                        * std::min(speed / PARTICLE_SPEED_FACTOR, 1.0);
 
-		double left_particles = turn_particles *
+		float left_particles = turn_particles *
 		                        std::fabs(std::min(ctrl->turn_fact, 0.)) +
 		                        brake_particles +
 		                        roll_particles * std::fabs(std::min(ctrl->turn_animation, 0.));
 
-		double right_particles = turn_particles *
+		float right_particles = turn_particles *
 		                         std::fabs(std::max(ctrl->turn_fact, 0.)) +
 		                         brake_particles +
 		                         roll_particles * std::fabs(std::max(ctrl->turn_animation, 0.));
@@ -450,27 +465,6 @@ void generate_particles(const CControl *ctrl, double dtime, const TVector3d& pos
 static CFlakes Flakes;
 
 
-void TFlake::Draw(const TPlane& lp, const TPlane& rp, bool rotate_flake, float dir_angle) const {
-	if ((DistanceToPlane(lp, pt) < 0) && (DistanceToPlane(rp, pt) < 0)) {
-		glPushMatrix();
-		glTranslate(pt);
-		if (rotate_flake) glRotatef(dir_angle, 0, 1, 0);
-
-		const GLfloat vtx[] = {
-			0,    0,    0,
-			size, 0,    0,
-			size, size, 0,
-			0,    size, 0
-		};
-		glVertexPointer(3, GL_FLOAT, 0, vtx);
-		glTexCoordPointer(2, GL_FLOAT, 0, tex);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-		glPopMatrix();
-	}
-}
-
-
 TFlakeArea::TFlakeArea(
     std::size_t num_flakes,
     float xrange_,
@@ -501,7 +495,7 @@ void TFlakeArea::Draw(const CControl *ctrl) const {
 
 	const TPlane& lp = get_left_clip_plane();
 	const TPlane& rp = get_right_clip_plane();
-	float dir_angle(std::atan(ctrl->viewdir.x / ctrl->viewdir.z) * 180 / M_PI);
+	float dir_angle = std::atan2(-ctrl->viewdir.x, -ctrl->viewdir.z);
 
 	ScopedRenderMode rm(PARTICLES);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -509,11 +503,33 @@ void TFlakeArea::Draw(const CControl *ctrl) const {
 	const sf::Color& particle_colour = Env.ParticleColor();
 	glColor(particle_colour);
 
+	// Batch an entire snow layer instead of changing the matrix and submitting
+	// a separate draw for every flake (up to 3000 draws per frame).
+	struct SnowVertex { float u, v; sf::Color color; float x, y, z; };
+	static std::vector<SnowVertex> batch;
+	batch.clear();
+	batch.reserve(flakes.size() * 6);
+	const TVector3d right(rotate_flake ? std::cos(dir_angle) : 1.f, 0.f,
+	                     rotate_flake ? -std::sin(dir_angle) : 0.f);
+	for (const TFlake& flake : flakes) {
+		if (DistanceToPlane(lp, flake.pt) >= 0 || DistanceToPlane(rp, flake.pt) >= 0) continue;
+		TVector3d points[4] = {flake.pt, flake.pt + flake.size * right,
+		                      flake.pt + flake.size * right + TVector3d(0, flake.size, 0),
+		                      flake.pt + TVector3d(0, flake.size, 0)};
+		for (int i : {0, 1, 2, 0, 2, 3})
+			batch.push_back({flake.tex[i*2], flake.tex[i*2+1], particle_colour,
+			                 points[i].x, points[i].y, points[i].z});
+	}
+	if (batch.empty()) return;
+	glDisableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	for (std::size_t i=0; i < flakes.size(); i++) {
-		flakes[i].Draw(lp, rp, rotate_flake, dir_angle);
-	}
+	glEnableClientState(GL_COLOR_ARRAY);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(SnowVertex), &batch[0].u);
+	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(SnowVertex), &batch[0].color);
+	glVertexPointer(3, GL_FLOAT, sizeof(SnowVertex), &batch[0].x);
+	glDrawArrays(GL_TRIANGLES, 0, batch.size());
+	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }

@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef TOOLS_H
 #define TOOLS_H
@@ -58,8 +60,8 @@ class CGluCamera {
 private:
 public:
 	CGluCamera();
-	double distance;
-	double angle;
+	float distance;
+	float angle;
 	void Update(float timestep);
 
 	bool turnright;

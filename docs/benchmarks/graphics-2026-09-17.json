@@ -1,0 +1,684 @@
+{
+  "date": "2026-09-17",
+  "emulator": "PPSSPP 1.20.4",
+  "profile": {
+    "cpu_mhz": 333,
+    "detail_level": 1,
+    "native_resolution": "480x272",
+    "frameskip": 0,
+    "music_enabled": true,
+    "host_audio": "dummy (isolated Xvfb tests)"
+  },
+  "eboot_sha256": "5ae8d40fc7ce7e46376f35fedaa3c3ac5adcd7315f2f029037d804c673c297e3",
+  "courses": [
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "bunny_hill",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.543,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 6775,
+        "p95_us": 7295,
+        "max_us": 18363
+      },
+      "heap_peak_bytes": 12235912,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "twisty_slope",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16687,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.543,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 6399,
+        "p95_us": 6966,
+        "max_us": 18399
+      },
+      "heap_peak_bytes": 12160200,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "bumpy_ride",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.543,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 5726,
+        "p95_us": 6188,
+        "max_us": 17750
+      },
+      "heap_peak_bytes": 12097496,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "explore_mountains",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.535,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 6955,
+        "p95_us": 8270,
+        "max_us": 19642
+      },
+      "heap_peak_bytes": 12562744,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "frozen_lakes",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.543,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4680,
+        "p95_us": 5845,
+        "max_us": 16578
+      },
+      "heap_peak_bytes": 12301192,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "challenge_one",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.526,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4915,
+        "p95_us": 5349,
+        "max_us": 16345
+      },
+      "heap_peak_bytes": 12483896,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "downhill_fear",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17645,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.936,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17275,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 3451,
+        "p95_us": 4023,
+        "max_us": 15470
+      },
+      "heap_peak_bytes": 12416024,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "in_search_of_vodka",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17179,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17083,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4404,
+        "p95_us": 4823,
+        "max_us": 16170
+      },
+      "heap_peak_bytes": 12648616,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "hippo_run",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17525,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.946,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17480,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 3948,
+        "p95_us": 4797,
+        "max_us": 15352
+      },
+      "heap_peak_bytes": 12253784,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "penguins_cant_fly",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16702,
+        "max_us": 17632,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16702,
+        "max_us": 17141,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 3405,
+        "p95_us": 3622,
+        "max_us": 15245
+      },
+      "heap_peak_bytes": 11798456,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "quiet_river",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33366,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.543,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33366,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4660,
+        "p95_us": 4919,
+        "max_us": 16530
+      },
+      "heap_peak_bytes": 12233096,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "frozen_river",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17240,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17191,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 3939,
+        "p95_us": 4307,
+        "max_us": 15697
+      },
+      "heap_peak_bytes": 12021432,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "secret_valleys",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.837,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33366,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.546,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33366,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 6569,
+        "p95_us": 7321,
+        "max_us": 19606
+      },
+      "heap_peak_bytes": 12415000,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "chinese_wall",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17609,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17371,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4479,
+        "p95_us": 4910,
+        "max_us": 15927
+      },
+      "heap_peak_bytes": 12445848,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "wild_mountains",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17647,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17263,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4200,
+        "p95_us": 4643,
+        "max_us": 15494
+      },
+      "heap_peak_bytes": 12151240,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "keep_country_tidy",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17442,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.937,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 16938,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4111,
+        "p95_us": 4503,
+        "max_us": 16146
+      },
+      "heap_peak_bytes": 12491144,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "holygrail",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33366,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.543,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33366,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 5319,
+        "p95_us": 5725,
+        "max_us": 17750
+      },
+      "heap_peak_bytes": 12311880,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "milos_castle",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 18088,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 18088,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4719,
+        "p95_us": 5763,
+        "max_us": 16076
+      },
+      "heap_peak_bytes": 12375656,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "path_of_daggers",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.543,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 6103,
+        "p95_us": 6590,
+        "max_us": 17538
+      },
+      "heap_peak_bytes": 12018408,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "this_means_something",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33366,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.537,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33366,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4575,
+        "p95_us": 5255,
+        "max_us": 16573
+      },
+      "heap_peak_bytes": 12127176,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "tux_at_home",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.84,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.538,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 6579,
+        "p95_us": 7186,
+        "max_us": 18970
+      },
+      "heap_peak_bytes": 12151064,
+      "min_free_user_bytes": 4386816
+    },
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "chragis_gagiwaetter",
+      "cpu_mhz": 333,
+      "music_frames": 599,
+      "all": {
+        "frames": 599,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17634,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 150,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17634,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 3763,
+        "p95_us": 4046,
+        "max_us": 15631
+      },
+      "heap_peak_bytes": 11658168,
+      "min_free_user_bytes": 4386816
+    }
+  ],
+  "endurance": [
+    {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "chinese_wall",
+      "cpu_mhz": 333,
+      "music_frames": 7199,
+      "all": {
+        "frames": 7199,
+        "fps": 59.791,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 34219,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 1800,
+        "fps": 59.739,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 33367,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 4872,
+        "p95_us": 6165,
+        "max_us": 19178
+      },
+      "heap_peak_bytes": 12451032,
+      "min_free_user_bytes": 4386816
+    }
+  ]
+}

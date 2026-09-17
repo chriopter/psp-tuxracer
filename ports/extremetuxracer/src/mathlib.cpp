@@ -15,6 +15,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -26,7 +28,7 @@ GNU General Public License for more details.
 
 
 TVector3d ProjectToPlane(const TVector3d& nml, const TVector3d& v) {
-	double dotProd = DotProduct(nml, v);
+	float dotProd = DotProduct(nml, v);
 	TVector3d nmlComp = dotProd * nml;
 
 	return v - nmlComp;
@@ -59,8 +61,8 @@ TVector3d TransformPoint(const TMatrix<4, 4>& mat, const TVector3d& p) {
 }
 
 bool IntersectPlanes(const TPlane& s1, const TPlane& s2, const TPlane& s3, TVector3d *p) {
-	double A[3][4];
-	double x[3];
+	float A[3][4];
+	float x[3];
 	int retval;
 
 	A[0][0] =  s1.nml.x;
@@ -78,7 +80,7 @@ bool IntersectPlanes(const TPlane& s1, const TPlane& s2, const TPlane& s3, TVect
 	A[2][2] =  s3.nml.z;
 	A[2][3] = -s3.d;
 
-	retval = Gauss((double*) A, 3, x);
+	retval = Gauss((float*) A, 3, x);
 
 	if (retval != 0) {
 		return false;
@@ -90,22 +92,22 @@ bool IntersectPlanes(const TPlane& s1, const TPlane& s2, const TPlane& s3, TVect
 	}
 }
 
-double DistanceToPlane(const TPlane& plane, const TVector3d& pt) {
+float DistanceToPlane(const TPlane& plane, const TVector3d& pt) {
 	return
 	    DotProduct(plane.nml, pt) +
 	    plane.d;
 }
 
 
-TMatrix<4, 4> RotateAboutVectorMatrix(const TVector3d& u, double angle) {
+TMatrix<4, 4> RotateAboutVectorMatrix(const TVector3d& u, float angle) {
 	TMatrix<4, 4> rx, irx, ry, iry;
 	TMatrix<4, 4> mat;
 
-	double a = u.x;
-	double b = u.y;
-	double c = u.z;
+	float a = u.x;
+	float b = u.y;
+	float c = u.z;
 
-	double d = std::hypot(b, c);
+	float d = std::hypot(b, c);
 
 	if (d < EPS) {
 		if (a < 0)
@@ -187,7 +189,7 @@ TMatrix<4, 4> MakeMatrixFromQuaternion(const TQuaternion& q) {
 
 TQuaternion MakeQuaternionFromMatrix(const TMatrix<4, 4>& m) {
 	TQuaternion res;
-	double  tr, s, q[4];
+	float  tr, s, q[4];
 
 	static int nxt[3] = {1, 2, 0};
 
@@ -228,15 +230,15 @@ TQuaternion MakeQuaternionFromMatrix(const TMatrix<4, 4>& m) {
 
 TQuaternion MakeRotationQuaternion(const TVector3d& s, const TVector3d& t) {
 	TVector3d u = CrossProduct(s, t);
-	double sin2phi = u.Norm();
+	float sin2phi = u.Norm();
 
 	if (sin2phi < EPS) {
 		return TQuaternion(0., 0., 0., 1.);
 	} else {
-		double cos2phi = DotProduct(s, t);
+		float cos2phi = DotProduct(s, t);
 
-		double sinphi = std::sqrt((1 - cos2phi) / 2.0);
-		double cosphi = std::sqrt((1 + cos2phi) / 2.0);
+		float sinphi = std::sqrt((1 - cos2phi) / 2.0);
+		float cosphi = std::sqrt((1 + cos2phi) / 2.0);
 
 		return TQuaternion(
 		           sinphi * u.x,
@@ -246,8 +248,8 @@ TQuaternion MakeRotationQuaternion(const TVector3d& s, const TVector3d& t) {
 	}
 }
 
-TQuaternion InterpolateQuaternions(const TQuaternion& q, TQuaternion r, double t) {
-	double cosphi = DotProduct(q, r);
+TQuaternion InterpolateQuaternions(const TQuaternion& q, TQuaternion r, float t) {
+	float cosphi = DotProduct(q, r);
 
 	if (cosphi < 0.0) {
 		cosphi = -cosphi;
@@ -257,10 +259,10 @@ TQuaternion InterpolateQuaternions(const TQuaternion& q, TQuaternion r, double t
 		r.w = -r.w;
 	}
 
-	double scale0, scale1;
+	float scale0, scale1;
 	if (1.0 - cosphi > EPS) {
-		double phi = std::acos(cosphi);
-		double sinphi = std::sin(phi);
+		float phi = std::acos(cosphi);
+		float sinphi = std::sin(phi);
 		scale0 = std::sin(phi * (1.0 - t)) / sinphi;
 		scale1 = std::sin(phi * t) / sinphi;
 	} else {
@@ -285,11 +287,11 @@ TVector3d RotateVector(const TQuaternion& q, const TVector3d& v) {
 //				 Gauss
 // --------------------------------------------------------------------
 
-bool order(double *matrix, int n, int pivot);
-void elim(double *matrix, int n, int pivot);
-void backsb(double *matrix, int n, double *soln);
+bool order(float *matrix, int n, int pivot);
+void elim(float *matrix, int n, int pivot);
+void backsb(float *matrix, int n, float *soln);
 
-int Gauss(double *matrix, int n, double *soln) {
+int Gauss(float *matrix, int n, float *soln) {
 	int pivot = 0;
 	bool error = false;
 
@@ -300,7 +302,9 @@ int Gauss(double *matrix, int n, double *soln) {
 			pivot++;
 		}
 	}
-	if (error) {
+	// The last pivot is not visited by elimination. Reject a singular final
+    // row before back substitution can divide by zero.
+    if (error || n < 1 || std::fabs(matrix[(n-1)*(n+1)+(n-1)]) < EPS) {
 		return 1;
 	} else {
 		backsb(matrix, n, soln);
@@ -308,7 +312,7 @@ int Gauss(double *matrix, int n, double *soln) {
 	return 0;
 }
 
-bool order(double *matrix, int n, int pivot) {
+bool order(float *matrix, int n, int pivot) {
 	bool error = false;
 
 	int rmax = pivot;
@@ -322,7 +326,7 @@ bool order(double *matrix, int n, int pivot) {
 		error = true;
 	else if (rmax != pivot) {
 		for (int k=0; k<(n+1); k++) {
-			double temp = *(matrix+rmax*(n+1)+k);
+			float temp = *(matrix+rmax*(n+1)+k);
 			*(matrix+rmax*(n+1)+k) = *(matrix+pivot*(n+1)+k);
 			*(matrix+pivot*(n+1)+k) = temp;
 		}
@@ -330,9 +334,9 @@ bool order(double *matrix, int n, int pivot) {
 	return error;
 }
 
-void elim(double *matrix, int n, int pivot) {
+void elim(float *matrix, int n, int pivot) {
 	for (int row = pivot+1; row < n; row++) {
-		double factor = (*(matrix+row*(n+1)+pivot))/(*(matrix+pivot*(n+1)+pivot));
+		float factor = (*(matrix+row*(n+1)+pivot))/(*(matrix+pivot*(n+1)+pivot));
 		*(matrix+row*(n+1)+pivot)=0.0;
 		for (int col=pivot+1l; col<n+1; col++) {
 			*(matrix+row*(n+1)+col) = *(matrix+row*(n+1)+col) -
@@ -342,7 +346,7 @@ void elim(double *matrix, int n, int pivot) {
 }
 
 
-void backsb(double *matrix, int n, double *soln) {
+void backsb(float *matrix, int n, float *soln) {
 	for (int row = n-1; row >=0; row--) {
 		for (int col = n-1; col >= row+1; col--) {
 			*(matrix+row*(n+1)+(n)) = *(matrix+row*(n+1)+n) -
@@ -357,8 +361,8 @@ void backsb(double *matrix, int n, double *soln) {
 
 bool IntersectPolygon(const TPolygon& p, std::vector<TVector3d>& v) {
 	TRay ray;
-	double d, s, nuDotProd;
-	double distsq;
+	float d, s, nuDotProd;
+	float distsq;
 
 	TVector3d nml = MakeNormal(p, &v[0]);
 	ray.pt = TVector3d();
@@ -379,9 +383,9 @@ bool IntersectPolygon(const TPolygon& p, std::vector<TVector3d>& v) {
 		v1 = &v[p.vertices[(i + 1) % p.vertices.size()]];
 
 		TVector3d edge_vec = *v1 - *v0;
-		double edge_len = edge_vec.Norm();
+		float edge_len = edge_vec.Norm();
 
-		double t = - DotProduct(*v0, edge_vec);
+		float t = - DotProduct(*v0, edge_vec);
 
 		if (t < 0) {
 			distsq = MAG_SQD(*v0);
@@ -402,7 +406,7 @@ bool IntersectPolygon(const TPolygon& p, std::vector<TVector3d>& v) {
 		TVector3d edge_nml = CrossProduct(nml,
 		                                  v[p.vertices[(i + 1) % p.vertices.size()]] - v[p.vertices[i]]);
 
-		double wec = DotProduct(pt - v[p.vertices[i]], edge_nml);
+		float wec = DotProduct(pt - v[p.vertices[i]], edge_nml);
 		if (wec < 0) return false;
 	}
 	return true;
@@ -436,57 +440,57 @@ void TransPolyhedron(const TMatrix<4, 4>& mat, TPolyhedron& ph) {
 //					ode solver
 // --------------------------------------------------------------------
 
-const double ode23_time_step_mat[] = { 0., 1./2., 3./4., 1. };
-const double ode23_coeff_mat[][4] = {
+const float ode23_time_step_mat[] = { 0., 1./2., 3./4., 1. };
+const float ode23_coeff_mat[][4] = {
 	{0.0, 1./2.,   0.0,  2./9.},
 	{0.0,   0.0, 3./4.,  1./3.},
 	{0.0,   0.0,   0.0,  4./9.},
 	{0.0,   0.0,   0.0,    0.0}
 };
 
-const double ode23_error_mat[] = {-5./72., 1./12., 1./9., -1./8. };
-const double ode23_time_step_exp = 1./3.;
+const float ode23_error_mat[] = {-5./72., 1./12., 1./9., -1./8. };
+const float ode23_time_step_exp = 1./3.;
 
 int ode23_NumEstimates() {return 4; }
 
-void ode23_InitOdeData(TOdeData *data, double init_val, double h) {
+void ode23_InitOdeData(TOdeData *data, float init_val, float h) {
 	data->init_val = init_val;
 	data->h = h;
 }
 
-double ode23_NextTime(TOdeData *data, int step) {
+float ode23_NextTime(TOdeData *data, int step) {
 	return ode23_time_step_mat[step] * data->h;
 }
 
-double ode23_NextValue(TOdeData *data, int step) {
-	double val = data->init_val;
+float ode23_NextValue(TOdeData *data, int step) {
+	float val = data->init_val;
 
 	for (int i=0; i<step; i++)
 		val += ode23_coeff_mat[i][step] * data->k[i];
 	return val;
 }
 
-void ode23_UpdateEstimate(TOdeData *data, int step, double val) {
+void ode23_UpdateEstimate(TOdeData *data, int step, float val) {
 	data->k[step] = data->h * val;
 }
 
-double ode23_FinalEstimate(TOdeData *data) {
-	double val = data->init_val;
+float ode23_FinalEstimate(TOdeData *data) {
+	float val = data->init_val;
 
 	for (int i=0; i<3; i++)
 		val += ode23_coeff_mat[i][3] * data->k[i];
 	return val;
 }
 
-double ode23_EstimateError(TOdeData *data) {
-	double err=0.;
+float ode23_EstimateError(TOdeData *data) {
+	float err=0.;
 
 	for (int i=0; i<4; i++)
 		err += ode23_error_mat[i] * data->k[i];
 	return std::fabs(err);
 }
 
-double ode23_TimestepExponent() {
+float ode23_TimestepExponent() {
 	return ode23_time_step_exp;
 }
 
@@ -501,9 +505,9 @@ TOdeSolver::TOdeSolver() {
 	TimestepExponent = ode23_TimestepExponent;
 }
 
-double LinearInterp(const double x[], const double y[], double val, int n) {
+float LinearInterp(const float x[], const float y[], float val, int n) {
 	int i;
-	double m, b;
+	float m, b;
 
 	if (val < x[0]) i = 0;
 	else if (val >= x[n-1]) i = n-2;
@@ -515,12 +519,12 @@ double LinearInterp(const double x[], const double y[], double val, int n) {
 	return m * val + b;
 }
 
-double XRandom(double min, double max) {
-	return (double)std::rand() / RAND_MAX * (max - min) + min;
+float XRandom(float min, float max) {
+	return (float)std::rand() / RAND_MAX * (max - min) + min;
 }
 
-double FRandom() {
-	return (double)std::rand() / RAND_MAX;
+float FRandom() {
+	return (float)std::rand() / RAND_MAX;
 }
 
 int IRandom(int min, int max) {

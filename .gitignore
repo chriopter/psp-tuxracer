@@ -1,0 +1,34 @@
+# Publish only the ETR source port and its documentation. Local experiments,
+# SDK/emulator installations, recordings, profiles and old ports stay local.
+/*
+!/.gitignore
+!/.pspdx
+!/README.md
+!/LICENSE
+!/build-extremetuxracer.sh
+!/start-extremetuxracer.sh
+!/start-extremetuxracer-background.sh
+!/docs/
+!/tools/
+/tools/*
+!/tools/stage-extremetuxracer.py
+!/tools/test-etr-numerics.py
+!/tools/test-etr-terrain.py
+!/ports/
+/ports/*
+!/ports/extremetuxracer/
+
+!/.github/
+!/tools/package-extremetuxracer.py
+
+!/tools/publish-release.py
+!/tools/test-release.py
+!/tools/test-psp-save.py
+!/tools/test-psp-music.py
+!/tools/fetch-upstream.sh
+!/tools/upstream/
+
+# Local runtime files from directly launching the build EBOOT.
+/ports/extremetuxracer/psp/config/
+/ports/extremetuxracer/psp/etr.log
+/ports/extremetuxracer/psp/etr-errors.log

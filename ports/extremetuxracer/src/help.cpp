@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -30,7 +32,7 @@ GNU General Public License for more details.
 
 CHelp Help;
 
-#define TEXT_LINES 13
+#define TEXT_LINES 9
 TLabel* headline;
 TLabel* texts[TEXT_LINES];
 TLabel* footnote;
@@ -62,8 +64,8 @@ void CHelp::Enter() {
 
 	FT.AutoSizeN(3);
 	int offs = FT.AutoDistanceN(2);
-	for (int i = 0; i < TEXT_LINES; i++)
-		texts[i] = AddLabel(Trans.Text(44 + i), xleft1, ytop + offs*i, colWhite);
+	const char* controls[]={"D-pad / analog stick: steer and navigate", "Up / R: paddle", "Down / L: brake", "Cross: jump / confirm", "Circle: back / end race", "Square + direction: trick", "Triangle: reset to course", "Start: pause / resume", "PPSSPP: remap host keys in Controls"};
+ for (int i=0;i<TEXT_LINES;i++)texts[i]=AddLabel(controls[i],xleft1,ytop+offs*i,colWhite);
 
 	footnote = AddLabel(Trans.Text(65), CENTER, AutoYPosN(90), colWhite);
 }

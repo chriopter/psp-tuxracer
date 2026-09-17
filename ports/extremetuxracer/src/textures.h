@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef TEXTURES_H
 #define TEXTURES_H
@@ -95,7 +97,7 @@ public:
 	void Draw(std::size_t idx, int x, int y, float size);
 	void Draw(std::size_t idx, int x, int y, int width, int height);
 
-	void DrawFrame(std::size_t idx, int x, int y, double w, double h, int frame, const sf::Color& col);
+	void DrawFrame(std::size_t idx, int x, int y, float w, float h, int frame, const sf::Color& col);
 
 	void DrawNumStr(const std::string& s, int x, int y, float size, const sf::Color& col);
 };

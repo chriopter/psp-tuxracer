@@ -1,3 +1,4 @@
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -7,6 +8,7 @@
 #include "textures.h"
 #include "course.h"
 #include "ogl.h"
+#include "clip_polygon.h"
 
 #include <climits>
 #include <cstring>
@@ -17,7 +19,7 @@
 #define ERROR_MAGNIFICATION_AMOUNT 3
 #define ENV_MAP_ALPHA 50
 #define colorval(j,ch) \
-	VNCArray[j*STRIDE_GL_ARRAY+STRIDE_GL_ARRAY-4+(ch)]
+	VNCArray[j*STRIDE_GL_ARRAY+8+(ch)]
 
 #define setalphaval(i) colorval(VertexIndices[i], 3) = \
 	( terrain <= VertexTerrains[i] ) ? 255 : 0
@@ -724,17 +726,75 @@ void quadsquare::InitVert(int i, int x, int z) {
 
 GLubyte *VNCArray;
 
-void quadsquare::DrawTris() {
-	int tmp_min_idx = VertexArrayMinIdx;
+// The GE can discard an entire triangle when a projected vertex exceeds its
+// coordinate range. Clip boundary terrain triangles before perspective divide.
+// Keep UVs, normals and terrain-blend alpha continuous at the new vertices.
+struct TerrainVertex {
+	float uv[2];
+	GLubyte color[4];
+	float normal[3];
+	float position[3];
+};
+static_assert(sizeof(TerrainVertex) == STRIDE_GL_ARRAY, "terrain vertex layout");
 
-	if (glLockArraysEXT_p) {
-		if (tmp_min_idx == 0) tmp_min_idx = 1;
-		glLockArraysEXT_p(tmp_min_idx, VertexArrayMaxIdx - tmp_min_idx + 1);
+static float plane_distance(const TerrainVertex& v, const TPlane& p) {
+	return clip_distance(v, p);
+}
+
+static TerrainVertex terrain_lerp(const TerrainVertex& a, const TerrainVertex& b, float t) {
+	TerrainVertex v;
+	for (int i = 0; i < 2; ++i) v.uv[i] = a.uv[i] + t * (b.uv[i] - a.uv[i]);
+	for (int i = 0; i < 4; ++i) v.color[i] = (GLubyte)(a.color[i] + t * (b.color[i] - a.color[i]));
+	for (int i = 0; i < 3; ++i) {
+		v.normal[i] = a.normal[i] + t * (b.normal[i] - a.normal[i]);
+		v.position[i] = a.position[i] + t * (b.position[i] - a.position[i]);
 	}
+	return v;
+}
 
-	glDrawElements(GL_TRIANGLES, VertexArrayCounter,
-	               GL_UNSIGNED_INT, VertexArrayIndices);
-	if (glUnlockArraysEXT_p) glUnlockArraysEXT_p();
+static void terrain_pointers(const void* vertices) {
+	const GLubyte* p = static_cast<const GLubyte*>(vertices);
+	glTexCoordPointer(2, GL_FLOAT, STRIDE_GL_ARRAY, p);
+	glColorPointer(4, GL_UNSIGNED_BYTE, STRIDE_GL_ARRAY, p + 8);
+	glNormalPointer(GL_FLOAT, STRIDE_GL_ARRAY, p + 12);
+	glVertexPointer(3, GL_FLOAT, STRIDE_GL_ARRAY, p + 24);
+}
+
+void quadsquare::DrawTris() {
+	static std::vector<GLuint> inside;
+	static std::vector<TerrainVertex> clipped;
+	inside.clear();
+	clipped.clear();
+	const TPlane* planes = get_view_clip_planes();
+	const TerrainVertex* vertices = reinterpret_cast<const TerrainVertex*>(VNCArray);
+	for (GLuint i = 0; i < VertexArrayCounter; i += 3) {
+		unsigned codes[3] = {};
+		for (int j = 0; j < 3; ++j)
+			for (int p = 0; p < 6; ++p)
+				if (plane_distance(vertices[VertexArrayIndices[i+j]], planes[p]) > 0)
+					codes[j] |= 1u << p;
+		if (codes[0] & codes[1] & codes[2]) continue;
+		unsigned boundary = codes[0] | codes[1] | codes[2];
+		if (!boundary) {
+			inside.insert(inside.end(), VertexArrayIndices+i, VertexArrayIndices+i+3);
+			continue;
+		}
+		TerrainVertex polygon[12];
+		for (int j = 0; j < 3; ++j) polygon[j] = vertices[VertexArrayIndices[i+j]];
+		int count = clip_polygon(polygon, 3, planes, boundary, terrain_lerp);
+		for (int j = 1; j+1 < count; ++j) {
+			clipped.push_back(polygon[0]);
+			clipped.push_back(polygon[j]);
+			clipped.push_back(polygon[j+1]);
+		}
+	}
+	if (!inside.empty())
+		glDrawElements(GL_TRIANGLES, inside.size(), GL_UNSIGNED_INT, inside.data());
+	if (!clipped.empty()) {
+		terrain_pointers(clipped.data());
+		glDrawArrays(GL_TRIANGLES, 0, clipped.size());
+		terrain_pointers(VNCArray);
+	}
 }
 
 void quadsquare::InitArrayCounters() {
@@ -1042,9 +1102,9 @@ void quadsquare::AddHeightMap(const quadcornerdata& cd, const HeightMapInfo& hm)
 	if (Dirty) SetStatic(cd);
 }
 
-double quadsquare::ScaleX;
-double quadsquare::ScaleZ;
-void quadsquare::SetScale(double x, double z) {
+float quadsquare::ScaleX;
+float quadsquare::ScaleZ;
+void quadsquare::SetScale(float x, float z) {
 	ScaleX = x;
 	ScaleZ = z;
 }
@@ -1081,12 +1141,12 @@ void ResetQuadtree() {
 }
 
 static int get_root_level(int nx, int nz) {
-	return (int)std::log2(static_cast<double>(std::max(nx, nz)));
+	return (int)std::log2(static_cast<float>(std::max(nx, nz)));
 }
 
 
 void InitQuadtree(CourseFields* fields, int nx, int nz,
-                  double scalex, double scalez, const TVector3d& view_pos, double detail) {
+                  float scalex, float scalez, const TVector3d& view_pos, float detail) {
 	HeightMapInfo hm;
 
 	hm.Data = fields;
@@ -1128,19 +1188,22 @@ void RenderQuadtree() {
 	GLubyte *vnc_array = Course.GetGLArrays();
 
 	glEnableClientState(GL_VERTEX_ARRAY);
-	glVertexPointer(3, GL_FLOAT, STRIDE_GL_ARRAY, vnc_array);
+	glVertexPointer(3, GL_FLOAT, STRIDE_GL_ARRAY, vnc_array + 24);
+ glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+ glTexCoordPointer(2, GL_FLOAT, STRIDE_GL_ARRAY, vnc_array);
 
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glNormalPointer(GL_FLOAT, STRIDE_GL_ARRAY,
-	                vnc_array + 4 * sizeof(GLfloat));
+	                vnc_array + 3 * sizeof(GLfloat));
 
 	glEnableClientState(GL_COLOR_ARRAY);
 	glColorPointer(4, GL_UNSIGNED_BYTE, STRIDE_GL_ARRAY,
-	               vnc_array + 8 * sizeof(GLfloat));
+	               vnc_array + 2 * sizeof(GLfloat));
 
 	root->Render(root_corner_data, vnc_array);
 
-	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+ glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 }

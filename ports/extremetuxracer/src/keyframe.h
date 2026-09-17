@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef KEYFRAME_H
 #define KEYFRAME_H
@@ -26,7 +28,7 @@ GNU General Public License for more details.
 class CCharShape;
 
 struct TKeyframe {
-	double val[MAX_FRAME_VALUES];
+	float val[MAX_FRAME_VALUES];
 	TKeyframe() {
 		for (int i = 1; i < 32; i++) val[i] = 0.0;
 		val[0] = 0.5; // time
@@ -39,12 +41,12 @@ private:
 	TVector3d refpos;
 	std::string loadedfile;
 	TKeyframe clipboard;
-	double keytime;
-	double heightcorr;
+	float keytime;
+	float heightcorr;
 	std::size_t keyidx;
 
-	static double interp(double frac, double v1, double v2);
-	void InterpolateKeyframe(std::size_t idx, double frac, CCharShape *shape);
+	static float interp(float frac, float v1, float v2);
+	void InterpolateKeyframe(std::size_t idx, float frac, CCharShape *shape);
 
 	// test and editing
 	void ResetFrame2(TKeyframe *frame);
@@ -53,8 +55,8 @@ public:
 	bool loaded;
 	bool active;
 
-	void Init(const TVector3d& ref_position, double height_correction);
-	void Init(const TVector3d& ref_position, double height_correction, CCharShape *shape);
+	void Init(const TVector3d& ref_position, float height_correction);
+	void Init(const TVector3d& ref_position, float height_correction, CCharShape *shape);
 	void InitTest(const TVector3d& ref_position, CCharShape *shape);
 	void Reset();
 	void Update(float timestep);

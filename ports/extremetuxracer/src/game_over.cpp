@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -39,6 +41,7 @@ GNU General Public License for more details.
 #include "winsys.h"
 #include "physics.h"
 #include "tux.h"
+#include "savedata.hpp"
 
 CGameOver GameOver;
 
@@ -46,6 +49,7 @@ static CKeyframe *final_frame;
 static int highscore_pos = MAX_SCORES;
 
 void QuitGameOver() {
+	PspSave::Save(false);
 	if (g_game.game_type == PRACTICING) {
 		State::manager.RequestEnterState(RaceSelect);
 	} else {

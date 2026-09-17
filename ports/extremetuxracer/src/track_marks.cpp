@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -211,14 +213,14 @@ void add_track_mark(const CControl *ctrl, int *id) {
 		return;
 	}
 
-	double speed = ctrl->cvel.Length();
+	float speed = ctrl->cvel.Length();
 	if (speed < SPEED_TO_START_TRENCH) {
 		break_track_marks();
 		return;
 	}
 
 	TVector3d width_vector = CrossProduct(ctrl->cdirection, TVector3d(0, 1, 0));
-	double magnitude = width_vector.Norm();
+	float magnitude = width_vector.Norm();
 	if (magnitude == 0) {
 		break_track_marks();
 		return;
@@ -228,8 +230,8 @@ void add_track_mark(const CControl *ctrl, int *id) {
 	TVector3d right_vector = -TRACK_WIDTH/2.0 * width_vector;
 	TVector3d left_wing =  ctrl->cpos - left_vector;
 	TVector3d right_wing = ctrl->cpos - right_vector;
-	double left_y = Course.FindYCoord(left_wing.x, left_wing.z);
-	double right_y = Course.FindYCoord(right_wing.x, right_wing.z);
+	float left_y = Course.FindYCoord(left_wing.x, left_wing.z);
+	float right_y = Course.FindYCoord(right_wing.x, right_wing.z);
 
 	if (std::fabs(left_y-right_y) > MAX_TRACK_DEPTH) {
 		break_track_marks();
@@ -237,8 +239,8 @@ void add_track_mark(const CControl *ctrl, int *id) {
 	}
 
 	TPlane surf_plane = Course.GetLocalCoursePlane(ctrl->cpos);
-	double dist_from_surface = DistanceToPlane(surf_plane, ctrl->cpos);
-	double comp_depth = 0.1;
+	float dist_from_surface = DistanceToPlane(surf_plane, ctrl->cpos);
+	float comp_depth = 0.1;
 	if (dist_from_surface >= (2 * comp_depth)) {
 		break_track_marks();
 		return;
@@ -279,7 +281,7 @@ void add_track_mark(const CControl *ctrl, int *id) {
 		q->n4 = Course.FindCourseNormal(q->v4.x, q->v4.z);
 		q->t1 = qprev->t3;
 		q->t2 = qprev->t4;
-		double tex_end = speed*g_game.time_step/TRACK_WIDTH;
+		float tex_end = speed*g_game.time_step/TRACK_WIDTH;
 		q->t3 = TVector2d(0.0, q->t1.y + tex_end);
 		q->t4 = TVector2d(1.0, q->t2.y + tex_end);
 		if (qprev->track_type == TRACK_TAIL)

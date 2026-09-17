@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -53,20 +55,20 @@ void SetStationaryCamera(bool stat) {
 	}
 }
 
-static double camera_distance = 4.0;
+static float camera_distance = 4.0;
 void IncCameraDistance(float timestep) {
 	camera_distance += timestep * CAMERA_DISTANCE_INCREMENT;
 }
 
-void SetCameraDistance(double val) {camera_distance = val;}
+void SetCameraDistance(float val) {camera_distance = val;}
 
 
 void set_view_mode(CControl *ctrl, TViewMode mode) {ctrl->viewmode = mode;}
 
 TVector3d interpolate_view_pos(const TVector3d& ctrl_pos1, const TVector3d& ctrl_pos2,
-                               double max_vec_angle,
+                               float max_vec_angle,
                                const TVector3d& pos1, const TVector3d& pos2,
-                               double dist, float dt,
+                               float dist, float dt,
                                float time_constant) {
 	static TVector3d y_vec(0.0, 1.0, 0.0);
 
@@ -78,11 +80,11 @@ TVector3d interpolate_view_pos(const TVector3d& ctrl_pos1, const TVector3d& ctrl
 
 	TQuaternion q1 = MakeRotationQuaternion(y_vec, vec1);
 	TQuaternion q2 = MakeRotationQuaternion(y_vec, vec2);
-	double alpha = std::min(MAX_INTERPOLATION_VALUE, 1.f - std::exp(-dt / time_constant));
+	float alpha = std::min(MAX_INTERPOLATION_VALUE, 1.f - std::exp(-dt / time_constant));
 	q2 = InterpolateQuaternions(q1, q2, alpha);
 
 	vec2 = RotateVector(q2, y_vec);
-	double theta = RADIANS_TO_ANGLES(M_PI/2 - std::acos(DotProduct(vec2, y_vec)));
+	float theta = RADIANS_TO_ANGLES(M_PI/2 - std::acos(DotProduct(vec2, y_vec)));
 	if (theta > max_vec_angle) {
 		TVector3d axis = CrossProduct(y_vec, vec2);
 		axis.Norm();
@@ -94,7 +96,7 @@ TVector3d interpolate_view_pos(const TVector3d& ctrl_pos1, const TVector3d& ctrl
 
 void interpolate_view_frame(const TVector3d& up1, const TVector3d& dir1,
                             TVector3d *p_up2, TVector3d *p_dir2,
-                            float dt, double time_constant) {
+                            float dt, float time_constant) {
 	TVector3d z1 = -dir1;
 	z1.Norm();
 	TVector3d y1 = ProjectToPlane(z1, up1);
@@ -111,7 +113,7 @@ void interpolate_view_frame(const TVector3d& up1, const TVector3d& dir1,
 	TMatrix<4, 4> cob_mat2(x2, y2, z2);
 	TQuaternion q2 = MakeQuaternionFromMatrix(cob_mat2);
 
-	double alpha = std::min(MAX_INTERPOLATION_VALUE, 1.f - std::exp(-dt / (float)time_constant));
+	float alpha = std::min(MAX_INTERPOLATION_VALUE, 1.f - std::exp(-dt / (float)time_constant));
 	q2 = InterpolateQuaternions(q1, q2, alpha);
 	cob_mat2 = MakeMatrixFromQuaternion(q2);
 
@@ -157,8 +159,8 @@ void setup_view_matrix(CControl *ctrl, bool save_mat) {
 }
 
 TVector3d MakeViewVector() {
-	double course_angle = Course.GetCourseAngle();
-	double rad = ANGLES_TO_RADIANS(
+	float course_angle = Course.GetCourseAngle();
+	float rad = ANGLES_TO_RADIANS(
 	                 course_angle -
 	                 CAMERA_ANGLE_ABOVE_SLOPE +
 	                 PLAYER_ANGLE_IN_CAMERA);
@@ -177,8 +179,8 @@ void update_view(CControl *ctrl, float dt) {
 	static const TVector3d y_vec(0.0, 1.0, 0.0);
 	static const TVector3d mz_vec(0.0, 0.0, -1.0);
 
-	double speed = ctrl->cvel.Length();
-	double time_constant_mult = 1.0 /
+	float speed = ctrl->cvel.Length();
+	float time_constant_mult = 1.0 /
 	                            clamp(0.0,
 	                                  (speed - NO_INTERPOLATION_SPEED) / (BASELINE_INTERPOLATION_SPEED - NO_INTERPOLATION_SPEED),
 	                                  1.0);
@@ -195,7 +197,7 @@ void update_view(CControl *ctrl, float dt) {
 			TQuaternion rot_quat = MakeRotationQuaternion(mz_vec, vel_proj);
 			view_vec = RotateVector(rot_quat, view_vec);
 			view_pt = ctrl->cpos + view_vec;
-			double ycoord = Course.FindYCoord(view_pt.x, view_pt.z);
+			float ycoord = Course.FindYCoord(view_pt.x, view_pt.z);
 
 			if (view_pt.y < ycoord + MIN_CAMERA_HEIGHT) {
 				view_pt.y = ycoord + MIN_CAMERA_HEIGHT;
@@ -239,7 +241,7 @@ void update_view(CControl *ctrl, float dt) {
 			TQuaternion rot_quat = MakeRotationQuaternion(mz_vec, vel_proj);
 			view_vec = RotateVector(rot_quat, view_vec);
 			view_pt = ctrl->cpos + view_vec;
-			double ycoord = Course.FindYCoord(view_pt.x, view_pt.z);
+			float ycoord = Course.FindYCoord(view_pt.x, view_pt.z);
 			if (view_pt.y < ycoord + MIN_CAMERA_HEIGHT) {
 				view_pt.y = ycoord + MIN_CAMERA_HEIGHT;
 			}
@@ -277,7 +279,7 @@ void update_view(CControl *ctrl, float dt) {
 
 		case ABOVE: {
 			view_pt = ctrl->cpos + view_vec;
-			double ycoord = Course.FindYCoord(view_pt.x, view_pt.z);
+			float ycoord = Course.FindYCoord(view_pt.x, view_pt.z);
 			if (view_pt.y < ycoord + MIN_CAMERA_HEIGHT) {
 				view_pt.y = ycoord + MIN_CAMERA_HEIGHT;
 			}
@@ -319,12 +321,12 @@ static char p_vertex_code[6];
 
 
 void SetupViewFrustum(const CControl *ctrl) {
-	double aspect = (double)Winsys.resolution.width/Winsys.resolution.height;
+	float aspect = (float)Winsys.resolution.width/Winsys.resolution.height;
 
-	double near_dist = NEAR_CLIP_DIST;
-	double far_dist = param.forward_clip_distance;
-	double half_fov = ANGLES_TO_RADIANS(param.fov * 0.5);
-	double half_fov_horiz = std::atan(std::tan(half_fov) * aspect);
+	float near_dist = NEAR_CLIP_DIST;
+	float far_dist = param.forward_clip_distance;
+	float half_fov = ANGLES_TO_RADIANS(param.fov * 0.5);
+	float half_fov_horiz = std::atan(std::tan(half_fov) * aspect);
 
 	frustum_planes[0] = TPlane(0, 0, 1, near_dist);
 	frustum_planes[1] = TPlane(0, 0, -1, -far_dist);
@@ -391,6 +393,7 @@ clip_result_t clip_aabb_to_view_frustum(const TVector3d& min, const TVector3d& m
 }
 
 const TPlane& get_far_clip_plane() { return frustum_planes[1]; }
+const TPlane* get_view_clip_planes() { return frustum_planes; }
 const TPlane& get_left_clip_plane() { return frustum_planes[2]; }
 const TPlane& get_right_clip_plane() { return frustum_planes[3]; }
 const TPlane& get_bottom_clip_plane() { return frustum_planes[5]; }

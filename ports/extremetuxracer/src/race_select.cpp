@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -150,7 +152,7 @@ void CRaceSelect::Enter() {
 
 	framewidth = 550 * Winsys.scale;
 	frameheight = 50 * Winsys.scale;
-	frametop = AutoYPosN(30);
+	frametop = AutoYPosN(25);
 
 	area = AutoAreaN(30, 80, framewidth);
 	prevheight = 144 * Winsys.scale;
@@ -173,8 +175,8 @@ void CRaceSelect::Enter() {
 	random_btn = AddIconButton(iconleft + iconspace * 4, icontop, Tex.GetSFTexture(RANDOM_BUTT), iconsize, 0, 0);
 	int siz = FT.AutoSizeN(5);
 	int len1 = FT.GetTextWidth(Trans.Text(13));
-	textbuttons[0] = AddTextButton(Trans.Text(13), area.right-len1-50, AutoYPosN(85), siz);
-	textbuttons[1] = AddTextButton(Trans.Text(8), area.left + 50, AutoYPosN(85), siz);
+	textbuttons[0] = AddTextButton(Trans.Text(13), area.right-len1-50, AutoYPosN(91), siz);
+	textbuttons[1] = AddTextButton(Trans.Text(8), area.left + 50, AutoYPosN(91), siz);
 	FT.AutoSizeN(4);
 
 	courseGroup = AddUpDown(area.left + framewidth + 8, frametop, 0, (int)Course.CourseLists.size() - 1, prevGroup);
@@ -232,7 +234,7 @@ void CRaceSelect::Loop(float time_step) {
 		sizevar += " Variation: ";
 		sizevar += Int_StrN(g_game.treevar);
 		FT.SetColor(colYellow);
-		FT.DrawString(CENTER, AutoYPosN(85), forcetrees);
+		FT.DrawString(CENTER, AutoYPosN(91), forcetrees);
 		FT.DrawString(CENTER, AutoYPosN(90), sizevar);
 	}
 

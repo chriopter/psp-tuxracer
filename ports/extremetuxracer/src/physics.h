@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef PHYSICS_H
 #define PHYSICS_H
@@ -69,38 +71,38 @@ struct TForce {
 	TVector3d vel;
 	TVector3d frictdir;
 
-	double frict_coeff;
-	double comp_depth;
-	double surfdistance;
-	double compression;
+	float frict_coeff;
+	float comp_depth;
+	float surfdistance;
+	float compression;
 };
 
 class CControl {
 private:
 	TForce ff;
-	double ode_time_step;
-	double finish_speed;
+	float ode_time_step;
+	float finish_speed;
 
 	bool CheckTreeCollisions(const TVector3d& pos, TVector3d *tree_loc) const;
 	void AdjustTreeCollision(const TVector3d& pos, TVector3d *vel) const;
 	static void CheckItemCollection(const TVector3d& pos);
 
-	TVector3d CalcRollNormal(double speed);
+	TVector3d CalcRollNormal(float speed);
 	TVector3d CalcAirForce();
 	TVector3d CalcSpringForce();
 	TVector3d CalcNormalForce();
 	TVector3d CalcJumpForce();
-	TVector3d CalcFrictionForce(double speed, const TVector3d& nmlforce);
-	TVector3d CalcPaddleForce(double speed);
-	TVector3d CalcBrakeForce(double speed);
+	TVector3d CalcFrictionForce(float speed, const TVector3d& nmlforce);
+	TVector3d CalcPaddleForce(float speed);
+	TVector3d CalcBrakeForce(float speed);
 	TVector3d CalcGravitationForce();
 	TVector3d CalcNetForce(const TVector3d& pos, const TVector3d& vel);
 
 	void     AdjustVelocity();
-	void     AdjustPosition(const TPlane& surf_plane, double dist_from_surface);
-	void     SetTuxPosition(double speed);
-	double   AdjustTimeStep(double h, const TVector3d& vel);
-	void     SolveOdeSystem(double timestep);
+	void     AdjustPosition(const TPlane& surf_plane, float dist_from_surface);
+	void     SetTuxPosition(float speed);
+	float   AdjustTimeStep(float h, const TVector3d& vel);
+	void     SolveOdeSystem(float timestep);
 public:
 	CControl();
 
@@ -120,16 +122,16 @@ public:
 	TVector3d cnet_force;
 	TVector3d cdirection;
 	TQuaternion corientation;
-	double way;
+	float way;
 
 	TVector3d plane_nml;
 
 	// steering:
-	double turn_fact;
-	double turn_animation;
-	double paddle_time;
-	double jump_amt;
-	double jump_start_time;
+	float turn_fact;
+	float turn_animation;
+	float paddle_time;
+	float jump_amt;
+	float jump_start_time;
 	bool   is_paddling;
 	bool   is_braking;
 	bool   begin_jump;
@@ -143,12 +145,12 @@ public:
 	bool   cairborne;
 	bool   roll_left;
 	bool   roll_right;
-	double roll_factor;
-	double flip_factor;
+	float roll_factor;
+	float flip_factor;
 
 	// pseudo constants:
-	double minSpeed;
-	double minFrictspeed;
+	float minSpeed;
+	float minFrictspeed;
 
 	void Init();
 	void UpdatePlayerPos(float timestep);

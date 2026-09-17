@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -31,6 +33,7 @@ GNU General Public License for more details.
 #include "regist.h"
 #include "winsys.h"
 #include "spx.h"
+#include "savedata.hpp"
 
 CNewPlayer NewPlayer;
 
@@ -53,6 +56,11 @@ void CNewPlayer::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 			State::manager.RequestEnterState(Regist);
 			break;
 		case sf::Keyboard::Return:
+			if (textfield->focussed()) {
+				std::string name = textfield->Text();
+				if (PspSave::EditPlayerName(name)) textfield->SetText(name);
+				break;
+			}
 			if (textbuttons[0]->focussed()) State::manager.RequestEnterState(Regist);
 			else QuitAndAddPlayer();
 			break;
@@ -105,7 +113,8 @@ void CNewPlayer::Enter() {
 	float len = FT.GetTextWidth(Trans.Text(15));
 	textbuttons[1] = AddTextButton(Trans.Text(15), area.right-len-50, AutoYPosN(70), siz);
 
-	textfield = AddTextField(emptyString, area.left, frametop, framewidth, frameheight);
+	textfield = AddTextField("Player " + Int_StrN(Players.numPlayers()+1), area.left, frametop, framewidth, frameheight);
+	SetFocus(textfield);
 }
 
 void CNewPlayer::Loop(float time_step) {
@@ -125,7 +134,7 @@ void CNewPlayer::Loop(float time_step) {
 
 	FT.SetColor(colWhite);
 	FT.AutoSizeN(4);
-	FT.DrawString(CENTER, AutoYPosN(30), Trans.Text(66));
+	FT.DrawString(CENTER, AutoYPosN(30), "Select the name field and press Cross to edit");
 
 	if (avatar->focussed()) col = colDYell;
 	else col = colWhite;

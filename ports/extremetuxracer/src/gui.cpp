@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -32,8 +34,6 @@ GNU General Public License for more details.
 static std::vector<TWidget*> Widgets;
 static int lock_focussed = -1;
 static int focussed = -1;
-static bool locked_LR = false;
-static bool locked_UD = false;
 
 static TWidget* AddWidget(TWidget* widget) {
 	if (Widgets.size() == focussed) {
@@ -117,7 +117,7 @@ TFramedText::TFramedText(int x, int y, int width, int height, int line, const sf
 	, frame(sf::Vector2f(width - line * 2, height - line * 2))
 	, text(string, FT.getCurrentFont(), ftsize)
 	, borderFocus(borderFocus_) {
-	text.setPosition(x + line + 20, y + line);
+	text.setPosition(x + line + 20, y + std::max(line, (height-(int)ftsize)/2));
 	if (!borderFocus) {
 		text.setFillColor(colWhite);
 		text.setOutlineColor(colWhite);
@@ -315,8 +315,9 @@ void TTextField::UpdateCursor(float timestep) {
 }
 
 TTextField* AddTextField(const sf::String& text, int x, int y, int width, int height) {
-	locked_LR = true;
-	return static_cast<TTextField*>(AddWidget(new TTextField(x, y, width, height, text)));
+	auto *widget = static_cast<TTextField*>(AddWidget(new TTextField(x, y, width, height, text)));
+	widget->locksLR = true;
+	return widget;
 }
 
 TCheckbox::TCheckbox(int x, int y, int width, const sf::String& tag_)
@@ -446,8 +447,9 @@ void TIconButton::Key(sf::Keyboard::Key key, bool released) {
 }
 
 TIconButton* AddIconButton(int x, int y, const sf::Texture& texture, float size, int maximum, int value) {
-	locked_UD = true;
-	return static_cast<TIconButton*>(AddWidget(new TIconButton(x, y, texture, size, maximum, value)));
+	auto *widget = static_cast<TIconButton*>(AddWidget(new TIconButton(x, y, texture, size, maximum, value)));
+	widget->locksUD = true;
+	return widget;
 }
 
 TArrow::TArrow(int x, int y, bool down_)
@@ -578,8 +580,9 @@ void TUpDown::SetMaximum(int max_) {
 }
 
 TUpDown* AddUpDown(int x, int y, int minimum, int maximum, int value, int distance, bool swapArrows) {
-	locked_UD = true;
-	return static_cast<TUpDown*>(AddWidget(new TUpDown(x, y, minimum, maximum, value, distance, swapArrows)));
+	auto *widget = static_cast<TUpDown*>(AddWidget(new TUpDown(x, y, minimum, maximum, value, distance, swapArrows)));
+	widget->locksUD = true;
+	return widget;
 }
 
 // ------------------ Elementary drawing ---------------------------------------------
@@ -663,7 +666,7 @@ void DrawCursor() {
 	static sf::Sprite s(Tex.GetSFTexture(MOUSECURSOR));
 	static bool init = false;
 	if (!init) {
-		s.setScale((double) Winsys.resolution.width / 1400, (double) Winsys.resolution.width / 1400);
+		s.setScale((float) Winsys.resolution.width / 1400, (float) Winsys.resolution.width / 1400);
 		init = true;
 	}
 	s.setPosition(cursor_pos.x, cursor_pos.y);
@@ -714,6 +717,9 @@ TWidget* MouseMoveGUI(int x, int y) {
 }
 
 TWidget* KeyGUI(sf::Keyboard::Key key, bool released) {
+	const int previousFocus = focussed;
+	const bool locked_LR = focussed >= 0 && Widgets[focussed]->locksLR;
+	const bool locked_UD = focussed >= 0 && Widgets[focussed]->locksUD;
 	if (!released) {
 		switch (key) {
 			case sf::Keyboard::Tab:
@@ -744,7 +750,7 @@ TWidget* KeyGUI(sf::Keyboard::Key key, bool released) {
 	}
 	if (focussed == -1)
 		return 0;
-	Widgets[focussed]->Key(key, released);
+	if (focussed == previousFocus) Widgets[focussed]->Key(key, released);
 	return Widgets[focussed];
 }
 
@@ -833,7 +839,6 @@ void ResetGUI() {
 	Widgets.clear();
 	focussed = 0;
 	lock_focussed = -1;
-	locked_LR = locked_UD = false;
 }
 
 // ---------------------------------------------------------------

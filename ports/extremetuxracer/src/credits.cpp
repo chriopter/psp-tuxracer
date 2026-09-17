@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -38,9 +40,7 @@ CCredits Credits;
 
 static float y_offset = 0;
 static bool moving = true;
-sf::RenderTexture* RT = 0;
-sf::VertexArray arr(sf::Quads, 12);
-sf::RenderStates states(sf::BlendAlpha);
+
 
 void CCredits::LoadCreditList() {
 	CSPList list;
@@ -74,7 +74,8 @@ void CCredits::DrawCreditsText(float time_step) {
 
 	sf::Text text;
 	text.setFont(FT.getCurrentFont());
-	RT->clear(colTBackr);
+	glEnable(GL_SCISSOR_TEST);
+ glScissor(0, BOTT_Y * 272 / h, 480, (h-TOP_Y-BOTT_Y)*272/h);
 	for (std::forward_list<TCredits>::const_iterator i = CreditList.begin(); i != CreditList.end(); ++i) {
 		offs = h - TOP_Y - y_offset + i->offs;
 		if (offs > h || offs < -100.f) // Draw only visible lines
@@ -90,11 +91,9 @@ void CCredits::DrawCreditsText(float time_step) {
 		text.setCharacterSize(FT.AutoSizeN(i->size)+1);
 		text.setString(i->text);
 		text.setPosition((Winsys.resolution.width - text.getLocalBounds().width) / 2, offs);
-		RT->draw(text);
+		Winsys.draw(text);
 	}
-	RT->display();
-
-	Winsys.draw(arr, states);
+	glDisable(GL_SCISSOR_TEST);
 
 	if (offs < TOP_Y) y_offset = 0;
 }
@@ -127,32 +126,11 @@ void CCredits::Enter() {
 	Music.Play(param.credits_music, true);
 	y_offset = 0;
 	moving = true;
-	RT = new sf::RenderTexture();
-	RT->create(Winsys.resolution.width, Winsys.resolution.height - TOP_Y - BOTT_Y + 2 * FADE);
 
-	float w = Winsys.resolution.width;
-	float h = Winsys.resolution.height;
-	arr[0] = sf::Vertex(sf::Vector2f(0, TOP_Y - FADE), colTBackr, sf::Vector2f(0, 0));
-	arr[1] = sf::Vertex(sf::Vector2f(0, TOP_Y), colWhite, sf::Vector2f(0, FADE));
-	arr[2] = sf::Vertex(sf::Vector2f(w, TOP_Y), colWhite, sf::Vector2f(w, FADE));
-	arr[3] = sf::Vertex(sf::Vector2f(w, TOP_Y - FADE), colTBackr, sf::Vector2f(w, 0));
-
-	arr[4] = sf::Vertex(sf::Vector2f(0, TOP_Y), colWhite, sf::Vector2f(0, FADE));
-	arr[5] = sf::Vertex(sf::Vector2f(0, h - BOTT_Y), colWhite, sf::Vector2f(0, RT->getSize().y - FADE));
-	arr[6] = sf::Vertex(sf::Vector2f(w, h - BOTT_Y), colWhite, sf::Vector2f(w, RT->getSize().y - FADE));
-	arr[7] = sf::Vertex(sf::Vector2f(w, TOP_Y), colWhite, sf::Vector2f(w, FADE));
-
-	arr[8] = sf::Vertex(sf::Vector2f(0, h - BOTT_Y), colWhite, sf::Vector2f(0, RT->getSize().y - FADE));
-	arr[9] = sf::Vertex(sf::Vector2f(0, h - BOTT_Y + FADE), colTBackr, sf::Vector2f(0, RT->getSize().y));
-	arr[10] = sf::Vertex(sf::Vector2f(w, h - BOTT_Y + FADE), colTBackr, sf::Vector2f(w, RT->getSize().y));
-	arr[11] = sf::Vertex(sf::Vector2f(w, h - BOTT_Y), colWhite, sf::Vector2f(w, RT->getSize().y - FADE));
-
-	states.texture = &RT->getTexture();
 }
 
 void CCredits::Exit() {
-	delete RT;
-	RT = nullptr;
+
 	CreditList.clear();
 }
 

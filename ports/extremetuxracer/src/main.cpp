@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -28,6 +30,7 @@ GNU General Public License for more details.
 #include "tools.h"
 #include "ogl_test.h"
 #include "winsys.h"
+#include "savedata.hpp"
 #include <iostream>
 #include <ctime>
 #include <cstring>
@@ -61,7 +64,7 @@ void InitGame(int argc, char **argv) {
 	g_game.treevar = 3;
 }
 
-int main(int argc, char **argv) {
+int etr_main(int argc, char **argv) {
 	std::cout << "\n----------- Extreme Tux Racer " ETR_VERSION_STRING " ----------------";
 	std::cout << "\n----------- (C) 2010-2024 Extreme Tux Racer Team  --------\n\n";
 
@@ -69,6 +72,7 @@ int main(int argc, char **argv) {
 	InitConfig();
 	InitGame(argc, argv);
 	Winsys.Init();
+	PspSave::LoadStartup();
 	InitOpenglExtensions();
 
 	// For checking the joystick and the OpgenGL version (the info is written on the console):

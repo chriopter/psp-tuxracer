@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -160,6 +162,7 @@ bool CMusic::LoadPiece(const std::string& name, const std::string& filename) {
 	sf::Music* m = new sf::Music();
 	if (!m->openFromFile(filename)) {
 		Message("could not load music", filename);
+		delete m;
 		return false;
 	}
 	MusicIndex[name] = musics.size();
@@ -187,17 +190,22 @@ void CMusic::LoadMusicList() {
 	list.clear();
 	ThemesIndex.clear();
 	if (list.Load(param.music_dir, "racing_themes.lst")) {
+		auto findMusic = [&](const std::string &name) -> sf::Music* {
+			auto found = MusicIndex.find(name);
+			return found != MusicIndex.end() && found->second < musics.size()
+			    ? musics[found->second] : nullptr;
+		};
 		themes.resize(list.size());
 		std::size_t i = 0;
 		for (CSPList::const_iterator line = list.cbegin(); line != list.cend(); ++line, i++) {
 			std::string name = SPStrN(*line, "name");
 			ThemesIndex[name] = i;
 			std::string item = SPStrN(*line, "race", "race_1");
-			themes[i].situation[0] = musics[MusicIndex[item]];
+			themes[i].situation[0] = findMusic(item);
 			item = SPStrN(*line, "wonrace", "wonrace_1");
-			themes[i].situation[1] = musics[MusicIndex[item]];
+			themes[i].situation[1] = findMusic(item);
 			item = SPStrN(*line, "lostrace", "lostrace_1");
-			themes[i].situation[2] = musics[MusicIndex[item]];
+			themes[i].situation[2] = findMusic(item);
 		}
 	} else Message("could not load racing_themes.lst");
 }

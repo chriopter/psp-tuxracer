@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -77,14 +79,14 @@ CCourse::~CCourse() {
 	ResetCourse();
 }
 
-double CCourse::GetBaseHeight(double distance) const {
-	double slope = std::tan(ANGLES_TO_RADIANS(curr_course->angle));
+float CCourse::GetBaseHeight(float distance) const {
+	float slope = std::tan(ANGLES_TO_RADIANS(curr_course->angle));
 
 	return -slope * distance -
 	       base_height_value / 255.0 * curr_course->scale;
 }
 
-double CCourse::GetMaxHeight(double distance) const {
+float CCourse::GetMaxHeight(float distance) const {
 	return GetBaseHeight(distance) + curr_course->scale;
 }
 
@@ -252,15 +254,13 @@ void CCourse::FillGlArrays() {
 		for (unsigned int y = 0; y < ny; y++) {
 			int idx = STRIDE_GL_ARRAY * (y * nx + x);
 
-			FLOATVAL(0) = (GLfloat)x / (nx-1.f) * curr_course->size.x;
-			FLOATVAL(1) = Fields[x + nx*y].elevation;
-			FLOATVAL(2) = -(GLfloat)y / (ny-1.f) * curr_course->size.y;
-
-			const TVector3d& nml = Fields[ x + y * nx ].nml;
-			FLOATVAL(4) = nml.x;
-			FLOATVAL(5) = nml.y;
-			FLOATVAL(6) = nml.z;
-			FLOATVAL(7) = 1.0f;
+            FLOATVAL(6) = (GLfloat)x / (nx-1.f) * curr_course->size.x;
+            FLOATVAL(7) = Fields[x + nx*y].elevation;
+            FLOATVAL(8) = -(GLfloat)y / (ny-1.f) * curr_course->size.y;
+            FLOATVAL(0) = FLOATVAL(6) / 6.f;
+            FLOATVAL(1) = FLOATVAL(8) / 6.f;
+            const TVector3d& nml = Fields[x + y * nx].nml;
+            FLOATVAL(3) = nml.x; FLOATVAL(4) = nml.y; FLOATVAL(5) = nml.z;
 
 			BYTEVAL(0) = 255;
 			BYTEVAL(1) = 255;
@@ -329,7 +329,7 @@ bool CCourse::LoadElevMap() {
 	ny = img.getSize().y;
 	Fields.resize(nx*ny);
 
-	double slope = std::tan(ANGLES_TO_RADIANS(curr_course->angle));
+	float slope = std::tan(ANGLES_TO_RADIANS(curr_course->angle));
 	int pad = 0;
 	int depth = 4;
 	const uint8_t* data = img.getPixelsPtr();
@@ -338,7 +338,7 @@ bool CCourse::LoadElevMap() {
 			Fields[(nx - 1 - x) + nx * (ny - 1 - y)].elevation =
 			    ((data[(x + nx*y) * depth + pad]
 			      - base_height_value) / 255.0) * curr_course->scale
-			    - (double)(ny-1-y) / ny * curr_course->size.y * slope;
+			    - (float)(ny-1-y) / ny * curr_course->size.y * slope;
 		}
 		pad += (nx * depth) % 4;
 	}
@@ -367,10 +367,10 @@ void CCourse::LoadItemList() {
 	for (CSPList::const_iterator line = list.cbegin(); line != list.cend(); ++line) {
 		int x = SPIntN(*line, "x", 0);
 		int z = SPIntN(*line, "z", 0);
-		double height = SPFloatN(*line, "height", 1);
-		double diam = SPFloatN(*line, "diam", 1);
-		double xx = (nx - x) / (double)((double)nx - 1.0) * curr_course->size.x;
-		double zz = -(int)(ny - z) / (double)((double)ny - 1.0) * curr_course->size.y;
+		float height = SPFloatN(*line, "height", 1);
+		float diam = SPFloatN(*line, "diam", 1);
+		float xx = (nx - x) / (float)((float)nx - 1.0) * curr_course->size.x;
+		float zz = -(int)(ny - z) / (float)((float)ny - 1.0) * curr_course->size.y;
 
 		std::string name = SPStrN(*line, "name");
 		std::size_t type = ObjectIndex[name];
@@ -415,14 +415,14 @@ static int GetObject(const unsigned char* pixel) {
 #define SHRUB_MIN 1.0
 #define SHRUB_MAX 2.0
 
-const double sizefact[6] = {0.5, 0.5, 0.7, 1.0, 1.4, 2.0};
-const double varfact[6] = {1.0, 1.0, 1.22, 1.41, 1.73, 2.0};
-const double diamfact = 1.4;
+const float sizefact[6] = {0.5, 0.5, 0.7, 1.0, 1.4, 2.0};
+const float varfact[6] = {1.0, 1.0, 1.22, 1.41, 1.73, 2.0};
+const float diamfact = 1.4;
 
-static void CalcRandomTrees(double baseheight, double basediam, double &height, double &diam) {
-	double hhh = baseheight * sizefact[g_game.treesize];
-	double minsiz = hhh / varfact[g_game.treevar];
-	double maxsiz = hhh * varfact[g_game.treevar];
+static void CalcRandomTrees(float baseheight, float basediam, float &height, float &diam) {
+	float hhh = baseheight * sizefact[g_game.treesize];
+	float minsiz = hhh / varfact[g_game.treevar];
+	float maxsiz = hhh * varfact[g_game.treevar];
 	height = XRandom(minsiz, maxsiz);
 	diam = XRandom(height/diamfact, height);
 }
@@ -440,7 +440,7 @@ bool CCourse::LoadAndConvertObjectMap() {
 	int cnt = 0;
 	int depth = 4;
 	const unsigned char* data = (unsigned char*)treeImg.getPixelsPtr();
-	double height, diam;
+	float height, diam;
 	CSPList savelist;
 
 	CollArr.clear();
@@ -451,8 +451,8 @@ bool CCourse::LoadAndConvertObjectMap() {
 			int type = GetObject(&data[imgidx]);
 			if (type >= 0) {
 				cnt++;
-				double xx = (nx - x) / (double)((double)nx - 1.0) * curr_course->size.x;
-				double zz = -(int)(ny - y) / (double)((double)ny - 1.0) * curr_course->size.y;
+				float xx = (nx - x) / (float)((float)nx - 1.0) * curr_course->size.x;
+				float zz = -(int)(ny - y) / (float)((float)ny - 1.0) * curr_course->size.y;
 				if (ObjTypes[type].texture == nullptr && ObjTypes[type].drawable) {
 					ObjTypes[type].texture = new TTexture();
 					ObjTypes[type].texture->Load(MakePathStr(param.obj_dir, ObjTypes[type].textureFile), false);
@@ -801,7 +801,7 @@ std::size_t CCourse::GetEnv() const {
 void CCourse::MirrorCourseData() {
 	for (unsigned int y = 0; y < ny; y++) {
 		for (unsigned int x = 0; x < nx / 2; x++) {
-			double tmp = ELEV(x,y);
+			float tmp = ELEV(x,y);
 			ELEV(x,y) = ELEV(nx-1-x, y);
 			ELEV(nx-1-x,y) = tmp;
 
@@ -848,10 +848,10 @@ void CCourse::MirrorCourse() {
 //				from phys_sim:
 // ********************************************************************
 
-void CCourse::GetIndicesForPoint(double x, double z, unsigned int* x0, unsigned int* y0, unsigned int* x1, unsigned int* y1)  const {
+void CCourse::GetIndicesForPoint(float x, float z, unsigned int* x0, unsigned int* y0, unsigned int* x1, unsigned int* y1)  const {
 
-	double xidx = x / curr_course->size.x * ((double) nx - 1.);
-	double yidx = -z / curr_course->size.y * ((double) ny - 1.);
+	float xidx = x / curr_course->size.x * ((float) nx - 1.);
+	float yidx = -z / curr_course->size.y * ((float) ny - 1.);
 
 	if (xidx < 0) xidx = 0;
 	else if (xidx > nx-1) xidx = nx-1;
@@ -875,15 +875,15 @@ void CCourse::GetIndicesForPoint(double x, double z, unsigned int* x0, unsigned 
 	}
 }
 
-void CCourse::FindBarycentricCoords(double x, double z, TVector2i *idx0,
-                                    TVector2i *idx1, TVector2i *idx2, double *u, double *v) const {
-	double xidx, yidx;
+void CCourse::FindBarycentricCoords(float x, float z, TVector2i *idx0,
+                                    TVector2i *idx1, TVector2i *idx2, float *u, float *v) const {
+	float xidx, yidx;
 	unsigned int x0, x1, y0, y1;
-	double dx, ex, dz, ez, qx, qz, invdet;
+	float dx, ex, dz, ez, qx, qz, invdet;
 
 	GetIndicesForPoint(x, z, &x0, &y0, &x1, &y1);
-	xidx = x / curr_course->size.x * ((double) nx - 1.0);
-	yidx = -z / curr_course->size.y * ((double) ny - 1.0);
+	xidx = x / curr_course->size.x * ((float) nx - 1.0);
+	yidx = -z / curr_course->size.y * ((float) ny - 1.0);
 
 	if ((x0 + y0) % 2 == 0) {
 		if (yidx - y0 < xidx - x0) {
@@ -919,12 +919,12 @@ void CCourse::FindBarycentricCoords(double x, double z, TVector2i *idx0,
 	*v = (qz * dx - qx * dz) * invdet;
 }
 
-#define COURSE_VERTX(_x, _y) TVector3d ( (double)(_x)/(nx-1.)*curr_course->size.x, \
-                       ELEV((_x),(_y)), -(double)(_y)/(ny-1.)*curr_course->size.y )
+#define COURSE_VERTX(_x, _y) TVector3d ( (float)(_x)/(nx-1.)*curr_course->size.x, \
+                       ELEV((_x),(_y)), -(float)(_y)/(ny-1.)*curr_course->size.y )
 
-TVector3d CCourse::FindCourseNormal(double x, double z) const {
+TVector3d CCourse::FindCourseNormal(float x, float z) const {
 	TVector2i idx0, idx1, idx2;
-	double u, v;
+	float u, v;
 	FindBarycentricCoords(x, z, &idx0, &idx1, &idx2, &u, &v);
 
 	const TVector3d& n0 = Course.Fields[idx0.x + nx * idx0.y].nml;
@@ -942,8 +942,8 @@ TVector3d CCourse::FindCourseNormal(double x, double z) const {
 	TVector3d tri_nml = CrossProduct(p1 - p0, p2 - p0);
 	tri_nml.Norm();
 
-	double min_bary = std::min(u, std::min(v, 1. - u - v));
-	double interp_factor = std::min(min_bary / NORM_INTERPOL, 1.0);
+	float min_bary = std::min(u, std::min(v, 1. - u - v));
+	float interp_factor = std::min(min_bary / NORM_INTERPOL, 1.0);
 
 	TVector3d interp_nml = interp_factor * tri_nml + (1.-interp_factor) * smooth_nml;
 	interp_nml.Norm();
@@ -951,21 +951,21 @@ TVector3d CCourse::FindCourseNormal(double x, double z) const {
 	return interp_nml;
 }
 
-double CCourse::FindYCoord(double x, double z) const {
-	static double last_x, last_z, last_y;
+float CCourse::FindYCoord(float x, float z) const {
+	static float last_x, last_z, last_y;
 	static bool cache_full = false;
 
 	if (cache_full && last_x == x && last_z == z) return last_y;
 
 	TVector2i idx0, idx1, idx2;
-	double u, v;
+	float u, v;
 	FindBarycentricCoords(x, z, &idx0, &idx1, &idx2, &u, &v);
 
 	TVector3d p0 = COURSE_VERTX(idx0.x, idx0.y);
 	TVector3d p1 = COURSE_VERTX(idx1.x, idx1.y);
 	TVector3d p2 = COURSE_VERTX(idx2.x, idx2.y);
 
-	double ycoord = u * p0.y + v * p1.y + (1. - u - v) * p2.y;
+	float ycoord = u * p0.y + v * p1.y + (1. - u - v) * p2.y;
 
 	last_x = x;
 	last_z = z;
@@ -975,9 +975,9 @@ double CCourse::FindYCoord(double x, double z) const {
 	return ycoord;
 }
 
-void CCourse::GetSurfaceType(double x, double z, double weights[]) const {
+void CCourse::GetSurfaceType(float x, float z, float weights[]) const {
 	TVector2i idx0, idx1, idx2;
-	double u, v;
+	float u, v;
 	FindBarycentricCoords(x, z, &idx0, &idx1, &idx2, &u, &v);
 
 	for (std::size_t i=0; i<Course.TerrList.size(); i++) {
@@ -988,13 +988,13 @@ void CCourse::GetSurfaceType(double x, double z, double weights[]) const {
 	}
 }
 
-int CCourse::GetTerrainIdx(double x, double z, double level) const {
+int CCourse::GetTerrainIdx(float x, float z, float level) const {
 	TVector2i idx0, idx1, idx2;
-	double u, v;
+	float u, v;
 	FindBarycentricCoords(x, z, &idx0, &idx1, &idx2, &u, &v);
 
 	for (std::size_t i=0; i<Course.TerrList.size(); i++) {
-		double wheight = 0.0;
+		float wheight = 0.0;
 		if (Course.Fields[idx0.x + nx*idx0.y].terrain == i) wheight += u;
 		if (Course.Fields[idx1.x + nx*idx1.y].terrain == i) wheight += v;
 		if (Course.Fields[idx2.x + nx*idx2.y].terrain == i) wheight += 1.0 - u - v;

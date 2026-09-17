@@ -14,11 +14,14 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
 #endif
 
+// PSP port modifications, 2026-09-07: resource-loading diagnostic checkpoints.
 #include "keyframe.h"
 #include "course.h"
 #include "spx.h"
@@ -58,11 +61,11 @@ CKeyframe::CKeyframe() {
 	keyidx = 0;
 }
 
-double CKeyframe::interp(double frac, double v1, double v2) {
+float CKeyframe::interp(float frac, float v1, float v2) {
 	return frac * v1 + (1.0 - frac) * v2;
 }
 
-void CKeyframe::Init(const TVector3d& ref_position, double height_correction) {
+void CKeyframe::Init(const TVector3d& ref_position, float height_correction) {
 	if (!loaded) return;
 	g_game.character->shape->ResetNode("head");
 	g_game.character->shape->ResetNode("neck");
@@ -73,7 +76,7 @@ void CKeyframe::Init(const TVector3d& ref_position, double height_correction) {
 	keytime = 0;
 }
 
-void CKeyframe::Init(const TVector3d& ref_position, double height_correction, CCharShape *shape) {
+void CKeyframe::Init(const TVector3d& ref_position, float height_correction, CCharShape *shape) {
 	if (!loaded) return;
 	shape->ResetNode("head");
 	shape->ResetNode("neck");
@@ -107,6 +110,8 @@ void CKeyframe::Reset() {
 bool CKeyframe::Load(const std::string& dir, const std::string& filename) {
 	if (loaded && loadedfile == filename) return true;
 	CSPList list;
+	const std::string diagnostic_path = dir + "/" + filename;
+	PspTraceResource("animation begin", diagnostic_path.c_str());
 
 	if (list.Load(dir, filename)) {
 		frames.resize(list.size());
@@ -140,10 +145,12 @@ bool CKeyframe::Load(const std::string& dir, const std::string& filename) {
 		}
 		loaded = true;
 		loadedfile = filename;
+		PspTraceResource("animation ready", diagnostic_path.c_str());
 		return true;
 	} else {
 		Message("keyframe not found:", filename);
 		loaded = false;
+		PspTraceResource("animation failed", diagnostic_path.c_str());
 		return false;
 	}
 }
@@ -151,8 +158,8 @@ bool CKeyframe::Load(const std::string& dir, const std::string& filename) {
 // there are more possibilities for rotating the parts of the body,
 // that will be implemented later
 
-void CKeyframe::InterpolateKeyframe(std::size_t idx, double frac, CCharShape *shape) {
-	double vv;
+void CKeyframe::InterpolateKeyframe(std::size_t idx, float frac, CCharShape *shape) {
+	float vv;
 	vv = interp(frac, frames[idx].val[4], frames[idx+1].val[4]);
 	shape->RotateNode("root", 2, vv);
 
@@ -200,7 +207,7 @@ void CKeyframe::InterpolateKeyframe(std::size_t idx, double frac, CCharShape *sh
 }
 
 void CKeyframe::CalcKeyframe(std::size_t idx, CCharShape *shape, const TVector3d& refpos_) const {
-	double vv;
+	float vv;
 	TVector3d pos;
 
 	pos.x = frames[idx].val[1] + refpos_.x;
@@ -272,7 +279,7 @@ void CKeyframe::Update(float timestep) {
 		return;
 	}
 
-	double frac;
+	float frac;
 	TVector3d pos;
 	CCharShape *shape = g_game.character->shape;
 
@@ -288,7 +295,7 @@ void CKeyframe::Update(float timestep) {
 	shape->ResetJoints();
 
 	g_game.player->ctrl->cpos = pos;
-	double disp_y = pos.y + TUX_Y_CORR + heightcorr;
+	float disp_y = pos.y + TUX_Y_CORR + heightcorr;
 	shape->ResetNode(0);
 	shape->TranslateNode(0, TVector3d(pos.x, disp_y, pos.z));
 	InterpolateKeyframe(keyidx, frac, shape);
@@ -308,7 +315,7 @@ void CKeyframe::UpdateTest(float timestep, CCharShape *shape) {
 		return;
 	}
 
-	double frac;
+	float frac;
 	TVector3d pos;
 
 	if (std::fabs(frames[keyidx].val[0]) < 0.0001) frac = 1.0;
@@ -363,8 +370,8 @@ void CKeyframe::SaveTest(const std::string& dir, const std::string& filename) co
 		if (frame->val[7] != 0) line += " [neck] " + Int_StrN((int)frame->val[7]);
 		if (frame->val[8] != 0) line += " [head] " + Int_StrN((int)frame->val[8]);
 
-		double ll = frame->val[9];
-		double rr = frame->val[10];
+		float ll = frame->val[9];
+		float rr = frame->val[10];
 		if (ll != 0 || rr != 0)
 			line += " [sh] " + Int_StrN((int)ll) + ' ' + Int_StrN((int)rr);
 

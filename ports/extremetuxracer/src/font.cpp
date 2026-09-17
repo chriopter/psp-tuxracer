@@ -15,6 +15,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -180,6 +182,7 @@ void CFont::SetFontFromSettings() {
 unsigned int CFont::AutoSizeN(int rel_val) {
 	unsigned int size = (rel_val + 2) * 4;
 	size *= curr_fact * Winsys.scale;
+ size=std::max(18u,size);
 	SetSize(size);
 	return size;
 }

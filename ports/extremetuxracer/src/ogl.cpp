@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -35,7 +37,7 @@ static const struct {
 	{ "modelview stack depth", GL_MAX_MODELVIEW_STACK_DEPTH, GL_INT },
 	{ "projection stack depth", GL_MAX_PROJECTION_STACK_DEPTH, GL_INT },
 	{ "max texture size", GL_MAX_TEXTURE_SIZE, GL_INT },
-	{ "double buffering", GL_DOUBLEBUFFER, GL_UNSIGNED_BYTE },
+	{ "float buffering", GL_DOUBLEBUFFER, GL_UNSIGNED_BYTE },
 	{ "red bits", GL_RED_BITS, GL_INT },
 	{ "green bits", GL_GREEN_BITS, GL_INT },
 	{ "blue bits", GL_BLUE_BITS, GL_INT },
@@ -173,11 +175,12 @@ void Setup2dScene() {
 }
 
 void Reshape(int w, int h) {
-	glViewport(0, 0, (GLint) w, (GLint) h);
+ ResetRenderMode();
+	glViewport(0, 0, 480, 272);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	double far_clip_dist = param.forward_clip_distance + FAR_CLIP_FUDGE_AMOUNT;
-	gluPerspective(param.fov, (double)w/h, NEAR_CLIP_DIST, far_clip_dist);
+	float far_clip_dist = param.forward_clip_distance + FAR_CLIP_FUDGE_AMOUNT;
+	gluPerspective(param.fov, (float)w/h, NEAR_CLIP_DIST, far_clip_dist);
 	glMatrixMode(GL_MODELVIEW);
 }
 // ====================================================================
@@ -212,15 +215,13 @@ void set_gl_options(TRenderMode mode) {
 			glDisable(GL_ALPHA_TEST);
 			glEnable(GL_BLEND);
 			glDisable(GL_STENCIL_TEST);
-			glEnable(GL_TEXTURE_GEN_S);
-			glEnable(GL_TEXTURE_GEN_T);
+			glDisable(GL_TEXTURE_GEN_S);
+			glDisable(GL_TEXTURE_GEN_T);
 			glDisable(GL_COLOR_MATERIAL);
 			glDepthMask(GL_TRUE);
 			glShadeModel(GL_SMOOTH);
 			glDepthFunc(GL_LESS);
 
-			glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-			glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 			break;
 
 		case TEXFONT:
@@ -435,9 +436,9 @@ void glTexCoord2(const TVector2d& vec) {
 }
 
 void glLoadMatrix(const TMatrix<4, 4>& mat) {
-	glLoadMatrixd(mat.data());
+	glLoadMatrixf(mat.data());
 }
 
 void glMultMatrix(const TMatrix<4, 4>& mat) {
-	glMultMatrixd(mat.data());
+	glMultMatrixf(mat.data());
 }

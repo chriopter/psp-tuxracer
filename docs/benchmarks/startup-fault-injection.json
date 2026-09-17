@@ -1,0 +1,128 @@
+{
+  "date": "2026-09-07",
+  "synthetic_open_limit": 8,
+  "method": "Test-only linker wrappers around application sceIoOpen/sceIoClose calls for ms0:/ef0: paths. This limit is injected, not measured on physical hardware. Instrumented EBOOTs are not release binaries.",
+  "results": {
+    "released": {
+      "no_race_result": true,
+      "staging_script_sha256": "bce2ad2fab2ae79789af79505467be7eb6d8d0dd37c9e0d9a4fa8ba9770608a8",
+      "emulator": "PPSSPP 1.20.4",
+      "psp_model": "PSP-1000 (32 MB)",
+      "internal_resolution": 1,
+      "frameskip": 0,
+      "date": "2026-09-07",
+      "eboot_sha256": "cea15dcc6c8697fab8047bd25ff53519b9276e6eddf37ae281a0c44ab1344ae8",
+      "method": "Guest presentation intervals including VSync; work measured before swap. Loading and first race frame excluded. Paddle held, left/right 30 frames per 240-frame cycle. Heap samples every 60 frames. Not physical PSP measurements.",
+      "source": "8d2f60e3fade3bcca6a0e77d6d7570a9e54d8155",
+      "stderr": [
+        "TEST OPEN PEAK: 3",
+        "TEST OPEN PEAK: 4",
+        "TEST OPEN PEAK: 5",
+        "TEST OPEN PEAK: 6",
+        "TEST OPEN PEAK: 7",
+        "TEST OPEN PEAK: 8",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/music/raceintro-ks.wav",
+        "music data/music/raceintro-ks.wav: Couldn't open 'data/music/raceintro-ks.wav'",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/music/spunkyrace-ks.wav",
+        "music data/music/spunkyrace-ks.wav: Couldn't open 'data/music/spunkyrace-ks.wav'",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/music/start1-jt.wav",
+        "music data/music/start1-jt.wav: Couldn't open 'data/music/start1-jt.wav'",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/music/wonrace1-jt.wav",
+        "music data/music/wonrace1-jt.wav: Couldn't open 'data/music/wonrace1-jt.wav'",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/music/racing_themes.lst",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/sounds/sounds.lst",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/char/characters.lst",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/objects/object_types.lst",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/terrains/terrains.lst",
+        "INJECTED OPEN QUOTA: held=8 path=ms0:/PSP/GAME/ExtremeTuxRacer/data/env/environment.lst"
+      ]
+    },
+    "fixed": {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "frozen_river",
+      "cpu_mhz": 333,
+      "music_frames": 299,
+      "all": {
+        "frames": 299,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17204,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 60,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 16699,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 3349,
+        "p95_us": 3528,
+        "max_us": 4418
+      },
+      "heap_peak_bytes": 11999368,
+      "min_free_user_bytes": 4386816,
+      "staging_script_sha256": "bce2ad2fab2ae79789af79505467be7eb6d8d0dd37c9e0d9a4fa8ba9770608a8",
+      "emulator": "PPSSPP 1.20.4",
+      "psp_model": "PSP-1000 (32 MB)",
+      "internal_resolution": 1,
+      "frameskip": 0,
+      "date": "2026-09-07",
+      "eboot_sha256": "a00d86657db22327e9efc73ab767b360d4b22d2e24734294e3e088bce063a2df",
+      "method": "Guest presentation intervals including VSync; work measured before swap. Loading and first race frame excluded. Paddle held, left/right 30 frames per 240-frame cycle. Heap samples every 60 frames. Not physical PSP measurements.",
+      "source": "Uncommitted lazy-music candidate, before subsequent fog/text diagnostics fixes",
+      "stderr": [
+        "ETR startup: firmware=0x06060010 cwd=ms0:/PSP/GAME/ExtremeTuxRacer argv0=ms0:/PSP/GAME/ExtremeTuxRacer/EBOOT.PBP",
+        "TEST OPEN PEAK: 3",
+        "TEST OPEN PEAK: 4"
+      ]
+    },
+    "final": {
+      "game": "Extreme Tux Racer 0.8.4",
+      "course": "frozen_river",
+      "cpu_mhz": 333,
+      "music_frames": 299,
+      "all": {
+        "frames": 299,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 17478,
+        "over35ms": 0
+      },
+      "steering": {
+        "frames": 60,
+        "fps": 59.94,
+        "median_us": 16683,
+        "p95_us": 16684,
+        "max_us": 16783,
+        "over35ms": 0
+      },
+      "work": {
+        "median_us": 3359,
+        "p95_us": 3549,
+        "max_us": 4545
+      },
+      "heap_peak_bytes": 11999272,
+      "min_free_user_bytes": 4386816,
+      "staging_script_sha256": "bce2ad2fab2ae79789af79505467be7eb6d8d0dd37c9e0d9a4fa8ba9770608a8",
+      "emulator": "PPSSPP 1.20.4",
+      "psp_model": "PSP-1000 (32 MB)",
+      "internal_resolution": 1,
+      "frameskip": 0,
+      "date": "2026-09-07",
+      "eboot_sha256": "91831e0e294e9e5389275b6ce5fbe8759704c78f0ccffc947f1773b2c2e9a64f",
+      "method": "Guest presentation intervals including VSync; work measured before swap. Loading and first race frame excluded. Paddle held, left/right 30 frames per 240-frame cycle. Heap samples every 60 frames. Not physical PSP measurements.",
+      "source": "Final candidate plus test-only file-handle instrumentation",
+      "stderr": [
+        "ETR startup: firmware=0x06060010 cwd=ms0:/PSP/GAME/ExtremeTuxRacer argv0=ms0:/PSP/GAME/ExtremeTuxRacer/EBOOT.PBP",
+        "ETR memory: heap_total=33792 heap_used=31144 free_user=4386816 largest_free=4194304",
+        "TEST OPEN PEAK: 3",
+        "TEST OPEN PEAK: 4"
+      ]
+    }
+  }
+}

@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef PARTICLES_H
 #define PARTICLES_H
@@ -38,7 +40,7 @@ void draw_ui_snow();
 void update_particles(float time_step);
 void clear_particles();
 void draw_particles(const CControl *ctrl);
-void generate_particles(const CControl *ctrl, double dtime, const TVector3d& pos, double speed);
+void generate_particles(const CControl *ctrl, float dtime, const TVector3d& pos, float speed);
 
 // --------------------------------------------------------------------
 //					snow flakes for short distances
@@ -50,7 +52,6 @@ struct TFlake {
 	float size;
 	const GLfloat* tex;
 
-	void Draw(const TPlane& lp, const TPlane& rp, bool rotate_flake, float dir_angle) const;
 };
 
 struct TFlakeArea {

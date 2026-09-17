@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -55,7 +57,7 @@ static bool key_charging;
 static bool stick_charging;
 static bool key_braking;
 static bool stick_braking;
-static double charge_start_time;
+static float charge_start_time;
 static bool trick_modifier;
 
 static bool sky = true;
@@ -251,7 +253,7 @@ void CRacing::Enter() {
 // -------------------- sound -----------------------------------------
 
 // this function is not used yet.
-/*static int SlideVolume(CControl *ctrl, double speed, int typ) {
+/*static int SlideVolume(CControl *ctrl, float speed, int typ) {
 	if (typ == 1) {	// only at paddling or braking
 		return (int)(std::min((((std::pow(ctrl->turn_fact, 2) * 128)) +
 		                  (ctrl->is_braking ? 128:0) +
@@ -322,8 +324,8 @@ static void CalcSteeringControls(CControl *ctrl, float time_step) {
 }
 
 static void CalcFinishControls(CControl *ctrl, float timestep, bool airborne) {
-	double speed = ctrl->cvel.Length();
-	double dir_angle = RADIANS_TO_ANGLES(std::atan(ctrl->cvel.x / ctrl->cvel.z));
+	float speed = ctrl->cvel.Length();
+	float dir_angle = RADIANS_TO_ANGLES(std::atan(ctrl->cvel.x / ctrl->cvel.z));
 
 	if (std::fabs(dir_angle) > 5 && speed > 5) {
 		ctrl->turn_fact = dir_angle / 20;
@@ -370,7 +372,7 @@ static void CalcTrickControls(CControl *ctrl, float time_step, bool airborne) {
 
 void CRacing::Loop(float time_step) {
 	CControl *ctrl = g_game.player->ctrl;
-	double ycoord = Course.FindYCoord(ctrl->cpos.x, ctrl->cpos.z);
+	float ycoord = Course.FindYCoord(ctrl->cpos.x, ctrl->cpos.z);
 	bool airborne = (bool)(ctrl->cpos.y > (ycoord + JUMP_MAX_START_HEIGHT));
 
 	ClearRenderContext();

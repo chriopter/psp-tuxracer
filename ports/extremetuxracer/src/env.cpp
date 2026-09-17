@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -25,6 +27,7 @@ GNU General Public License for more details.
 #include "spx.h"
 #include "view.h"
 #include "course.h"
+#include "clip_polygon.h"
 
 // --------------------------------------------------------------------
 //					defaults
@@ -90,8 +93,10 @@ void CEnvironment::SetupLight() {
 void CEnvironment::SetupFog() {
 	glEnable(GL_FOG);
 	glFogi(GL_FOG_MODE, fog.mode);
-	glFogf(GL_FOG_START, fog.start);
+	// PSPGL starts with a zero far plane; setting a zero start first divides
+	// by zero internally and raises GL_INVALID_VALUE. Set the far plane first.
 	glFogf(GL_FOG_END, fog.end);
+	glFogf(GL_FOG_START, fog.start);
 	glFogfv(GL_FOG_COLOR, fog.color);
 
 	if (param.perf_level > 1) {
@@ -209,8 +214,6 @@ void CEnvironment::DrawSkybox(const TVector3d& pos) const {
 
 	glColor4ub(255, 255, 255, 255);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-	glPushMatrix();
-	glTranslate(pos);
 
 	static const GLfloat tex[] = {
 		aa, bb,
@@ -218,12 +221,32 @@ void CEnvironment::DrawSkybox(const TVector3d& pos) const {
 		bb, aa,
 		aa, aa
 	};
-	glTexCoordPointer(2, GL_FLOAT, 0, tex);
+	// A cube face can cross the camera plane while turning. The PSP GE drops
+	// such large projected polygons; clip in world space, just like terrain.
+	struct SkyVertex { float uv[2]; float position[3]; };
+	auto draw_face = [&](const GLfloat* face) {
+		SkyVertex polygon[12];
+		for (int i = 0; i < 4; ++i) {
+			polygon[i] = {{tex[i*2], tex[i*2+1]},
+			              {face[i*3] + pos.x, face[i*3+1] + pos.y, face[i*3+2] + pos.z}};
+		}
+		int count = clip_polygon(polygon, 4, get_view_clip_planes(), 63,
+		    [](const SkyVertex& a, const SkyVertex& b, float t) {
+			SkyVertex v;
+			for (int j = 0; j < 2; ++j) v.uv[j] = a.uv[j] + t * (b.uv[j] - a.uv[j]);
+			for (int j = 0; j < 3; ++j) v.position[j] = a.position[j] + t * (b.position[j] - a.position[j]);
+			return v;
+		});
+		if (count < 3) return;
+		glTexCoordPointer(2, GL_FLOAT, sizeof(SkyVertex), polygon[0].uv);
+		glVertexPointer(3, GL_FLOAT, sizeof(SkyVertex), polygon[0].position);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, count);
+	};
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	// front
-	static const GLshort front[] = {
+	static const GLfloat front[] = {
 		-1, -1, -1,
 		    1, -1, -1,
 		    1,  1, -1,
@@ -231,70 +254,63 @@ void CEnvironment::DrawSkybox(const TVector3d& pos) const {
 	    };
 
 	Skybox[0].Bind();
-	glVertexPointer(3, GL_SHORT, 0, front);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	draw_face(front);
 
 	// left
-	static const GLshort left[] = {
+	static const GLfloat left[] = {
 		-1, -1,  1,
 		    -1, -1, -1,
 		    -1,  1, -1,
 		    -1,  1,  1
 	    };
 	Skybox[1].Bind();
-	glVertexPointer(3, GL_SHORT, 0, left);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	draw_face(left);
 
 	// right
-	static const GLshort right[] = {
+	static const GLfloat right[] = {
 		1, -1, -1,
 		1, -1, 1,
 		1,  1, 1,
 		1,  1, -1
 	};
 	Skybox[2].Bind();
-	glVertexPointer(3, GL_SHORT, 0, right);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	draw_face(right);
 
 	// normally, the following textures are unvisible
 	// see game_config.cpp (param.full_skybox)
 	if (param.full_skybox) {
 		// top
-		static const GLshort top[] = {
+		static const GLfloat top[] = {
 			-1, 1, -1,
 			    1, 1, -1,
 			    1, 1,  1,
 			    -1, 1,  1
 		    };
 		Skybox[3].Bind();
-		glVertexPointer(3, GL_SHORT, 0, top);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		draw_face(top);
 
 		// bottom
-		static const GLshort bottom[] = {
+		static const GLfloat bottom[] = {
 			-1, -1,  1,
 			    1, -1,  1,
 			    1, -1, -1,
 			    -1, -1, -1
 		    };
 		Skybox[4].Bind();
-		glVertexPointer(3, GL_SHORT, 0, bottom);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		draw_face(bottom);
 
 		// back
-		static const GLshort back[] = {
+		static const GLfloat back[] = {
 			1, -1, 1,
 			-1, -1, 1,
 			-1,  1, 1,
 			1,  1, 1
 		};
 		Skybox[5].Bind();
-		glVertexPointer(3, GL_SHORT, 0, back);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		draw_face(back);
 	}
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
-	glPopMatrix();
 }
 
 void CEnvironment::DrawFog() const {
@@ -314,12 +330,12 @@ void CEnvironment::DrawFog() const {
 
 	// --------------- calculate the planes ---------------------------
 
-	double slope = std::tan(ANGLES_TO_RADIANS(Course.GetCourseAngle()));
+	float slope = std::tan(ANGLES_TO_RADIANS(Course.GetCourseAngle()));
 //	TPlane left_edge_plane = MakePlane (1.0, 0.0, 0.0, 0.0);
 //	TPlane right_edge_plane = MakePlane (-1.0, 0.0, 0.0, Course.width);
 
 	bottom_plane.nml = TVector3d(0.0, 1, -slope);
-	double height = Course.GetBaseHeight(0);
+	float height = Course.GetBaseHeight(0);
 	bottom_plane.d = -height * bottom_plane.nml.y;
 
 	top_plane.nml = bottom_plane.nml;

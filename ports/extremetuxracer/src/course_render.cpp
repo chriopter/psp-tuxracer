@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -54,8 +56,8 @@ void DrawTrees() {
 	const CControl*	ctrl = g_game.player->ctrl;
 
 	ScopedRenderMode rm(TREES);
-	double fwd_clip_limit = param.forward_clip_distance;
-	double bwd_clip_limit = param.backward_clip_distance;
+	float fwd_clip_limit = param.forward_clip_distance;
+	float bwd_clip_limit = param.backward_clip_distance;
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	set_material(colWhite, colBlack, 1.0);
@@ -78,7 +80,7 @@ void DrawTrees() {
 
 		float treeRadius = Course.CollArr[i].diam / 2.0;
 		float treeHeight = Course.CollArr[i].height;
-		glNormal3i(0, 0, 1);
+		glNormal3f(0, 0, 1);
 
 		static const GLshort tex[] = {
 			0, 1,
@@ -107,7 +109,10 @@ void DrawTrees() {
 
 		glVertexPointer(3, GL_FLOAT, 0, vtx);
 		glTexCoordPointer(2, GL_SHORT, 0, tex);
-		glDrawArrays(GL_QUADS, 0, 8);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+ glVertexPointer(3, GL_FLOAT, 0, vtx+12);
+ glTexCoordPointer(2, GL_SHORT, 0, tex+8);
+ glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		glDisableClientState(GL_VERTEX_ARRAY);
@@ -132,8 +137,8 @@ void DrawTrees() {
 
 		glPushMatrix();
 		glTranslate(Course.NocollArr[i].pt);
-		double itemRadius = Course.NocollArr[i].diam / 2;
-		double itemHeight = Course.NocollArr[i].height;
+		float itemRadius = Course.NocollArr[i].diam / 2;
+		float itemHeight = Course.NocollArr[i].height;
 
 		TVector3d normal;
 		if (item_type->use_normal) {
@@ -173,7 +178,7 @@ void DrawTrees() {
 
 		glVertexPointer(3, GL_FLOAT, 0, vtx);
 		glTexCoordPointer(2, GL_SHORT, 0, tex);
-		glDrawArrays(GL_QUADS, 0, 4);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		glDisableClientState(GL_VERTEX_ARRAY);

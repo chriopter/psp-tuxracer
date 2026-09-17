@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -121,13 +123,13 @@ bool CControl::CheckTreeCollisions(const TVector3d& pos, TVector3d *tree_loc) co
 	TMatrix<4, 4> mat;
 
 	for (std::size_t i = 0; i<Course.CollArr.size(); i++) {
-		double diam = Course.CollArr[i].diam;
-		double height = Course.CollArr[i].height;
+		float diam = Course.CollArr[i].diam;
+		float height = Course.CollArr[i].height;
 		loc = Course.CollArr[i].pt;
 		TVector3d distvec(loc.x - pos.x, 0.0, loc.z - pos.z);
 
 		// check distance from tree; .6 is the radius of a bounding sphere
-		double squared_dist = (diam / 2.0 + 0.6);
+		float squared_dist = (diam / 2.0 + 0.6);
 		squared_dist *= squared_dist;
 		if (MAG_SQD(distvec) > squared_dist) continue;
 
@@ -162,12 +164,12 @@ void CControl::AdjustTreeCollision(const TVector3d& pos, TVector3d *vel) const {
 		    pos.z - treeLoc.z);
 		treeNml.Norm();
 
-		double speed = vel->Norm();
+		float speed = vel->Norm();
 		speed *= 0.8;  // original 0.7
 
-		double costheta = DotProduct(*vel, treeNml);
+		float costheta = DotProduct(*vel, treeNml);
 		if (costheta < 0) {
-			double factor;
+			float factor;
 			if (cairborne) factor = 0.5;
 			else factor = 1.5;
 			*vel += (-factor * costheta) * treeNml;
@@ -184,11 +186,11 @@ void CControl::CheckItemCollection(const TVector3d& pos) {
 	for (std::size_t i=0; i<num_items; i++) {
 		if (Course.NocollArr[i].collectable != 1) continue;
 
-		double diam = Course.NocollArr[i].diam;
+		float diam = Course.NocollArr[i].diam;
 		const TVector3d& loc = Course.NocollArr[i].pt;
 
 		TVector3d distvec(loc.x - pos.x, loc.y - pos.y, loc.z - pos.z);
-		double squared_dist = (diam / 2. + 0.7);
+		float squared_dist = (diam / 2. + 0.7);
 		squared_dist *= squared_dist;
 		if (MAG_SQD(distvec) <= squared_dist) {  // Check collision using a bounding sphere
 			Course.NocollArr[i].collectable = 0;
@@ -204,7 +206,7 @@ void CControl::CheckItemCollection(const TVector3d& pos) {
 // --------------------------------------------------------------------
 
 void CControl::AdjustVelocity() {
-	double speed = cvel.Norm();
+	float speed = cvel.Norm();
 	speed = std::max(minSpeed, speed);
 	cvel *= speed;
 
@@ -215,19 +217,19 @@ void CControl::AdjustVelocity() {
 	}
 }
 
-void CControl::AdjustPosition(const TPlane& surf_plane, double dist_from_surface) {
+void CControl::AdjustPosition(const TPlane& surf_plane, float dist_from_surface) {
 	if (dist_from_surface < -MAX_SURF_PEN) {
-		double displace = -MAX_SURF_PEN - dist_from_surface;
+		float displace = -MAX_SURF_PEN - dist_from_surface;
 		cpos += displace * surf_plane.nml;
 	}
 }
 
-void CControl::SetTuxPosition(double speed) {
+void CControl::SetTuxPosition(float speed) {
 	CCharShape *shape = g_game.character->shape;
 
 	TVector2d playSize = Course.GetPlayDimensions();
 	TVector2d courseSize = Course.GetDimensions();
-	double boundaryWidth = (courseSize.x - playSize.x) / 2;
+	float boundaryWidth = (courseSize.x - playSize.x) / 2;
 	if (cpos.x < boundaryWidth) cpos.x = boundaryWidth;
 	if (cpos.x > courseSize.x - boundaryWidth) cpos.x = courseSize.x - boundaryWidth;
 	if (cpos.z > 0) cpos.z = 0;
@@ -243,7 +245,7 @@ void CControl::SetTuxPosition(double speed) {
 		}
 /// -----------------------------------------------------------
 	}
-	double disp_y = cpos.y + TUX_Y_CORR;
+	float disp_y = cpos.y + TUX_Y_CORR;
 	shape->ResetNode(0);
 	shape->TranslateNode(0, TVector3d(cpos.x, disp_y, cpos.z));
 }
@@ -251,14 +253,14 @@ void CControl::SetTuxPosition(double speed) {
 //			forces ***
 // --------------------------------------------------------------------
 
-TVector3d CControl::CalcRollNormal(double speed) {
+TVector3d CControl::CalcRollNormal(float speed) {
 	TVector3d vel = ProjectToPlane(ff.surfnml, ff.vel);
 	vel.Norm();
 
-	double roll_angle = MAX_ROLL_ANGLE;
+	float roll_angle = MAX_ROLL_ANGLE;
 	if (is_braking) roll_angle = BRAKING_ROLL_ANGLE;
 
-	double angle = turn_fact * roll_angle *
+	float angle = turn_fact * roll_angle *
 	               std::min(1.0, std::max(0.0, ff.frict_coeff) / IDEAL_ROLL_FRIC) *
 	               std::min(1.0, std::max(0.0, speed - minSpeed) / (IDEAL_ROLL_SPEED - minSpeed));
 
@@ -266,26 +268,26 @@ TVector3d CControl::CalcRollNormal(double speed) {
 	return TransformVector(rot_mat, ff.surfnml);
 }
 
-const double airlog[]  = {-1, 0, 1, 2, 3, 4, 5, 6};
-const double airdrag[] = {2.25, 1.35, 0.6, 0, -0.35, -0.45, -0.33, -0.9};
+const float airlog[]  = {-1, 0, 1, 2, 3, 4, 5, 6};
+const float airdrag[] = {2.25, 1.35, 0.6, 0, -0.35, -0.45, -0.33, -0.9};
 
 TVector3d CControl::CalcAirForce() {
 	TVector3d windvec = -ff.vel;
 	if (g_game.wind_id > 0)
 		windvec += WIND_FACTOR * Wind.WindDrift();
 
-	double windspeed = windvec.Length();
-	double re = 34600 * windspeed;
+	float windspeed = windvec.Length();
+	float re = 34600 * windspeed;
 	int tablesize = sizeof(airdrag) / sizeof(airdrag[0]);
-	double interpol = LinearInterp(airlog, airdrag, std::log10(re), tablesize);
-	double dragcoeff = std::pow(10.0, interpol);
-	double airfact = 0.104 * dragcoeff *  windspeed;
+	float interpol = LinearInterp(airlog, airdrag, std::log10(re), tablesize);
+	float dragcoeff = std::pow(10.0, interpol);
+	float airfact = 0.104 * dragcoeff *  windspeed;
 	return airfact * windvec;
 }
 
 TVector3d CControl::CalcSpringForce() {
-	double springvel = DotProduct(ff.vel, ff.rollnml);
-	double springfact = std::min(ff.compression, 0.05) * 1500;
+	float springvel = DotProduct(ff.vel, ff.rollnml);
+	float springfact = std::min(ff.compression, 0.05) * 1500;
 	springfact += clamp(0.0, ff.compression - 0.05, 0.12) * 3000;
 	springfact += std::max(0.0, ff.compression - 0.12 - 0.05) * 10000;
 	springfact -= springvel * (ff.compression <= 0.05 ? 1500 : 500);
@@ -311,7 +313,7 @@ TVector3d CControl::CalcJumpForce() {
 		} else jumping = false;
 	}
 	if ((jumping) && (g_game.time - jump_start_time < JUMP_FORCE_DURATION)) {
-		double y = 294 + jump_amt * 294; // jump_amt goes from 0 to 1
+		float y = 294 + jump_amt * 294; // jump_amt goes from 0 to 1
 		jumpforce.y = y;
 
 	} else {
@@ -320,13 +322,13 @@ TVector3d CControl::CalcJumpForce() {
 	return jumpforce; // normally scaled with 1.0
 }
 
-TVector3d CControl::CalcFrictionForce(double speed, const TVector3d& nmlforce) {
+TVector3d CControl::CalcFrictionForce(float speed, const TVector3d& nmlforce) {
 	if ((cairborne == false && speed > minFrictspeed) || g_game.finish) {
-		double fric_f_mag = nmlforce.Length() * ff.frict_coeff;
+		float fric_f_mag = nmlforce.Length() * ff.frict_coeff;
 		fric_f_mag = std::min(MAX_FRICT_FORCE, fric_f_mag);
 		TVector3d frictforce = fric_f_mag * ff.frictdir;
 
-		double steer_angle = turn_fact * MAX_TURN_ANGLE;
+		float steer_angle = turn_fact * MAX_TURN_ANGLE;
 
 		if (std::fabs(fric_f_mag * std::sin(steer_angle * M_PI / 180)) > MAX_TURN_PERP) {
 			steer_angle = RADIANS_TO_ANGLES(std::asin(MAX_TURN_PERP / fric_f_mag)) *
@@ -339,7 +341,7 @@ TVector3d CControl::CalcFrictionForce(double speed, const TVector3d& nmlforce) {
 	return TVector3d(0, 0, 0);
 }
 
-TVector3d CControl::CalcBrakeForce(double speed) {
+TVector3d CControl::CalcBrakeForce(float speed) {
 	if (g_game.finish == false) {
 		if (cairborne == false && speed > minFrictspeed) {
 			if (speed > minSpeed && is_braking) {
@@ -360,7 +362,7 @@ TVector3d CControl::CalcBrakeForce(double speed) {
 	return TVector3d(0, 0, 0);
 }
 
-TVector3d CControl::CalcPaddleForce(double speed) {
+TVector3d CControl::CalcPaddleForce(float speed) {
 	TVector3d paddleforce(0, 0, 0);
 	if (is_paddling)
 		if (g_game.time - paddle_time >= PADDLING_DURATION) is_paddling = false;
@@ -370,7 +372,7 @@ TVector3d CControl::CalcPaddleForce(double speed) {
 			paddleforce.z = -TUX_MASS * EARTH_GRAV / 4.0;
 			paddleforce = RotateVector(corientation, paddleforce);
 		} else {
-			double factor = -std::min(MAX_PADD_FORCE, MAX_PADD_FORCE
+			float factor = -std::min(MAX_PADD_FORCE, MAX_PADD_FORCE
 			                          * (MAX_PADDLING_SPEED - speed) / MAX_PADDLING_SPEED
 			                          * std::min(1.0, ff.frict_coeff / IDEAL_PADD_FRIC));
 			paddleforce = factor * ff.frictdir;
@@ -397,10 +399,10 @@ TVector3d CControl::CalcNetForce(const TVector3d& pos, const TVector3d& vel) {
 	ff.vel = vel;
 
 	ff.frictdir = ff.vel;
-	double speed = ff.frictdir.Norm();
+	float speed = ff.frictdir.Norm();
 	ff.frictdir *= -1.0;
 
-	static std::vector<double> surfweights;
+	static std::vector<float> surfweights;
 	if (surfweights.size() != Course.TerrList.size())
 		surfweights.resize(Course.TerrList.size());
 	Course.GetSurfaceType(ff.pos.x, ff.pos.z, &surfweights[0]);
@@ -432,23 +434,23 @@ TVector3d CControl::CalcNetForce(const TVector3d& pos, const TVector3d& vel) {
 //				ODE solver
 // --------------------------------------------------------------------
 
-double CControl::AdjustTimeStep(double h, const TVector3d& vel) {
-	double speed = vel.Length();
+float CControl::AdjustTimeStep(float h, const TVector3d& vel) {
+	float speed = vel.Length();
 	h = clamp(MIN_TIME_STEP, h, MAX_STEP_DIST / speed);
 	h = std::min(h, MAX_TIME_STEP);
 	return h;
 }
 
-void CControl::SolveOdeSystem(double timestep) {
-	double pos_err[3], vel_err[3], tot_pos_err, tot_vel_err;
-	double err=0, tol=0;
+void CControl::SolveOdeSystem(float timestep) {
+	float pos_err[3], vel_err[3], tot_pos_err, tot_vel_err;
+	float err=0, tol=0;
 
 	static const TOdeSolver solver;
-	double h = ode_time_step;
+	float h = ode_time_step;
 	if (h < 0 || solver.EstimateError == nullptr)
 		h = AdjustTimeStep(timestep, cvel);
-	double t = 0;
-	double tfinal = timestep;
+	float t = 0;
+	float tfinal = timestep;
 
 	TOdeData x;
 	TOdeData y;
@@ -562,13 +564,13 @@ void CControl::SolveOdeSystem(double timestep) {
 		}
 
 		t = t + h;
-		double speed = new_vel.Length();
+		float speed = new_vel.Length();
 		if (param.perf_level > 2) generate_particles(this, h, new_pos, speed);
 
 		new_f = CalcNetForce(new_pos, new_vel);
 
 		if (!failed && solver.EstimateError != nullptr) {
-			double temp = 1.25 * std::pow(err / tol, solver.TimestepExponent());
+			float temp = 1.25 * std::pow(err / tol, solver.TimestepExponent());
 			if (temp > 0.2) h = h / temp;
 			else h = 5.0 * h;
 		}
@@ -584,7 +586,7 @@ void CControl::SolveOdeSystem(double timestep) {
 	last_pos = cpos;
 	cpos = new_pos;
 
-	double step = (cpos - last_pos).Length();
+	float step = (cpos - last_pos).Length();
 	way += step;
 }
 
@@ -594,9 +596,9 @@ void CControl::SolveOdeSystem(double timestep) {
 
 void CControl::UpdatePlayerPos(float timestep) {
 	CCharShape *shape = g_game.character->shape;
-	double paddling_factor;
-	double flap_factor;
-	double dist_from_surface;
+	float paddling_factor;
+	float flap_factor;
+	float dist_from_surface;
 
 	if (g_game.finish) {
 /// --------------------- finish ------------------------------
@@ -614,7 +616,7 @@ void CControl::UpdatePlayerPos(float timestep) {
 	TVector3d surf_nml = surf_plane.nml; // normal vector of terrain
 	dist_from_surface = DistanceToPlane(surf_plane, cpos);
 
-	double speed = cvel.Length();
+	float speed = cvel.Length();
 	AdjustVelocity();
 	AdjustPosition(surf_plane, dist_from_surface);
 	SetTuxPosition(speed);	// speed only to set finish_speed
@@ -622,7 +624,7 @@ void CControl::UpdatePlayerPos(float timestep) {
 
 	flap_factor = 0;
 	if (is_paddling) {
-		double factor;
+		float factor;
 		factor = (g_game.time - paddle_time) / PADDLING_DURATION;
 		if (cairborne) {
 			paddling_factor = 0;

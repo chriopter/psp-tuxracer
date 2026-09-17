@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef BH_H
 #define BH_H
@@ -62,6 +64,11 @@ GNU General Public License for more details.
 #	include <dirent.h>
 #	include <GL/glext.h>
 #	define SEP "/"
+#elif defined(__PSP__)
+# include <unistd.h>
+# include <dirent.h>
+# include <sys/time.h>
+# define SEP "/"
 #else // Assume Unix platform (Linux, Mac OS X, BSD, ...)
 #	include <unistd.h>
 #	include <sys/types.h>
@@ -73,7 +80,9 @@ GNU General Public License for more details.
 #endif
 
 
+#ifndef __PSP__
 #define USE_STENCIL_BUFFER
+#endif
 
 #include "version.h"
 #define WINDOW_TITLE "Extreme Tux Racer " ETR_VERSION_STRING

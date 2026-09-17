@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -64,16 +66,16 @@ void TTexture::Draw() {
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
 
 	glColor4f(1.0, 1.0, 1.0, 1.0);
-	const GLint vtx[] = {
+	const GLfloat vtx[] = {
 		0, 0,
-		w, 0,
-		w, h,
-		0, h
+		(GLfloat)w, 0,
+		(GLfloat)w, (GLfloat)h,
+		0, (GLfloat)h
 	};
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-	glVertexPointer(2, GL_INT, 0, vtx);
+	glVertexPointer(2, GL_FLOAT, 0, vtx);
 	glTexCoordPointer(2, GL_SHORT, 0, fullsize_texture);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
@@ -236,7 +238,7 @@ void CTexture::Draw(std::size_t idx, int x, int y, int width, int height) {
 		CommonTex[idx]->Draw(x, y, width, height);
 }
 
-void CTexture::DrawFrame(std::size_t idx, int x, int y, double w, double h, int frame, const sf::Color& col) {
+void CTexture::DrawFrame(std::size_t idx, int x, int y, float w, float h, int frame, const sf::Color& col) {
 	if (CommonTex.size() > idx)
 		CommonTex[idx]->DrawFrame(x, y, w, h, frame, col);
 }

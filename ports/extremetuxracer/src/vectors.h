@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef VECTORS_H
 #define VECTORS_H
@@ -27,10 +29,10 @@ struct TVector2 {
 	constexpr explicit TVector2(T _x = (T)0, T _y = (T)0)
 		: x(_x), y(_y)
 	{}
-	constexpr double Length() const {
+	constexpr float Length() const {
 		return std::hypot(x, y);
 	}
-	double Norm();
+	float Norm();
 	TVector2<T>& operator*=(T f) {
 		x *= f;
 		y *= f;
@@ -54,10 +56,10 @@ struct TVector3 {
 	constexpr explicit TVector3(T _x = (T)0, T _y = (T)0, T _z = (T)0)
 		: x(_x), y(_y), z(_z)
 	{}
-	constexpr double Length() const {
-		return std::sqrt(static_cast<double>(x*x + y*y + z*z));
+	constexpr float Length() const {
+		return std::sqrt(static_cast<float>(x*x + y*y + z*z));
 	}
-	double Norm();
+	float Norm();
 	TVector3<T>& operator*=(T f) {
 		x *= f;
 		y *= f;
@@ -84,10 +86,10 @@ struct TVector4 {
 	constexpr explicit TVector4(T _x = (T)0, T _y = (T)0, T _z = (T)0, T _w = (T)0)
 		: x(_x), y(_y), z(_z), w(_w)
 	{}
-	constexpr double Length() const {
-		return std::sqrt(static_cast<double>(x*x + y*y + z*z + w*w));
+	constexpr float Length() const {
+		return std::sqrt(static_cast<float>(x*x + y*y + z*z + w*w));
 	}
-	double Norm();
+	float Norm();
 	TVector4<T>& operator*=(T f) {
 		x *= f;
 		y *= f;
@@ -111,9 +113,9 @@ struct TVector4 {
 	}
 };
 
-typedef TVector4<double> TVector4d;
-typedef TVector3<double> TVector3d;
-typedef TVector2<double> TVector2d;
+typedef TVector4<float> TVector4d;
+typedef TVector3<float> TVector3d;
+typedef TVector2<float> TVector2d;
 typedef TVector4<int> TVector4i;
 typedef TVector3<int> TVector3i;
 typedef TVector2<int> TVector2i;
@@ -172,11 +174,11 @@ constexpr TVector4<T> operator-(const TVector4<T>& r) {
 }
 
 template<typename T>
-constexpr double DotProduct(const TVector3<T>& v1, const TVector3<T>& v2) {
+constexpr float DotProduct(const TVector3<T>& v1, const TVector3<T>& v2) {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 template<typename T>
-constexpr double DotProduct(const TVector4<T>& v1, const TVector4<T>& v2) {
+constexpr float DotProduct(const TVector4<T>& v1, const TVector4<T>& v2) {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w;
 }
 

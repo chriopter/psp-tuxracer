@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef VIEW_H
 #define VIEW_H
@@ -26,7 +28,7 @@ void update_view(CControl *ctrl, float dt);
 
 void SetStationaryCamera(bool stat);  // 0 follow, 1 stationary
 void IncCameraDistance(float timestep);
-void SetCameraDistance(double val);
+void SetCameraDistance(float val);
 
 // ------------- viewfrustum ------------------------------------------
 
@@ -40,6 +42,7 @@ void SetupViewFrustum(const CControl *ctrl);
 clip_result_t clip_aabb_to_view_frustum(const TVector3d& min, const TVector3d& max);
 
 const TPlane& get_far_clip_plane();
+const TPlane* get_view_clip_planes();
 const TPlane& get_left_clip_plane();
 const TPlane& get_right_clip_plane();
 const TPlane& get_bottom_clip_plane();

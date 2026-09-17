@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -76,7 +78,7 @@ void PrintString(const std::string& s) {
 	std::cout << s << std::endl;
 }
 
-void PrintDouble(const double val) {
+void PrintDouble(const float val) {
 	std::cout.precision(4);
 	std::cout << val << '\n';
 }
@@ -198,7 +200,7 @@ bool DirExists(const char *dirname) {
 //				date and time
 // --------------------------------------------------------------------
 
-void GetTimeComponents(double time, int *min, int *sec, int *hundr) {
+void GetTimeComponents(float time, int *min, int *sec, int *hundr) {
 	*min = (int)(time / 60);
 	*sec = ((int) time) % 60;
 	*hundr = ((int)(time * 100 + 0.5)) % 100;

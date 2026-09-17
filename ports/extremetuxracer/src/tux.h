@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef TUX_H
 #define TUX_H
@@ -40,7 +42,7 @@ struct TCharAction {
 	std::size_t num;
 	int type[MAX_ACTIONS];
 	TVector3d vec[MAX_ACTIONS];
-	double dval[MAX_ACTIONS];
+	float dval[MAX_ACTIONS];
 	std::string name;
 	std::string order;
 	std::string mat;
@@ -62,7 +64,7 @@ struct TCharNode {
 	std::string joint;
 	TMatrix<4, 4> trans;
 	TMatrix<4, 4> invtrans;
-	double radius;
+	float radius;
 	TCharMaterial *mat;
 	int divisions;
 	bool render_shadow;
@@ -104,12 +106,12 @@ private:
 	bool CheckCollision(const TPolyhedron& ph);
 
 	// shadow
-	void DrawShadowVertex(double x, double y, double z, const TMatrix<4, 4>& mat) const;
+	void DrawShadowVertex(float x, float y, float z, const TMatrix<4, 4>& mat) const;
 	void DrawShadowSphere(const TMatrix<4, 4>& mat) const;
 	void TraverseDagForShadow(const TCharNode *node, const TMatrix<4, 4>& mat) const;
 
 	// testing and developing
-	void AddAction(std::size_t node_name, int type, const TVector3d& vec, double val);
+	void AddAction(std::size_t node_name, int type, const TVector3d& vec, float val);
 public:
 	CCharShape();
 	~CCharShape();
@@ -123,8 +125,8 @@ public:
 	bool ResetNode(std::size_t node_name);
 	bool ResetNode(const std::string& node_trivialname);
 	bool TranslateNode(std::size_t node_name, const TVector3d& vec);
-	bool RotateNode(std::size_t node_name, int axis, double angle);
-	bool RotateNode(const std::string& node_trivialname, int axis, double angle);
+	bool RotateNode(std::size_t node_name, int axis, float angle);
+	bool RotateNode(const std::string& node_trivialname, int axis, float angle);
 	void ScaleNode(std::size_t node_name, const TVector3d& vec);
 	void ResetRoot() { ResetNode(0); }
 	void ResetJoints();
@@ -135,11 +137,11 @@ public:
 	void DrawShadow() const;
 	bool Load(const std::string& dir, const std::string& filename, bool with_actions);
 
-	void AdjustOrientation(CControl *ctrl, double dtime,
-	                       double dist_from_surface, const TVector3d& surf_nml);
-	void AdjustJoints(double turnFact, bool isBraking,
-	                  double paddling_factor, double speed,
-	                  const TVector3d& net_force, double flap_factor);
+	void AdjustOrientation(CControl *ctrl, float dtime,
+	                       float dist_from_surface, const TVector3d& surf_nml);
+	void AdjustJoints(float turnFact, bool isBraking,
+	                  float paddling_factor, float speed,
+	                  const TVector3d& net_force, float flap_factor);
 	bool Collision(const TVector3d& pos, const TPolyhedron& ph);
 
 	std::size_t GetNodeName(std::size_t idx) const;

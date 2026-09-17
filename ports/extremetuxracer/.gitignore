@@ -1,0 +1,7 @@
+*.o
+*.d
+*.elf
+*.prx
+*.PBP
+PARAM.SFO
+psp/kexploit/

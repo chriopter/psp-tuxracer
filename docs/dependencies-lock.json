@@ -1,0 +1,252 @@
+{
+  "sdk_image": "pspdev/pspdev@sha256:b22811072ea0721d7f6c666a5a279b6def2b0cd95892b819d9570f8ffc4452c0",
+  "recipes_commit": "f5b6091ced5880e93cf57a92ee097141984caab3",
+  "packages": [
+    {
+      "name": "bzip2",
+      "version": "1.0.8-7",
+      "recipe_sha256": "074ad65551f6c816123c99afc8793db7a860e6d4ebdebae0fc7e14bad7e61c28",
+      "sources": [
+        {
+          "url": "https://gitlab.com/bzip2/bzip2/-/archive/bf5f505d0156ad5c6635d05db06b1bb7593b45b7/bzip2-bf5f505d0156ad5c6635d05db06b1bb7593b45b7.tar.gz",
+          "file": "bzip2-0.tar.gz",
+          "sha256": "0c6d9768269e663e48117661f6192e00ce3f0acf5636cf7a58bde63e90aca8bc"
+        }
+      ]
+    },
+    {
+      "name": "flac",
+      "version": "1.5.0-3",
+      "recipe_sha256": "6343c279fbabfd443b2cbd65a141c94e3f7c184f8e73360dcedc6550d2e7b424",
+      "sources": [
+        {
+          "url": "https://github.com/xiph/flac/releases/download/1.5.0/flac-1.5.0.tar.xz",
+          "file": "flac-0.tar.xz",
+          "sha256": "f2c1c76592a82ffff8413ba3c4a1299b6c7ab06c734dee03fd88630485c2b920"
+        }
+      ]
+    },
+    {
+      "name": "freetype2",
+      "version": "2.11.0-10",
+      "recipe_sha256": "5e2c68704012f7ad556e6d36076157f14ef6d4da72a82f48233256944d635c75",
+      "sources": [
+        {
+          "url": "https://github.com/freetype/freetype/archive/VER-2-11-0.tar.gz",
+          "file": "freetype2-0.tar.gz",
+          "sha256": "fffcba25febd1581cc12d706a39bee96f37eab627d0838ce6e8189ebd841d722"
+        }
+      ]
+    },
+    {
+      "name": "jpeg",
+      "version": "3.1.3-2",
+      "recipe_sha256": "04e7a51484e9ec613b402c42c9ae13d843dbd8ce3d1abd247adb3671bc8bc8d9",
+      "sources": [
+        {
+          "url": "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/3.1.3.tar.gz",
+          "file": "jpeg-0.tar.gz",
+          "sha256": "3a13a5ba767dc8264bc40b185e41368a80d5d5f945944d1dbaa4b2fb0099f4e5"
+        }
+      ]
+    },
+    {
+      "name": "libmodplug",
+      "version": "0.8.8.5-7",
+      "recipe_sha256": "d9080aa06e74b3279305315eace38c71a056da4522cc7958a906c07090da8a89",
+      "sources": [
+        {
+          "url": "https://codeload.github.com/Konstanty/libmodplug/tar.gz/d7ba5efd5816696fba668a23194940f796d62b95",
+          "file": "libmodplug-0.tar.gz",
+          "sha256": "d11d770c485aba977ca682b4fc843a41a1cec7acc22a26a70ef1df46dcaa0ca5"
+        }
+      ]
+    },
+    {
+      "name": "libogg",
+      "version": "1.3.6-2",
+      "recipe_sha256": "21ca4ee6f3e55865a29e2ca9df09e65e6ab3868e97f43e33afdc623b8b53a3a0",
+      "sources": [
+        {
+          "url": "https://github.com/xiph/ogg/archive/v1.3.6.tar.gz",
+          "file": "libogg-0.tar.gz",
+          "sha256": "95b643da661155d79db9de2fca55daed3a8d491039829def246aacb3d9201c81"
+        }
+      ]
+    },
+    {
+      "name": "libpng",
+      "version": "1.6.53-2",
+      "recipe_sha256": "909a1766e5854e62782fdcc39947c6b429074e49d407fa43ef04b53d44f4b054",
+      "sources": [
+        {
+          "url": "https://github.com/pnggroup/libpng/archive/v1.6.53.tar.gz",
+          "file": "libpng-0.tar.gz",
+          "sha256": "b20cee717e11416d2f96ccc7d184f63730ca8cb2f03bfd0c4ed77fbc909c0bff"
+        }
+      ]
+    },
+    {
+      "name": "libvorbis",
+      "version": "1.3.7-8",
+      "recipe_sha256": "3b8b505d88e8b4eeeec170e3931abf297b5bc46338f772e00b6b769692ee0fa1",
+      "sources": [
+        {
+          "url": "https://github.com/xiph/vorbis/archive/v1.3.7.tar.gz",
+          "file": "libvorbis-0.tar.gz",
+          "sha256": "270c76933d0934e42c5ee0a54a36280e2d87af1de3cc3e584806357e237afd13"
+        }
+      ]
+    },
+    {
+      "name": "mpg123",
+      "version": "1.32.10-5",
+      "recipe_sha256": "9be863542ab3e4ade178c216ef1224dd4019ed92117c47010abebbf73344d70f",
+      "sources": [
+        {
+          "url": "https://sourceforge.net/projects/mpg123/files/mpg123/1.32.10/mpg123-1.32.10.tar.bz2",
+          "file": "mpg123-0.tar.bz2",
+          "sha256": "87b2c17fe0c979d3ef38eeceff6362b35b28ac8589fbf1854b5be75c9ab6557c"
+        }
+      ]
+    },
+    {
+      "name": "pspgl",
+      "version": "r12-7",
+      "recipe_sha256": "1728fe18b4fa1773d18e5aab16c687cbeb208ea760c8014f3163f413498b7a8f",
+      "sources": [
+        {
+          "url": "https://codeload.github.com/pspdev/pspgl/tar.gz/de4260adf56d06516ec46018d404ca77e0b61748",
+          "file": "pspgl-0.tar.gz",
+          "sha256": "53b4a0f8f943d833822191a7007aad9b8e4f62cc8ac4afedbf84c91cae958e90"
+        }
+      ]
+    },
+    {
+      "name": "pspirkeyb",
+      "version": "r1-7",
+      "recipe_sha256": "a6e121ab588e98aadd3fd6ae0c77bd6ac986718bbc7388ff7604619c121509af",
+      "sources": [
+        {
+          "url": "https://codeload.github.com/pspdev/pspirkeyb/tar.gz/dd66ec05a946c4896e387bc05c8b130e84f7a21c",
+          "file": "pspirkeyb-0.tar.gz",
+          "sha256": "d8ea9a5d6537fca03d887ad973e6743ec8e1c4967e9009e95474ba12696e747a"
+        }
+      ]
+    },
+    {
+      "name": "sdl",
+      "version": "1.2.15-9",
+      "recipe_sha256": "34a25c7252cea64198a71f2a1471e213a7abc86e912d02afdc479da3c8dbf026",
+      "sources": [
+        {
+          "url": "https://codeload.github.com/pspdev/SDL/tar.gz/42ee00502244fc60e76ae395fcee29d82f64c369",
+          "file": "sdl-0.tar.gz",
+          "sha256": "a6c159c1799728f79373a7a593f38b4370cbe6038fc73664f0c4a1003e3d563c"
+        }
+      ]
+    },
+    {
+      "name": "sdl-image",
+      "version": "1.2.13-9",
+      "recipe_sha256": "2c9a4aa18f8d7aa1b66ba0174d7f494383c1c4a8ab173e24243be72ad27bcf1c",
+      "sources": [
+        {
+          "url": "https://codeload.github.com/libsdl-org/SDL_image/tar.gz/7adb1a70f97d62f1bb307bfb4e6c2fa0bc8c33ab",
+          "file": "sdl-image-0.tar.gz",
+          "sha256": "ce206b56dc511c8d2dece895f9b3edf6af13d39791baeb01e7dfd003fa8b38e1"
+        }
+      ]
+    },
+    {
+      "name": "sdl-mixer",
+      "version": "1.2.14-11",
+      "recipe_sha256": "694ca2975e325afa04b1356665f7acb4c7295a2e04b533866bfc0d20189c073f",
+      "sources": [
+        {
+          "url": "https://codeload.github.com/libsdl-org/SDL_mixer/tar.gz/78cde6dd63222f9345dda38e8b7dca836aa55803",
+          "file": "sdl-mixer-0.tar.gz",
+          "sha256": "42d80f4693be5db76e095bffec9449b7dfaa6565ab44db2036e4ec81d65e5612"
+        }
+      ]
+    },
+    {
+      "name": "sdl-ttf",
+      "version": "2.0.11-10",
+      "recipe_sha256": "b31869a5ee1f2d3768acebae033a577813ec5aded6ec98e55b3c7412e90c23da",
+      "sources": [
+        {
+          "url": "https://github.com/pspdev/SDL_ttf/archive/2.0.11-psp.tar.gz",
+          "file": "sdl-ttf-0.tar.gz",
+          "sha256": "55e7366d62067837aef247c5b1ffe1559333773c7559e1f27070398589e10ae1"
+        }
+      ]
+    },
+    {
+      "name": "tremor",
+      "version": "1.2.1git-6",
+      "recipe_sha256": "4ac32eb0eb71487c6e0950a4a4c706547531254f7a43470e4f168a6095af7137",
+      "sources": [
+        {
+          "url": "https://gitlab.xiph.org/xiph/tremor/-/archive/7c30a66346199f3f09017a09567c6c8a3a0eedc8/tremor-7c30a66346199f3f09017a09567c6c8a3a0eedc8.tar.gz",
+          "file": "tremor-0.tar.gz",
+          "sha256": "1b1bc4998c3af606abaa2ac90d6f63a28d4969abab35f6d098b35e9089962bcd"
+        }
+      ]
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.1-8",
+      "recipe_sha256": "a1da0445ea108f5b1c384aacad607d31c0d0f06c55f9e972363f488089b49313",
+      "sources": [
+        {
+          "url": "https://github.com/madler/zlib/archive/v1.3.1.tar.gz",
+          "file": "zlib-0.tar.gz",
+          "sha256": "17e88863f3600672ab49182f217281b6fc4d3c762bde361935e436a95214d05c"
+        }
+      ]
+    }
+  ],
+  "sdk_sources": [
+    {
+      "file": "psp-packages.tar.gz",
+      "url": "https://codeload.github.com/pspdev/psp-packages/tar.gz/f5b6091ced5880e93cf57a92ee097141984caab3",
+      "sha256": "60880146c637c49b4488900b539f5963f2b612d03906cf056e7f360e7da6b2e8"
+    },
+    {
+      "file": "pspsdk.tar.gz",
+      "url": "https://codeload.github.com/pspdev/pspsdk/tar.gz/09f02b88b9f30055bea916c5ddbdbddcdef9e31f",
+      "sha256": "0ab64234771cf6202b957532a18f3ef04a0215ffb2b372be0ff72b9e671e66da"
+    },
+    {
+      "file": "newlib.tar.gz",
+      "url": "https://codeload.github.com/pspdev/newlib/tar.gz/9e0a073634ad73e8e088f2e071c55a9fe5d39709",
+      "sha256": "d3fa54b832f75dbab8b07f4dfc23acab96a5795a10692571c0bb134c3063ae37"
+    },
+    {
+      "file": "gcc.tar.gz",
+      "url": "https://codeload.github.com/pspdev/gcc/tar.gz/1a33997924916ff5a6f61b64179ff9c8921f46c6",
+      "sha256": "75dfa598fe54f934d783f02ecdb5bd6f35d04d43e1eb583993e69eed170877b6"
+    },
+    {
+      "file": "pthread-embedded.tar.gz",
+      "url": "https://codeload.github.com/pspdev/pthread-embedded/tar.gz/97fe4ce006b420894f2bcaeb530d1f1f53111fc2",
+      "sha256": "09d99c99388d3f5afc5120dbdc5e4d519f070a50cebf7f0eada9033de4099708"
+    },
+    {
+      "file": "psptoolchain.tar.gz",
+      "url": "https://codeload.github.com/pspdev/psptoolchain/tar.gz/57a4fc650324dea4637ea5ef9dfc2fc292c004f8",
+      "sha256": "32302bc156175308644169def8651bab15a185387e32ec4d2859fe17b02077f5"
+    },
+    {
+      "file": "psptoolchain-allegrex.tar.gz",
+      "url": "https://codeload.github.com/pspdev/psptoolchain-allegrex/tar.gz/a95b7da838d9f506656092c3e0232dcf50389d89",
+      "sha256": "527d2210a4e4fae9e700be9e6c33efe46d30311bd253342c26eedd3c2890fc38"
+    },
+    {
+      "file": "psptoolchain-extra.tar.gz",
+      "url": "https://codeload.github.com/pspdev/psptoolchain-extra/tar.gz/b5f01b00e428a604832e0dfb4bfbb991d1397e3f",
+      "sha256": "c597ac4612dc44615319178a3b692f67a1a90f895ed90a1b0155aa6797b131bd"
+    }
+  ]
+}

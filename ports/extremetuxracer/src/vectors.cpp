@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -32,10 +34,10 @@ const TVector4i NullVec4i;
 
 // Instanciate only functions we actually need
 template<>
-double TVector3<double>::Norm() {
-	double square = x*x + y*y + z*z;
+float TVector3<float>::Norm() {
+	float square = x*x + y*y + z*z;
 	if (square == 0.0) return 0.0;
-	double denom = std::sqrt(square);
+	float denom = std::sqrt(square);
 	*this *= 1.0 / denom;
 	return denom;
 }

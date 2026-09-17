@@ -19,6 +19,8 @@ This module has been completely rewritten. Remember that the way of
 defining the character has radically changed though the character is
 still shaped with spheres.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -167,7 +169,7 @@ bool CCharShape::CreateCharNode(int parent_name, std::size_t node_name, const st
 	return true;
 }
 
-void CCharShape::AddAction(std::size_t node_name, int type, const TVector3d& vec, double val) {
+void CCharShape::AddAction(std::size_t node_name, int type, const TVector3d& vec, float val) {
 	std::size_t idx = GetNodeIdx(node_name);
 	TCharAction *act = Nodes[idx]->action;
 	act->type[act->num] = type;
@@ -191,7 +193,7 @@ bool CCharShape::TranslateNode(std::size_t node_name, const TVector3d& vec) {
 	return true;
 }
 
-bool CCharShape::RotateNode(std::size_t node_name, int axis, double angle) {
+bool CCharShape::RotateNode(std::size_t node_name, int axis, float angle) {
 	TCharNode *node = GetNode(node_name);
 	if (node == nullptr) return false;
 
@@ -220,7 +222,7 @@ bool CCharShape::RotateNode(std::size_t node_name, int axis, double angle) {
 	return true;
 }
 
-bool CCharShape::RotateNode(const std::string& node_trivialname, int axis, double angle) {
+bool CCharShape::RotateNode(const std::string& node_trivialname, int axis, float angle) {
 	std::unordered_map<std::string, std::size_t>::const_iterator i = NodeIndex.find(node_trivialname);
 	if (i == NodeIndex.end()) return false;
 	return RotateNode(i->second, axis, angle);
@@ -364,12 +366,24 @@ void CCharShape::CreateMaterial(const std::string& line) {
 // --------------------------------------------------------------------
 
 void CCharShape::DrawCharSphere(int num_divisions) const {
-	GLUquadricObj *qobj = gluNewQuadric();
-	gluQuadricDrawStyle(qobj, GLU_FILL);
-	gluQuadricOrientation(qobj, GLU_OUTSIDE);
-	gluQuadricNormals(qobj, GLU_SMOOTH);
-	gluSphere(qobj, 1.0, (GLint)2.0 * num_divisions, num_divisions);
-	gluDeleteQuadric(qobj);
+    // Cache smooth unit spheres; PSPGL has no GLU quadric implementation.
+    struct Vertex { float nx,ny,nz,x,y,z; };
+    static std::vector<Vertex> meshes[17];
+    int n=std::max(3,std::min(16,num_divisions));
+    auto& mesh=meshes[n];
+    if(mesh.empty()) {
+        auto point=[](float lat,float lon) { float c=std::cos(lat),x=c*std::cos(lon),y=c*std::sin(lon),z=std::sin(lat);return Vertex{x,y,z,x,y,z};};
+        for(int y=0;y<n;y++)for(int x=0;x<2*n;x++) {
+            float a=-1.57079632679f+y*3.14159265359f/n,b=a+3.14159265359f/n;
+            float c=x*3.14159265359f/n,d=c+3.14159265359f/n;
+            Vertex p=point(a,c),q=point(a,d),r=point(b,c),t=point(b,d);
+            mesh.insert(mesh.end(),{p,q,r,q,t,r});
+        }
+    }
+    glEnableClientState(GL_NORMAL_ARRAY);glEnableClientState(GL_VERTEX_ARRAY);
+    glNormalPointer(GL_FLOAT,sizeof(Vertex),&mesh[0].nx);glVertexPointer(3,GL_FLOAT,sizeof(Vertex),&mesh[0].x);
+    glDrawArrays(GL_TRIANGLES,0,mesh.size());
+    glDisableClientState(GL_NORMAL_ARRAY);glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 void CCharShape::DrawNodes(const TCharNode *node) {
@@ -497,8 +511,8 @@ TVector3d CCharShape::AdjustRollvector(const CControl *ctrl, const TVector3d& ve
 	return TransformVector(rot_mat, zvec);
 }
 
-void CCharShape::AdjustOrientation(CControl *ctrl, double dtime,
-                                   double dist_from_surface, const TVector3d& surf_nml) {
+void CCharShape::AdjustOrientation(CControl *ctrl, float dtime,
+                                   float dist_from_surface, const TVector3d& surf_nml) {
 	TVector3d new_y, new_z;
 	static const TVector3d minus_z_vec(0, 0, -1);
 	static const TVector3d y_vec(0, 1, 0);
@@ -525,7 +539,7 @@ void CCharShape::AdjustOrientation(CControl *ctrl, double dtime,
 		ctrl->corientation = new_orient;
 	}
 
-	double time_constant = dist_from_surface > 0 ? TO_AIR_TIME : TO_TIME;
+	float time_constant = dist_from_surface > 0 ? TO_AIR_TIME : TO_TIME;
 
 	ctrl->corientation = InterpolateQuaternions(
 	                         ctrl->corientation, new_orient,
@@ -546,17 +560,17 @@ void CCharShape::AdjustOrientation(CControl *ctrl, double dtime,
 	TransformNode(0, cob_mat, cob_mat.GetTransposed());
 }
 
-void CCharShape::AdjustJoints(double turnFact, bool isBraking,
-                              double paddling_factor, double speed,
-                              const TVector3d& net_force, double flap_factor) {
-	double turning_angle[2];
-	double paddling_angle = 0;
-	double ext_paddling_angle = 0;
-	double kick_paddling_angle = 0;
-	double braking_angle = 0;
-	double force_angle = 0;
-	double turn_leg_angle = 0;
-	double flap_angle = 0;
+void CCharShape::AdjustJoints(float turnFact, bool isBraking,
+                              float paddling_factor, float speed,
+                              const TVector3d& net_force, float flap_factor) {
+	float turning_angle[2];
+	float paddling_angle = 0;
+	float ext_paddling_angle = 0;
+	float kick_paddling_angle = 0;
+	float braking_angle = 0;
+	float force_angle = 0;
+	float turn_leg_angle = 0;
+	float flap_angle = 0;
 
 	if (isBraking) braking_angle = MAX_ARM_ANGLE2;
 
@@ -638,10 +652,10 @@ bool CCharShape::Collision(const TVector3d& pos, const TPolyhedron& ph) {
 //				shadow
 // --------------------------------------------------------------------
 
-void CCharShape::DrawShadowVertex(double x, double y, double z, const TMatrix<4, 4>& mat) const {
+void CCharShape::DrawShadowVertex(float x, float y, float z, const TMatrix<4, 4>& mat) const {
 	TVector3d pt(x, y, z);
 	pt = TransformPoint(mat, pt);
-	double old_y = pt.y;
+	float old_y = pt.y;
 	TVector3d nml = Course.FindCourseNormal(pt.x, pt.z);
 	pt.y = Course.FindYCoord(pt.x, pt.z) + SHADOW_HEIGHT;
 	if (pt.y > old_y) pt.y = old_y;
@@ -650,8 +664,8 @@ void CCharShape::DrawShadowVertex(double x, double y, double z, const TMatrix<4,
 }
 
 void CCharShape::DrawShadowSphere(const TMatrix<4, 4>& mat) const {
-	double theta, phi, d_theta, d_phi, eps, twopi;
-	double x, y, z;
+	float theta, phi, d_theta, d_phi, eps, twopi;
+	float x, y, z;
 	int div = param.tux_shadow_sphere_divisions;
 
 	eps = 1e-15;
@@ -659,9 +673,9 @@ void CCharShape::DrawShadowSphere(const TMatrix<4, 4>& mat) const {
 	d_theta = d_phi = M_PI / div;
 
 	for (phi = 0.0; phi + eps < M_PI; phi += d_phi) {
-		double cos_theta, sin_theta;
-		double sin_phi, cos_phi;
-		double sin_phi_d_phi, cos_phi_d_phi;
+		float cos_theta, sin_theta;
+		float sin_phi, cos_phi;
+		float sin_phi_d_phi, cos_phi_d_phi;
 
 		sin_phi = std::sin(phi);
 		cos_phi = std::cos(phi);
@@ -782,7 +796,7 @@ void CCharShape::RefreshNode(std::size_t idx) {
 	if (idx >= numNodes) return;
 	TMatrix<4, 4> TempMatrix;
 	char caxis;
-	double angle;
+	float angle;
 
 	TCharNode *node = Nodes[idx];
 	TCharAction *act = node->action;
@@ -795,7 +809,7 @@ void CCharShape::RefreshNode(std::size_t idx) {
 	for (std::size_t i=0; i<act->num; i++) {
 		int type = act->type[i];
 		const TVector3d& vec = act->vec[i];
-		double dval = act->dval[i];
+		float dval = act->dval[i];
 
 		switch (type) {
 			case 0:

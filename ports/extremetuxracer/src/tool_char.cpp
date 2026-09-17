@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -51,7 +53,7 @@ static bool control = false;
 static bool alt = false;
 static TCharAction Undo;
 static int startx, starty;
-static double startrotx, startroty, startposx, startposy;
+static float startrotx, startroty, startposx, startposy;
 static bool rotactive = false;
 static bool moveactive = false;
 static int comp = 0;
@@ -81,7 +83,7 @@ void RecallAction(TCharAction *act) {
 	}
 }
 
-void ChangeValue(int type, double fact) {
+void ChangeValue(int type, float fact) {
 	if (type == 0 || type == 4) {
 		if (comp == 0) {
 			action->vec[curr_act].x += 0.02 * fact;
@@ -114,7 +116,7 @@ void ChangeNode(int steps) {
 	}
 }
 
-void SetRotation(double x, double y, double z) {
+void SetRotation(float x, float y, float z) {
 	xrotation = x;
 	yrotation = y;
 	zrotation = z;

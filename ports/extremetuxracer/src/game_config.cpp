@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 /*
 If you want to add a new option, do this:
@@ -129,7 +131,7 @@ void AddComment(CSPList &list, const std::string& comment) {
 	list.Add(line);
 }
 
-void SaveConfigFile() {
+bool SaveConfigFile() {
 	CSPList liste;
 
 	liste.Add("# ------------------------------------------------------------------");
@@ -258,7 +260,7 @@ void SaveConfigFile() {
 	liste.Add();
 
 	// ---------------------------------------
-	liste.Save(param.config_dir + SEP "options.txt");
+	return liste.Save(param.config_dir + SEP "options.txt");
 }
 
 // --------------------------------------------------------------------
@@ -266,7 +268,10 @@ void SaveConfigFile() {
 void InitConfig() {
 	int config_exist = 0;
 
-#if defined (OS_WIN32_MINGW) || defined (OS_WIN32_MSC)
+#if defined(__PSP__)
+ param.config_dir="config"; param.data_dir="data"; param.save_dir="config";
+ param.configfile="config/options.txt"; config_exist=FileExists(param.configfile);
+#elif defined (OS_WIN32_MINGW) || defined (OS_WIN32_MSC)
 	// the progdir is always the current dir
 	param.config_dir = "config";
 	param.data_dir = "data";
@@ -350,7 +355,7 @@ void InitConfig() {
 	param.trans_dir = param.data_dir + SEP "translations";
 	param.player_dir = param.data_dir + SEP "players";
 
-	param.ui_snow = true;
+	param.ui_snow = false;
 	param.view_mode = FOLLOW;
 	param.display_fps = false;
 	param.show_hud = true;
@@ -362,4 +367,6 @@ void InitConfig() {
 		SetConfigDefaults();
 		Trans.LoadLanguages();
 	}
+ param.full_skybox=true;
+ param.display_fps=true;
 }

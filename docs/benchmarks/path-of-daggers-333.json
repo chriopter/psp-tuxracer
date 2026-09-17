@@ -1,0 +1,29 @@
+{
+  "game": "Extreme Tux Racer 0.8.4",
+  "course": "path_of_daggers",
+  "cpu_mhz": 333,
+  "music_frames": 3599,
+  "all": {
+    "frames": 3599,
+    "fps": 59.874,
+    "median_us": 16683,
+    "p95_us": 16684,
+    "max_us": 33367,
+    "over35ms": 0
+  },
+  "steering": {
+    "frames": 900,
+    "fps": 59.873,
+    "median_us": 16683,
+    "p95_us": 16684,
+    "max_us": 33367,
+    "over35ms": 0
+  },
+  "emulator": "PPSSPP 1.20.4",
+  "internal_resolution": 1,
+  "frameskip": 0,
+  "psp_model": "PSP-2000/3000 (64 MB)",
+  "date": "2026-09-07",
+  "eboot_sha256": "7dfea8a0d0af5969157ccf00399dffb9598a77e24dd2991b326522f1a92e7f16",
+  "method": "Guest presentation intervals including VSync; first race frame and loading excluded. Paddle held, left/right 30 frames each per 240-frame cycle. Not physical PSP measurements."
+}

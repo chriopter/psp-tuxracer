@@ -14,6 +14,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifndef COMMON_H
 #define COMMON_H
@@ -82,7 +84,7 @@ void	PrintInt(const int val);
 void	PrintInt(const std::string& s, const int val);
 void	PrintStr(const char *val);
 void	PrintString(const std::string& s);
-void	PrintDouble(const double val);
+void	PrintDouble(const float val);
 void	PrintVector(const TVector3d& v);
 void	PrintVector4(const TVector4d& v);
 void	PrintColor(const sf::Color& c);
@@ -114,7 +116,7 @@ void	SaveMessages();
 //				date and time
 // --------------------------------------------------------------------
 
-void GetTimeComponents(double time, int *min, int *sec, int *hundr);
+void GetTimeComponents(float time, int *min, int *sec, int *hundr);
 std::string GetTimeString();
 
 

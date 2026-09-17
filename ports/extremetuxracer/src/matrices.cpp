@@ -13,6 +13,8 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ---------------------------------------------------------------------*/
+// PSP port modifications, 2026-09-07. See docs/porting.md in the port repository.
+
 
 #ifdef HAVE_CONFIG_H
 #include <etr_config.h>
@@ -48,8 +50,8 @@ template void TMatrix<4, 4>::SetIdentity();
 
 
 template<int ix, int iy>
-void TMatrix<ix, iy>::SetRotationMatrix(double angle, char axis) {
-	double sinv, cosv;
+void TMatrix<ix, iy>::SetRotationMatrix(float angle, char axis) {
+	float sinv, cosv;
 	sinv = std::sin(ANGLES_TO_RADIANS(angle));
 	cosv = std::cos(ANGLES_TO_RADIANS(angle));
 
@@ -78,27 +80,27 @@ void TMatrix<ix, iy>::SetRotationMatrix(double angle, char axis) {
 			break;
 	}
 }
-template void TMatrix<3, 3>::SetRotationMatrix(double angle, char axis);
-template void TMatrix<4, 4>::SetRotationMatrix(double angle, char axis);
+template void TMatrix<3, 3>::SetRotationMatrix(float angle, char axis);
+template void TMatrix<4, 4>::SetRotationMatrix(float angle, char axis);
 
 template<int ix, int iy>
-void TMatrix<ix, iy>::SetTranslationMatrix(double x, double y, double z) {
+void TMatrix<ix, iy>::SetTranslationMatrix(float x, float y, float z) {
 	SetIdentity();
 	_data[3][0] = x;
 	_data[3][1] = y;
 	_data[3][2] = z;
 }
-template void TMatrix<4, 4>::SetTranslationMatrix(double x, double y, double z);
+template void TMatrix<4, 4>::SetTranslationMatrix(float x, float y, float z);
 
 template<int ix, int iy>
-void TMatrix<ix, iy>::SetScalingMatrix(double x, double y, double z) {
+void TMatrix<ix, iy>::SetScalingMatrix(float x, float y, float z) {
 	SetIdentity();
 	_data[0][0] = x;
 	_data[1][1] = y;
 	_data[2][2] = z;
 }
-template void TMatrix<3, 3>::SetScalingMatrix(double x, double y, double z);
-template void TMatrix<4, 4>::SetScalingMatrix(double x, double y, double z);
+template void TMatrix<3, 3>::SetScalingMatrix(float x, float y, float z);
+template void TMatrix<4, 4>::SetScalingMatrix(float x, float y, float z);
 
 template<int ix, int iy>
 TMatrix<ix, iy>::TMatrix(const TVector3d& w1, const TVector3d& w2, const TVector3d& w3) {
