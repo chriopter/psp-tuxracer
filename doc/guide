@@ -1,0 +1,44 @@
+===============================================================================
+                   Extreme Tux Racer - End User Documentation
+===============================================================================
+
+
+Important keys
+-------------------------------------------------------------------------------
+
+Tux is steered by the following keys:
+
+Arrows - control direction and speed
+Space - Charge for jumping, jump when released
+
+The appearance is modified by following keys:
+
+1, 2, 3 - select camera mode (default is 2)
+f - hide or show fps display as part of the hud (heads-up display)
+s - screenshot (in folder "screenshots")
+h - toggle on/off hud
+u - toggle n/off snowflakes (menu screens only)
+F5 - toggle on/off skybox
+F6 - toggle on/off fog
+F7 - toggle on/off terrain
+F8 - toggle on/off trees and objects
+
+
+The configuration screen
+-------------------------------------------------------------------------------
+
+The most important adjustments can be done at runtime at the config screen.
+Most options should be self-explanatory. "Auto" for resolution means that the
+program uses the same values as set in the basic computer configuration. That's
+not convenient in windowed mode since it ignores the menu/task bar on the
+screen.
+
+There are 4 levels of detail:
+
+1 - for very slow computers (no trackmarks, particles etc.)
+2 - most details are shown but on an lower level
+3 - good appearance but using lower resolution textures (default)
+4 - best appearance, today's computers should have no problems with this
+
+The adjustments are entered and stored in the file "options". Editing this
+file is possible, but usually not necessary.

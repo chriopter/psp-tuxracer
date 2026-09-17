@@ -1,0 +1,39 @@
+===============================================================================
+                     Extreme Tux Racer - Code Documentation
+===============================================================================
+
+
+Dependencies and Requirements
+-------------------------------------------------------------------------------
+
+Extreme Tux Racer is written entirely in C++, and thus requires a C++ compiler
+to be compiled. This compiler has to support the subset of C++14 supported by
+recent versions of GCC, Clang and MSVC.
+
+Extreme Tux Racer has - though aiming to not have more dependencies than
+necessary - the following dependencies:
+- OpenGL
+- SFML 2.4 or later (modules: system, graphics, audio and window)
+
+The code is prepared to be compiled on Windows and Unix environments. For
+Windows, there exists a solution for Microsoft Visual Studio (see /build); on
+Unix autotools are used. With a few changes (mainly to bh.h) it should run also
+on other platforms, given that they provide the dependencies listed above.
+
+
+Coding Style
+-------------------------------------------------------------------------------
+
+Extreme Tux Racer uses AStyle to automatically format the source code. For this
+purpose, we provide scripts for Windows (runastyle.bat) and Unix (runastyle)
+that automatically call AStyle on the entire source code with the flags
+specified in astyle.ini.
+
+
+Final Remarks
+-------------------------------------------------------------------------------
+
+Before r548, this file contained a much longer text written by Reinhard
+Niehoff. Today, that text is outdated, but it nicely explains what changed
+since the days of TuxRacer. So, in case you are interested in the history of
+this project - have a look!

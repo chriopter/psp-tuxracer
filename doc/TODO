@@ -1,0 +1,6 @@
+
+- Font with all characters required by supported translations
+- MinGW build support
+- Handle errors caused by corrupted user configuration files
+  - Existing 'players' file without valid players crash only when
+    screen refresh needs player information.
