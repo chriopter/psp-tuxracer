@@ -29,6 +29,7 @@ jobs:
           python3 tools/test-psp-save.py
           python3 tools/test-psp-music.py
           python3 tools/test-psp-controls.py
+          python3 tools/test-psp-ui.py
           python3 tools/test-release.py
       - name: Build PSP executable
         run: ./build-extremetuxracer.sh
@@ -44,6 +45,7 @@ jobs:
           retention-days: 30
 
   release:
+    timeout-minutes: 30
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-24.04

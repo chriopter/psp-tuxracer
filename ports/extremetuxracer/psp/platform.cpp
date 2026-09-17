@@ -12,6 +12,8 @@
 #include "race_select.h"
 #include "racing.h"
 #include "regist.h"
+#include "controls_guide.h"
+#include "help.h"
 #include "states.h"
 #include "winsys.h"
 #include <GLES/egl.h>
@@ -630,6 +632,11 @@ bool RenderWindow::pollEvent(Event &e) {
       if (state == &GameTypeSelect) {
         EnterPractice();
       }
+      if (state == &ControlsGuide) {
+        e.type = Event::KeyPressed;
+        e.key.code = Keyboard::P;
+        return true;
+      }
       if (state == &RaceSelect) {
         g_game.course = Course.GetCourse("default", benchcourse);
         state->Exit();
@@ -690,7 +697,9 @@ bool RenderWindow::pollEvent(Event &e) {
                          racing ? Keyboard::P : Keyboard::Escape,
                          racing ? Keyboard::T : Keyboard::Unknown,
                          racing ? Keyboard::R : Keyboard::Unknown,
-                         (racing || State::manager.CurrentState() == &Paused) ? Keyboard::P : Keyboard::Unknown,
+                         (racing || State::manager.CurrentState() == &Paused ||
+                          State::manager.CurrentState() == &ControlsGuide ||
+                          State::manager.CurrentState() == &Help) ? Keyboard::P : Keyboard::Unknown,
                          racing ? Keyboard::Down : Keyboard::Unknown,
                          racing ? Keyboard::Up : Keyboard::Unknown};
   // Latch contextual bindings until physical release. A held Start/Cross must

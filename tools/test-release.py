@@ -147,6 +147,15 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(attempts, ['game.zip', 'sources.tar.gz', 'sources.tar.gz', 'SHA256SUMS'])
         sleep.assert_called_once_with(5)
 
+    def test_stalled_upload_is_bounded_and_never_published(self):
+        with patch.object(publish.subprocess, 'run', side_effect=subprocess.TimeoutExpired('gh', 180)) as run, \
+             patch.object(publish.time, 'sleep') as sleep:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                publish.upload_assets('v0.3.0', ['game.zip'])
+        self.assertEqual(run.call_count, 3)
+        self.assertTrue(all(call.kwargs['timeout'] == 180 for call in run.call_args_list))
+        self.assertEqual(sleep.call_count, 2)
+
 
 if __name__ == '__main__':
     unittest.main()

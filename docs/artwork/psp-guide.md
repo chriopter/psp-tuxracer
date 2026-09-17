@@ -1,0 +1,13 @@
+# PSP control-diagram illustration
+
+Generated with the built-in image model on 2026-09-17 at the user's request. Original: `psp-guide-source.png`; runtime: `../../ports/extremetuxracer/data/textures/psp-guide.png`.
+
+The source is resized to a 512 × 256 power-of-two texture. It is displayed at the original landscape proportions. The PSP-specific texture cap is increased only for this asset; the RGB565 upload uses 256 KiB. Labels and leader lines are rendered by the game for native-resolution readability and accurate control mapping. They are not invented lettering baked by the image model. The graphic is a stylized illustration, not a precise hardware schematic.
+
+```sh
+magick docs/artwork/psp-guide-source.png -filter Lanczos -resize '512x256!' ports/extremetuxracer/data/textures/psp-guide.png
+```
+
+## Final prompt
+
+Use case: stylized-concept. Asset type: a game onboarding control-diagram BACKGROUND illustration for Extreme Tux Racer on PSP, landscape 16:9. Production illustration, not a UI mockup. A single beautifully drawn black Sony PSP handheld console, perfectly straight-on front orthographic view, centered horizontally and vertically, taking exactly the middle 56 percent of canvas width (x=22% to 78%) and roughly y=30% to 72%. Keep accurate recognisable PSP silhouette: rounded horizontal black body, wide central screen, D-pad cross on left, analog nub lower left, four small circular action buttons on right in diamond arrangement with triangle at top, circle at right, cross at bottom and square at left; L/R shoulder controls along the two top corners; tiny START button below the screen toward the right. Device screen shows a tiny cheerful snowy downhill landscape and a penguin racing away, no text. Cool daylight catches black plastic and polished rim, slight tasteful blue reflections, very crisp shape, friendly winter-game manual illustration rather than photoreal product advertising. Backdrop: light icy sky-blue snowy alpine paper, delicate frost crystals restricted to outermost corners and a very faint snowdrift at bottom; pale uncluttered center and generous quiet empty space to left and right of console and above/below. IMPORTANT: no labels, no callout lines, no arrows, no captions, no title, no logo text, no watermark, no extra objects or controller, no hands, no decorative UI. All control labels and thin leader lines will be drawn later by the game for exact positioning and readable text on a 480x272 screen. The left and right 20 percent bands MUST remain nearly empty and pale enough for dark blue labels. Do not crop the device. Restrained crisp high-quality painted game-manual art, snow-white and ice-blue palette, charming and clean.

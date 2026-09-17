@@ -13,9 +13,9 @@ def upload_assets(version, assets):
     for asset in assets:
         for attempt in range(3):
             try:
-                subprocess.run(['gh', 'release', 'upload', version, str(asset), '--clobber'], check=True)
+                subprocess.run(['gh', 'release', 'upload', version, str(asset), '--clobber'], check=True, timeout=180)
                 break
-            except subprocess.CalledProcessError:
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
                 if attempt == 2:
                     raise
                 time.sleep(5 * (attempt + 1))

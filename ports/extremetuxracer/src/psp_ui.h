@@ -4,6 +4,7 @@
 namespace PspUI {
 enum Button { Cross, Circle, Square, Triangle, Start, ShoulderL, ShoulderR, Dpad };
 void Box(int x, int y, int w, int h, sf::Color color);
+void Line(float x, float y, float xx, float yy, sf::Color color);
 void Text(int x, int y, const char* text, unsigned size = 22);
 void Icon(int x, int y, Button button);
 void Hint(int x, int y, Button button, const char* text);

@@ -258,6 +258,7 @@ class VertexArray : public Drawable {
 
 public:
   VertexArray(int, std::size_t n) : vertices(n) {}
+  void resize(std::size_t n) { vertices.resize(n); }
   Vertex &operator[](std::size_t i) { return vertices[i]; }
   void render(const RenderStates &) const override;
 };

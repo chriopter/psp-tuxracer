@@ -181,9 +181,26 @@ void update_ui_snow(float time_step) {
 	}
 }
 void draw_ui_snow() {
-	for (std::list<TGuiParticle>::const_iterator i = particles_2d.begin(); i != particles_2d.end(); ++i) {
-		i->Draw();
+	// Preserve the original snow, but submit one atlas batch rather than
+	// hundreds of individual sprite draws on the PSP.
+	static sf::VertexArray snow(sf::Quads, 0);
+	snow.resize(particles_2d.size() * 4);
+	std::size_t vertex = 0;
+	const sf::Color color(255,255,255,76);
+	for (const auto& particle : particles_2d) {
+		const auto p = particle.sprite.getPosition();
+		const auto scale = particle.sprite.getScale();
+		const auto r = particle.sprite.getTextureRect();
+		const float w = r.width * scale.x, h = r.height * scale.y;
+		const float u = r.left, v = r.top, uw = r.width, vh = r.height;
+		snow[vertex++] = sf::Vertex(sf::Vector2f(p.x,p.y),color,sf::Vector2f(u,v));
+		snow[vertex++] = sf::Vertex(sf::Vector2f(p.x+w,p.y),color,sf::Vector2f(u+uw,v));
+		snow[vertex++] = sf::Vertex(sf::Vector2f(p.x+w,p.y+h),color,sf::Vector2f(u+uw,v+vh));
+		snow[vertex++] = sf::Vertex(sf::Vector2f(p.x,p.y+h),color,sf::Vector2f(u,v+vh));
 	}
+	sf::RenderStates state;
+	state.texture = &Tex.GetSFTexture(SNOW_PART);
+	Winsys.draw(snow,state);
 }
 
 void push_ui_snow(const TVector2i& pos) {

@@ -35,6 +35,7 @@ GNU General Public License for more details.
 #include "winsys.h"
 #include "savedata.hpp"
 #include "psp_ui.h"
+#include "controls_guide.h"
 
 CRegist Regist;
 
@@ -51,7 +52,9 @@ void QuitRegistration() {
 	g_game.character = &Char.CharList[character->GetValue()];
 	PspSave::Save(false);
 	Char.FreeCharacterPreviews(); // From here on, character previews are no longer required
-	State::manager.RequestEnterState(GameTypeSelect);
+	static bool guideShown = false;
+	if (guideShown) State::manager.RequestEnterState(GameTypeSelect);
+	else { guideShown = true; State::manager.RequestEnterState(ControlsGuide); }
 }
 
 void CRegist::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {

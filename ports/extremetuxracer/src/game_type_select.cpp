@@ -120,22 +120,22 @@ void CGameTypeSelect::Enter() {
 
 	ResetGUI();
 	confirmQuit = false;
-	int top = 125;
+	int top = 162;
 	unsigned int siz = 27;
-	int dist = 36;
-	textbuttons[0] = AddTextButton(Trans.Text(1), 62, top, siz);
-	textbuttons[1] = AddTextButton(Trans.Text(2), 62, top + dist, siz);
-	textbuttons[2] = AddTextButton(Trans.Text(3), 62, top + dist * 2, siz);
-	textbuttons[3] = AddTextButton(Trans.Text(62), 62, top + dist * 3, siz);
-	textbuttons[4] = AddTextButton(Trans.Text(43), 62, top + dist * 4, siz);
-	textbuttons[5] = AddTextButton(Trans.Text(4), 62, top + dist * 5, siz);
-	textbuttons[6] = AddTextButton("Saved data", 62, top + dist * 6, siz);
-	textbuttons[7] = AddTextButton(Trans.Text(5), 62, top + dist * 7, siz);
+	int dist = 34;
+	textbuttons[0] = AddTextButton(Trans.Text(1), CENTER, top, siz);
+	textbuttons[1] = AddTextButton(Trans.Text(2), CENTER, top + dist, siz);
+	textbuttons[2] = AddTextButton(Trans.Text(3), CENTER, top + dist * 2, siz);
+	textbuttons[3] = AddTextButton(Trans.Text(62), CENTER, top + dist * 3, siz);
+	textbuttons[4] = AddTextButton(Trans.Text(43), CENTER, top + dist * 4, siz);
+	textbuttons[5] = AddTextButton(Trans.Text(4), CENTER, top + dist * 5, siz);
+	textbuttons[6] = AddTextButton("Saved data", CENTER, top + dist * 6, siz);
+	textbuttons[7] = AddTextButton(Trans.Text(5), CENTER, top + dist * 7, siz);
 	SetFocus(textbuttons[selectedIndex]);
 	logo.setTexture(Tex.GetSFTexture(T_TITLE));
-	float logoScale = 170.0f / logo.getTextureRect().width;
+	float logoScale = Winsys.scale * 0.75f;
 	logo.setScale(logoScale, logoScale);
-	logo.setPosition(650, 4);
+	logo.setPosition((Winsys.resolution.width - logo.getTextureRect().width * logoScale) / 2, 5);
 
 	Music.Play(param.menu_music, true);
 }
@@ -144,20 +144,15 @@ void CGameTypeSelect::Loop(float time_step) {
 	ScopedRenderMode rm(GUI);
 	Winsys.clear();
 
-	PspUI::Background();
-	Winsys.draw(logo);
-	for (int i=0; i<8; ++i) {
-		bool selected = textbuttons[i]->focussed();
-		PspUI::Box(36,124+i*36,340,34,selected?sf::Color(30,72,98):sf::Color(18,36,53));
-		if (selected) PspUI::Box(36,124+i*36,4,34,sf::Color(113,224,239));
+	if (param.ui_snow) {
+		update_ui_snow(time_step);
+		draw_ui_snow();
 	}
-	PspUI::Controls(420,113);
+	Winsys.draw(logo);
+	DrawGUIFrame();
 	DrawGUI();
-	PspUI::Hint(36,438,PspUI::Cross,"Select");
-	PspUI::Hint(245,438,PspUI::Circle,"Player");
-	PspUI::Hint(480,438,PspUI::Dpad,"Navigate");
 	if (PspSave::NeedsAttention()) {
-		PspUI::Text(38,405,"Autosave paused: check Saved data",18);
+		PspUI::Text(CENTER,445,"Autosave paused: check Saved data",18);
 	}
 	if (confirmQuit) PspUI::Confirm("QUIT GAME?", "Your saved progress is kept.");
 

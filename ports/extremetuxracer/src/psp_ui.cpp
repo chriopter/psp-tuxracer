@@ -13,7 +13,7 @@ void Text(int x, int y, const char* text, unsigned size) {
     FT.SetColor(sf::Color(225, 239, 248)); FT.SetSize(size);
     FT.DrawString(x, y, text);
 }
-static void Line(float x, float y, float xx, float yy, sf::Color c) {
+void Line(float x, float y, float xx, float yy, sf::Color c) {
     float len = std::sqrt((xx-x)*(xx-x)+(yy-y)*(yy-y));
     float dx = -(yy-y)*1.5f/len, dy = (xx-x)*1.5f/len;
     GLfloat v[] = {x+dx,y+dy, xx+dx,yy+dy, xx-dx,yy-dy,

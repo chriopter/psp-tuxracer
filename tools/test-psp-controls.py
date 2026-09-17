@@ -15,7 +15,7 @@ source = r'''
 #include <cassert>
 #include <iostream>
 namespace Keyboard { enum Key { Unknown=-1, Left,Right,Up,Down,Space,Return,Escape,T,R,P,KeyCount }; }
-int Racing, Paused, Menu;
+int Racing, Paused, Menu, ControlsGuide, Help;
 struct State {
   struct Manager { const int* state; const int* CurrentState() { return state; } };
   static Manager manager;
@@ -58,7 +58,17 @@ int main() {
   release(); assert(sample(&Paused,PSP_CTRL_CIRCLE)[Escape]);
   release(); held=sample(&Racing,PSP_CTRL_CROSS|PSP_CTRL_SQUARE|PSP_CTRL_LEFT);
   assert(held[Space] && held[T] && held[Left]);
-  std::cout << "PASS: 33 bindings, disabled menu actions, held-state transitions and simultaneous controls\n";
+  for (const int* state : {&ControlsGuide, &Help}) {
+    for (int b=0;b<11;b++) {
+      release(); auto out=sample(state,1u<<b);
+      Key expected = b==8 ? P : menu[b];
+      for(int k=0;k<KeyCount;k++) assert(out[k]==(k==expected));
+    }
+  }
+  release(); assert(sample(&ControlsGuide,PSP_CTRL_START)[P]);
+  held=sample(&Menu,PSP_CTRL_START);
+  assert(held[P] && !held[Return]); // Start must not select a menu entry on arrival.
+  std::cout << "PASS: 55 bindings, guide Start gate, disabled menu actions, held-state transitions and simultaneous controls\n";
 }
 '''.replace('// DEFINES', defines).replace('// MAPPING', mapping)
 with tempfile.TemporaryDirectory(prefix='etr-controls-') as temp:

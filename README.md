@@ -21,13 +21,17 @@ Download the game ZIP from the [latest release](https://github.com/chriopter/psp
 | Triangle | Reset to the course |
 | Start | Pause / resume |
 
-Start, Square, Triangle and the shoulder buttons do not activate menu items.
+The first visit to the main menu is preceded by an illustrated PSP control guide.
+Press **Start** to continue; **Help** reopens the guide later.
+Start, Square, Triangle and the shoulder buttons do not activate normal menu items.
 To leave a race, pause, select **End race**, then confirm with Cross (Circle cancels).
-Quitting the game also requires confirmation. The main menu shows the PSP button legend.
+Quitting the game also requires confirmation. The original snowy main menu is retained.
 
-![PSP main menu and control legend](docs/images/psp-main-menu.png)
+![Illustrated PSP controls introduction](docs/images/psp-controls-intro.png)
 
-See the [screenshot and performance checks](docs/psp-ui-validation.md) and the [generated icon artwork and prompt](docs/artwork/psp-controls.md).
+![Original snowy main menu](docs/images/psp-main-menu.png)
+
+See the [screenshot and performance checks](docs/psp-ui-validation.md), [PSP illustration and prompt](docs/artwork/psp-guide.md), and [button artwork](docs/artwork/psp-controls.md).
 
 Progress and settings save automatically. The **Saved data** menu opens the PSP Save/Load dialogs.
 

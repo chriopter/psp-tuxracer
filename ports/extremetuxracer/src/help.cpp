@@ -30,11 +30,12 @@ GNU General Public License for more details.
 #include "translation.h"
 #include "winsys.h"
 #include "psp_ui.h"
+#include "controls_guide.h"
 
 CHelp Help;
 
 void CHelp::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
-	if (release || (key != sf::Keyboard::Return && key != sf::Keyboard::Escape)) return;
+	if (release || (key != sf::Keyboard::P && key != sf::Keyboard::Return && key != sf::Keyboard::Escape)) return;
 	State::manager.RequestEnterState(*State::manager.PreviousState());
 }
 
@@ -57,17 +58,6 @@ void CHelp::Loop(float time_step) {
 	ScopedRenderMode rm(GUI);
 	Winsys.clear();
 
-	PspUI::Background();
-	PspUI::Text(36,113,"MENUS & RACING",24);
-	PspUI::Hint(36,155,PspUI::Cross,"Confirm selection");
-	PspUI::Hint(36,195,PspUI::Circle,"Back / cancel");
-	PspUI::Text(36,245,"Left / right: select field",20);
-	PspUI::Text(36,275,"Up / down: change value",20);
-	PspUI::Text(36,325,"To leave a race:",22);
-	PspUI::Text(36,355,"Pause, select End race,",20);
-	PspUI::Text(36,382,"then confirm with Cross.",20);
-	PspUI::Controls(420,113);
-	PspUI::Hint(36,438,PspUI::Circle,"Back");
-	PspUI::Hint(245,438,PspUI::Cross,"Back");
+	DrawControlsGuide(false);
 	Winsys.SwapBuffers();
 }

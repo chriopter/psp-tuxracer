@@ -355,7 +355,7 @@ void InitConfig() {
 	param.trans_dir = param.data_dir + SEP "translations";
 	param.player_dir = param.data_dir + SEP "players";
 
-	param.ui_snow = false;
+	param.ui_snow = true;
 	param.view_mode = FOLLOW;
 	param.display_fps = false;
 	param.show_hud = true;
