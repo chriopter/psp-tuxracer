@@ -100,6 +100,7 @@ class ReleaseTests(unittest.TestCase):
                 with patch.dict(os.environ, GH_REPO='example/repo', GITHUB_SHA='abc123', GITHUB_RUN_ID='42'), \
                      patch.object(publish.subprocess, 'check_output', return_value=json.dumps([releases])), \
                      patch.object(publish, 'notes', return_value='Commit notes'), \
+                     patch.object(publish.time, 'sleep'), \
                      patch.object(publish.subprocess, 'run', side_effect=run) as calls:
                     if missing:
                         with self.assertRaises(SystemExit):
@@ -115,7 +116,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_publish_only_after_assets_upload(self):
         calls = self.run_publish([{'tag_name': 'v0.1.0'}])
-        self.assertEqual([c[2] for c in calls], ['create', 'upload', 'edit'])
+        self.assertEqual([c[2] for c in calls], ['create', 'upload', 'upload', 'upload', 'edit'])
         self.assertTrue(all(c[3] == 'v0.2.0' for c in calls))
         self.assertIn('--draft', calls[0])
         self.assertIn('abc123', calls[0])
@@ -124,15 +125,27 @@ class ReleaseTests(unittest.TestCase):
 
     def test_upload_failure_does_not_publish(self):
         calls = self.run_publish([], fail_upload=True)
-        self.assertEqual([c[2] for c in calls], ['create', 'upload'])
+        self.assertEqual([c[2] for c in calls], ['create', 'upload', 'upload', 'upload'])
 
     def test_retry_resumes_draft_or_skips_published_release(self):
         release = {'tag_name': 'v0.2.0', 'draft': True, 'body': '<!-- ci-run:42 -->'}
         calls = self.run_publish([release])
-        self.assertEqual([c[2] for c in calls], ['upload', 'edit'])
+        self.assertEqual([c[2] for c in calls], ['upload', 'upload', 'upload', 'edit'])
         self.assertTrue(all(c[3] == 'v0.2.0' for c in calls))
         release['draft'] = False
         self.assertEqual(self.run_publish([release]), [])
+
+    def test_transient_failure_retries_only_failed_asset(self):
+        attempts = []
+        def run(args, **kwargs):
+            attempts.append(args[4])
+            if args[4] == 'sources.tar.gz' and attempts.count('sources.tar.gz') == 1:
+                raise subprocess.CalledProcessError(1, args)
+        with patch.object(publish.subprocess, 'run', side_effect=run), \
+             patch.object(publish.time, 'sleep') as sleep:
+            publish.upload_assets('v0.2.0', ['game.zip', 'sources.tar.gz', 'SHA256SUMS'])
+        self.assertEqual(attempts, ['game.zip', 'sources.tar.gz', 'sources.tar.gz', 'SHA256SUMS'])
+        sleep.assert_called_once_with(5)
 
 
 if __name__ == '__main__':

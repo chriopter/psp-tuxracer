@@ -15,11 +15,19 @@ Download the game ZIP from the [latest release](https://github.com/chriopter/psp
 | D-pad / analog stick | Steer and navigate |
 | Up / R | Paddle |
 | Down / L | Brake |
-| Cross | Jump / confirm |
-| Circle | Back / end race |
+| Cross | Hold and release to jump / confirm |
+| Circle | Back / pause race / resume from pause |
 | Square + direction | Trick |
 | Triangle | Reset to the course |
 | Start | Pause / resume |
+
+Start, Square, Triangle and the shoulder buttons do not activate menu items.
+To leave a race, pause, select **End race**, then confirm with Cross (Circle cancels).
+Quitting the game also requires confirmation. The main menu shows the PSP button legend.
+
+![PSP main menu and control legend](docs/images/psp-main-menu.png)
+
+See the [screenshot and performance checks](docs/psp-ui-validation.md) and the [generated icon artwork and prompt](docs/artwork/psp-controls.md).
 
 Progress and settings save automatically. The **Saved data** menu opens the PSP Save/Load dialogs.
 

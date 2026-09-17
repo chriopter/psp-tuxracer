@@ -5,6 +5,20 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import time
+
+
+def upload_assets(version, assets):
+    """Retry a failed asset, not every successful upload, before publishing."""
+    for asset in assets:
+        for attempt in range(3):
+            try:
+                subprocess.run(['gh', 'release', 'upload', version, str(asset), '--clobber'], check=True)
+                break
+            except subprocess.CalledProcessError:
+                if attempt == 2:
+                    raise
+                time.sleep(5 * (attempt + 1))
 
 
 def next_version(releases):
@@ -87,7 +101,7 @@ def main():
                         '--target', commit, '--title', f'Extreme Tux Racer PSP {version}',
                         '--notes-file', str(path)], check=True)
     # Keep incomplete uploads private; a retry resumes the same draft.
-    subprocess.run(['gh', 'release', 'upload', version, *map(str, assets), '--clobber'], check=True)
+    upload_assets(version, assets)
     subprocess.run(['gh', 'release', 'edit', version, '--draft=false', '--latest'], check=True)
 
 

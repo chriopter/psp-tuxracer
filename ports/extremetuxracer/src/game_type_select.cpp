@@ -37,11 +37,15 @@ GNU General Public License for more details.
 #include "score.h"
 #include "winsys.h"
 #include "savedata.hpp"
+#include "psp_ui.h"
+#include "regist.h"
 
 CGameTypeSelect GameTypeSelect;
 
 static TTextButton* textbuttons[8];
 static sf::Sprite logo;
+static bool confirmQuit = false;
+static int selectedIndex = 0;
 
 void EnterPractice() {
 	g_game.game_type = PRACTICING;
@@ -49,6 +53,7 @@ void EnterPractice() {
 }
 
 void QuitGameType() {
+	for (int i=0; i<8; ++i) if (textbuttons[i]->focussed()) selectedIndex = i;
 	if (textbuttons[0]->focussed())
 		State::manager.RequestEnterState(EventSelect);
 	if (textbuttons[1]->focussed())
@@ -64,11 +69,12 @@ void QuitGameType() {
 	if (textbuttons[6]->focussed())
 		PspSave::OpenMenu();
 	if (textbuttons[7]->focussed())
-		State::manager.RequestQuit();
+		confirmQuit = true;
 }
 
 void CGameTypeSelect::Mouse(int button, int state, int x, int y) {
 	if (state == 1) {
+		if (confirmQuit) return;
 		ClickGUI(x, y);
 		QuitGameType();
 	}
@@ -76,13 +82,18 @@ void CGameTypeSelect::Mouse(int button, int state, int x, int y) {
 
 void CGameTypeSelect::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 	if (release) return;
+	if (confirmQuit) {
+		if (key == sf::Keyboard::Escape) confirmQuit = false;
+		if (key == sf::Keyboard::Return) State::manager.RequestQuit();
+		return;
+	}
 
 	switch (key) {
 		case sf::Keyboard::U:
 			param.ui_snow = !param.ui_snow;
 			break;
 		case sf::Keyboard::Escape:
-			State::manager.RequestQuit();
+			State::manager.RequestEnterState(Regist);
 			break;
 		case sf::Keyboard::Return:
 			QuitGameType();
@@ -108,21 +119,23 @@ void CGameTypeSelect::Enter() {
 	Winsys.ShowCursor(!param.ice_cursor);
 
 	ResetGUI();
-	int top = 162;
+	confirmQuit = false;
+	int top = 125;
 	unsigned int siz = 27;
-	int dist = 34;
-	textbuttons[0] = AddTextButton(Trans.Text(1), CENTER, top, siz);
-	textbuttons[1] = AddTextButton(Trans.Text(2), CENTER, top + dist, siz);
-	textbuttons[2] = AddTextButton(Trans.Text(3), CENTER, top + dist * 2, siz);
-	textbuttons[3] = AddTextButton(Trans.Text(62), CENTER, top + dist * 3, siz);
-	textbuttons[4] = AddTextButton(Trans.Text(43), CENTER, top + dist * 4, siz);
-	textbuttons[5] = AddTextButton(Trans.Text(4), CENTER, top + dist * 5, siz);
-	textbuttons[6] = AddTextButton("Saved data", CENTER, top + dist * 6, siz);
-	textbuttons[7] = AddTextButton(Trans.Text(5), CENTER, top + dist * 7, siz);
+	int dist = 36;
+	textbuttons[0] = AddTextButton(Trans.Text(1), 62, top, siz);
+	textbuttons[1] = AddTextButton(Trans.Text(2), 62, top + dist, siz);
+	textbuttons[2] = AddTextButton(Trans.Text(3), 62, top + dist * 2, siz);
+	textbuttons[3] = AddTextButton(Trans.Text(62), 62, top + dist * 3, siz);
+	textbuttons[4] = AddTextButton(Trans.Text(43), 62, top + dist * 4, siz);
+	textbuttons[5] = AddTextButton(Trans.Text(4), 62, top + dist * 5, siz);
+	textbuttons[6] = AddTextButton("Saved data", 62, top + dist * 6, siz);
+	textbuttons[7] = AddTextButton(Trans.Text(5), 62, top + dist * 7, siz);
+	SetFocus(textbuttons[selectedIndex]);
 	logo.setTexture(Tex.GetSFTexture(T_TITLE));
-	float logoScale = Winsys.scale * 0.75f;
+	float logoScale = 170.0f / logo.getTextureRect().width;
 	logo.setScale(logoScale, logoScale);
-	logo.setPosition((Winsys.resolution.width - logo.getTextureRect().width * logoScale) / 2, (5));
+	logo.setPosition(650, 4);
 
 	Music.Play(param.menu_music, true);
 }
@@ -131,19 +144,22 @@ void CGameTypeSelect::Loop(float time_step) {
 	ScopedRenderMode rm(GUI);
 	Winsys.clear();
 
-	if (param.ui_snow) {
-		update_ui_snow(time_step);
-		draw_ui_snow();
-	}
-
+	PspUI::Background();
 	Winsys.draw(logo);
-	DrawGUIFrame();
-	DrawGUI();
-	if (PspSave::NeedsAttention()) {
-		FT.SetColor(colWhite);
-		FT.SetSize(18);
-		FT.DrawString(CENTER, 445, "Autosave paused. Open Saved data to check your save.");
+	for (int i=0; i<8; ++i) {
+		bool selected = textbuttons[i]->focussed();
+		PspUI::Box(36,124+i*36,340,34,selected?sf::Color(30,72,98):sf::Color(18,36,53));
+		if (selected) PspUI::Box(36,124+i*36,4,34,sf::Color(113,224,239));
 	}
+	PspUI::Controls(420,113);
+	DrawGUI();
+	PspUI::Hint(36,438,PspUI::Cross,"Select");
+	PspUI::Hint(245,438,PspUI::Circle,"Player");
+	PspUI::Hint(480,438,PspUI::Dpad,"Navigate");
+	if (PspSave::NeedsAttention()) {
+		PspUI::Text(38,405,"Autosave paused: check Saved data",18);
+	}
+	if (confirmQuit) PspUI::Confirm("QUIT GAME?", "Your saved progress is kept.");
 
 	Winsys.SwapBuffers();
 }

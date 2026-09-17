@@ -39,6 +39,7 @@ GNU General Public License for more details.
 #include "font.h"
 #include "gui.h"
 #include "game_over.h"
+#include "psp_ui.h"
 
 CPaused Paused;
 
@@ -46,10 +47,27 @@ static bool sky = true;
 static bool fog = true;
 static bool terr = true;
 static bool trees = true;
+static bool endSelected = false;
+static bool confirmEnd = false;
+
+void CPaused::Enter() { endSelected = false; confirmEnd = false; }
 
 void CPaused::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 	if (release) return;
+	if (confirmEnd) {
+		if (key == sf::Keyboard::Escape || key == sf::Keyboard::P) confirmEnd = false;
+		if (key == sf::Keyboard::Return) {
+			g_game.raceaborted = true;
+			g_game.race_result = -1;
+			State::manager.RequestEnterState(GameOver);
+		}
+		return;
+	}
 	switch (key) {
+		case sf::Keyboard::Up:
+		case sf::Keyboard::Down:
+			endSelected = !endSelected;
+			break;
 		case sf::Keyboard::C:
 			Winsys.TakeScreenshot();
 			break;
@@ -66,14 +84,13 @@ void CPaused::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 			trees = !trees;
 			break;
 		case sf::Keyboard::Escape:
-			g_game.raceaborted = true;
-			g_game.race_result = -1;
-			State::manager.RequestEnterState(GameOver);
+		case sf::Keyboard::P:
+			State::manager.RequestEnterState(Racing);
 			break;
 		case sf::Keyboard::Return:
-		case sf::Keyboard::P:
 		case sf::Keyboard::Space:
-			State::manager.RequestEnterState(Racing);
+			if (endSelected) confirmEnd = true;
+			else State::manager.RequestEnterState(Racing);
 			break;
 		default:
 			break;
@@ -81,7 +98,7 @@ void CPaused::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 }
 
 void CPaused::Mouse(int button, int state, int x, int y) {
-	State::manager.RequestEnterState(Racing);
+	// PSP pause actions use explicit button presses, never incidental mouse input.
 }
 
 // ====================================================================
@@ -112,11 +129,14 @@ void CPaused::Loop(float time_step) {
 	Reshape(width, height);
 	{
 		ScopedRenderMode overlay(GUI);
-		DrawFrameX((width - 570) / 2, 170, 570, 135, 2, colDBlue, colWhite, 0.85f);
-		FT.SetColor(colWhite); FT.SetSize(34);
-		FT.DrawString(CENTER, 188, "Paused");
-		FT.SetSize(20);
-		FT.DrawString(CENTER, 252, "Start: resume    Circle: end race");
+		PspUI::Box(137,113,580,264,sf::Color(18,36,53));
+		PspUI::Text(169,132,"PAUSED",34);
+		PspUI::Box(163,endSelected?246:194,528,46,sf::Color(30,72,98));
+		PspUI::Text(185,201,"Resume",28);
+		PspUI::Text(185,253,"End race",28);
+		PspUI::Hint(169,328,PspUI::Cross,"Select");
+		PspUI::Hint(420,328,PspUI::Circle,"Resume");
+		if (confirmEnd) PspUI::Confirm("END THIS RACE?", "This run will not count as a finish.");
 	}
 	Winsys.SwapBuffers();
 }

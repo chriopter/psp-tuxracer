@@ -28,6 +28,7 @@ jobs:
           python3 tools/test-etr-terrain.py
           python3 tools/test-psp-save.py
           python3 tools/test-psp-music.py
+          python3 tools/test-psp-controls.py
           python3 tools/test-release.py
       - name: Build PSP executable
         run: ./build-extremetuxracer.sh

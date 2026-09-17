@@ -128,7 +128,7 @@ void CIntro::Loop(float time_step) {
 // -----------------------------------------------------------------------
 
 void CIntro::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
-	if (release)
+	if (release || key != sf::Keyboard::Return)
 		return;
 
 	abort_intro();

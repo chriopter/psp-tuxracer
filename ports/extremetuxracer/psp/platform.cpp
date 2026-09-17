@@ -687,12 +687,12 @@ bool RenderWindow::pollEvent(Event &e) {
                          Keyboard::Up,
                          Keyboard::Down,
                          racing ? Keyboard::Space : Keyboard::Return,
-                         Keyboard::Escape,
-                         Keyboard::T,
-                         Keyboard::R,
-                         racing ? Keyboard::P : Keyboard::Return,
-                         Keyboard::Down,
-                         Keyboard::Up};
+                         racing ? Keyboard::P : Keyboard::Escape,
+                         racing ? Keyboard::T : Keyboard::Unknown,
+                         racing ? Keyboard::R : Keyboard::Unknown,
+                         (racing || State::manager.CurrentState() == &Paused) ? Keyboard::P : Keyboard::Unknown,
+                         racing ? Keyboard::Down : Keyboard::Unknown,
+                         racing ? Keyboard::Up : Keyboard::Unknown};
   // Latch contextual bindings until physical release. A held Start/Cross must
   // not become a second press when its first press changes the game state.
   static unsigned previous_buttons = 0;
@@ -700,7 +700,7 @@ bool RenderWindow::pollEvent(Event &e) {
   for (int i = 0; i < 11; i++) {
     if ((b & bits[i]) && !(previous_buttons & bits[i]))
       held_map[i] = map[i];
-    if (b & bits[i])
+    if ((b & bits[i]) && held_map[i] != Keyboard::Unknown)
       now[held_map[i]] = true;
   }
   previous_buttons = b;

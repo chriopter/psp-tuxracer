@@ -8,6 +8,8 @@ Basis: offizielles Extreme Tux Racer 0.8.4, C++-PC-Version. Spielzustände, Phys
 
 Kontextabhängige Tastenbelegungen bleiben bis zum Loslassen an den ursprünglichen Spielzustand gebunden. Dadurch löst gehaltenes Start beim Pausieren keinen zweiten Druck zum Fortsetzen aus.
 
+Das Hauptmenü hat eine feste, für 480 × 272 ausgelegte Zweispaltenansicht mit Auswahlkarten und einem per Bildmodell erzeugten PSP-Iconset als gemeinsamem 256 × 128-Texturatlas (64 KiB). Direkt gezeichnete Symbole bleiben als Fallback erhalten. Kreuz bestätigt, Kreis geht zurück; Start pausiert nur im Rennen bzw. setzt eine Pause fort. Schulter-/Trick-/Reset-Tasten bleiben in Menüs ohne Aktion. Rennabbruch und Spielende benötigen eine zweite Bestätigung, Hilfe/Credits schließen nicht mehr durch Richtungstasten. `tools/test-psp-controls.py` kompiliert die tatsächliche Belegung aus dem Plattformcode und prüft alle drei Kontexte sowie gehaltene und gleichzeitige Tasten. Screenshots, Messwerte und Asset-Herkunft stehen in [der UI-Validierung](psp-ui-validation.md).
+
 Der PSP-Takt wird auf 333/333/166 MHz gesetzt. Die Präsentation erfolgt mit VSync. PSPGL benötigt eine explizite globale Ambient-Alpha-Komponente von 1: der Bibliotheksstartwert 0 macht beleuchtete Geometrie transparent. GUI-Matrizen werden vor dem Bufferwechsel beendet; vollständige PC-Attributstapel werden nicht über einen EGL-Swap getragen.
 
 ## Darstellung und Leistung

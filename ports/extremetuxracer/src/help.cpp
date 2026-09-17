@@ -29,16 +29,12 @@ GNU General Public License for more details.
 #include "gui.h"
 #include "translation.h"
 #include "winsys.h"
+#include "psp_ui.h"
 
 CHelp Help;
 
-#define TEXT_LINES 9
-TLabel* headline;
-TLabel* texts[TEXT_LINES];
-TLabel* footnote;
-
 void CHelp::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
-	if (release) return;
+	if (release || (key != sf::Keyboard::Return && key != sf::Keyboard::Escape)) return;
 	State::manager.RequestEnterState(*State::manager.PreviousState());
 }
 
@@ -55,30 +51,23 @@ void CHelp::Enter() {
 	Winsys.ShowCursor(false);
 	Music.Play(param.credits_music, true);
 
-	int ytop = AutoYPosN(15);
-
-	const int xleft1 = 40;
-
-	FT.AutoSizeN(4);
-	headline = AddLabel(Trans.Text(57), xleft1, AutoYPosN(5), colWhite);
-
-	FT.AutoSizeN(3);
-	int offs = FT.AutoDistanceN(2);
-	const char* controls[]={"D-pad / analog stick: steer and navigate", "Up / R: paddle", "Down / L: brake", "Cross: jump / confirm", "Circle: back / end race", "Square + direction: trick", "Triangle: reset to course", "Start: pause / resume", "PPSSPP: remap host keys in Controls"};
- for (int i=0;i<TEXT_LINES;i++)texts[i]=AddLabel(controls[i],xleft1,ytop+offs*i,colWhite);
-
-	footnote = AddLabel(Trans.Text(65), CENTER, AutoYPosN(90), colWhite);
 }
 
 void CHelp::Loop(float time_step) {
 	ScopedRenderMode rm(GUI);
 	Winsys.clear();
 
-	if (param.ui_snow) {
-		update_ui_snow(time_step);
-		draw_ui_snow();
-	}
-
-	DrawGUI();
+	PspUI::Background();
+	PspUI::Text(36,113,"MENUS & RACING",24);
+	PspUI::Hint(36,155,PspUI::Cross,"Confirm selection");
+	PspUI::Hint(36,195,PspUI::Circle,"Back / cancel");
+	PspUI::Text(36,245,"Left / right: select field",20);
+	PspUI::Text(36,275,"Up / down: change value",20);
+	PspUI::Text(36,325,"To leave a race:",22);
+	PspUI::Text(36,355,"Pause, select End race,",20);
+	PspUI::Text(36,382,"then confirm with Cross.",20);
+	PspUI::Controls(420,113);
+	PspUI::Hint(36,438,PspUI::Circle,"Back");
+	PspUI::Hint(245,438,PspUI::Cross,"Back");
 	Winsys.SwapBuffers();
 }

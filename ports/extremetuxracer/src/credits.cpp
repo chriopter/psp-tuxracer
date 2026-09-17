@@ -107,8 +107,12 @@ void CCredits::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 		case sf::Keyboard::U:
 			param.ui_snow = !param.ui_snow;
 			break;
-		default:
+		case sf::Keyboard::Return:
+		case sf::Keyboard::Escape:
 			State::manager.RequestEnterState(*State::manager.PreviousState());
+			break;
+		default:
+			break;
 	}
 }
 

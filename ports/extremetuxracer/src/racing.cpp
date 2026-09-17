@@ -226,10 +226,11 @@ void CRacing::Enter() {
 	ctrl->jumping = false;
 	ctrl->jump_charging = false;
 
-	key_paddling = false;
-	key_braking = false;
-	left_turn = false;
-	right_turn = false;
+	// Direction inputs held through an intro or pause remain responsive.
+	key_paddling = sf::Keyboard::isKeyPressed(sf::Keyboard::Up);
+	key_braking = sf::Keyboard::isKeyPressed(sf::Keyboard::Down);
+	left_turn = sf::Keyboard::isKeyPressed(sf::Keyboard::Left);
+	right_turn = sf::Keyboard::isKeyPressed(sf::Keyboard::Right);
 	key_charging = false;
 	trick_modifier = false;
 	stick_paddling = false;

@@ -25,6 +25,7 @@
 !/tools/test-release.py
 !/tools/test-psp-save.py
 !/tools/test-psp-music.py
+!/tools/test-psp-controls.py
 !/tools/fetch-upstream.sh
 !/tools/upstream/
 

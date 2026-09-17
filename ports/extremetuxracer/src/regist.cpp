@@ -34,12 +34,14 @@ GNU General Public License for more details.
 #include "newplayer.h"
 #include "winsys.h"
 #include "savedata.hpp"
+#include "psp_ui.h"
 
 CRegist Regist;
 
 static TWidget* textbuttons[2];
 static TUpDown* player;
 static TUpDown* character;
+static bool confirmQuit = false;
 
 void QuitRegistration() {
 	Players.ResetControls();
@@ -53,11 +55,16 @@ void QuitRegistration() {
 }
 
 void CRegist::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
-	TWidget* focussed = KeyGUI(key, release);
 	if (release) return;
+	if (confirmQuit) {
+		if (key == sf::Keyboard::Escape) confirmQuit = false;
+		if (key == sf::Keyboard::Return) State::manager.RequestQuit();
+		return;
+	}
+	TWidget* focussed = KeyGUI(key, release);
 	switch (key) {
 		case sf::Keyboard::Escape:
-			State::manager.RequestQuit();
+			confirmQuit = true;
 			break;
 		case sf::Keyboard::Return:
 			if (focussed == textbuttons[1]) {
@@ -71,6 +78,7 @@ void CRegist::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 }
 
 void CRegist::Mouse(int button, int state, int x, int y) {
+	if (confirmQuit) return;
 	if (state == 1) {
 		TWidget* focussed = ClickGUI(x, y);
 		if (focussed == textbuttons[0])
@@ -97,6 +105,7 @@ static TFramedText* sPlayerFrame;
 static TFramedText* sCharFrame;
 
 void CRegist::Enter() {
+	confirmQuit = false;
 	Char.LoadCharacterPreviews();
 	Winsys.ShowCursor(!param.ice_cursor);
 	Music.Play(param.menu_music, true);
@@ -150,6 +159,9 @@ void CRegist::Loop(float time_step) {
 		    AutoYPosN(40), texsize, texsize, 3, colWhite);
 
 	DrawGUI();
+	PspUI::Hint(44,432,PspUI::Cross,"Continue");
+	PspUI::Hint(320,432,PspUI::Circle,"Quit");
+	if (confirmQuit) PspUI::Confirm("QUIT GAME?", "Your saved progress is kept.");
 
 	Winsys.SwapBuffers();
 }
