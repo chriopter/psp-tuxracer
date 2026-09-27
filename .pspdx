@@ -4,6 +4,7 @@
   "name": "Extreme Tux Racer",
   "summary": "Downhill racing with Tux, ported to the PSP.",
   "category": "game",
+  "tags": ["unreleased"],
   "license": "GPL-2.0-or-later",
   "installdir": "PSP/GAME/ExtremeTuxRacer"
 }
