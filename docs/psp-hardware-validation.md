@@ -78,10 +78,27 @@ range made it flicker), and DXT1 for the sky (above).
 ### Computer penguins
 
 A race can be run against one to five computer penguins (race and event
-selection). They cost 0.2 ms of CPU a frame for five (each is one draw of a
-mesh made once) and the GE's time for about 2500 vertices each. See
-`src/opponents.h` for how they drive; `tools/test-psp-opponents.py` runs their
-logic on the host.
+selection, one row: none or one to five). They cost 0.2 ms of CPU a frame for
+five (each is one draw of a mesh made once) and the GE's time for about 2500
+vertices each. See `src/opponents.h` for how they drive;
+`tools/test-psp-opponents.py` runs their logic on the host.
+
+Changed on 2026-10-03:
+
+- **Collision box** drawn on the console (`config/debug-collision`) was
+  0.95 × 1.5 m against a body of about 0.6 × 1.0 m: one ran into nothing that
+  could be seen. Now 0.6 × 1.05 m, and running into one brakes over a few
+  frames instead of in one.
+- **Pace**: they took their speed from the player's, so a clean run always
+  won. Now each drives by the slope, the ground's friction and the air, as the
+  player does, scaled by what the player makes of a slope (learned over the
+  session) and by its skill: the best a little quicker than the player's
+  usual, one their equal, the rest behind. Only beyond 15 m are they held back
+  or pressed on. Against the self-driving player on Bunny Hill, Twisty Slope
+  and Frozen River the places came out 2nd to 6th.
+- **Result screen**: under the figures, every racer's time in order, the
+  player's row in red; a penguin still on the course is given the time it
+  would come in at.
 
 ### Results
 
@@ -132,8 +149,8 @@ Largest heap peak in any of them: 12.5 MB of 15.3.
 - Heavy snow does not reach 60 FPS (42 on Bunny Hill); with penguins and wind
   on top it is lower. Courses with long views over ice (Tux at Home, Path of
   Daggers) are the slowest in clear weather.
-- The penguins are not simulated as the player is: they follow the ground,
-  do not jump and take their pace from the player's.
+- The penguins are not simulated as the player is: they follow the ground and
+  do not jump; their pace is tuned against the self-driving player only.
 - Not tested: a full or missing Memory Stick during a save, suspend and
   resume during a race, PSP-2000/3000/Go.
 

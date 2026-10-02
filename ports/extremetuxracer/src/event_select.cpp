@@ -37,9 +37,9 @@ GNU General Public License for more details.
 
 CEventSelect EventSelect;
 
-// PSP: two rows, the event and the cup in it. Up and down choose the row,
+// PSP: three rows, the event, the cup in it and the penguins to race. Up and down choose the row,
 // left and right change it, Cross enters the cup if it is unlocked.
-enum { ROW_EVENT, ROW_CUP, ROW_VERSUS, ROW_PENGUINS, ROW_COUNT };
+enum { ROW_EVENT, ROW_CUP, ROW_PENGUINS, ROW_COUNT };
 static int cursor_row = ROW_EVENT;
 static int sel_event = 0, sel_cup = 0;
 
@@ -61,14 +61,11 @@ void CEventSelect::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 			sel_event = wrap(sel_event + step, (int)Events.EventList.size());
 			sel_cup = 0;
 		} else if (cursor_row == ROW_CUP) sel_cup = wrap(sel_cup + step, (int)Events.EventList[sel_event].cups.size());
-		else if (cursor_row == ROW_VERSUS) Opponents::enabled = !Opponents::enabled;
-		else if (Opponents::enabled) Opponents::count = 1 + wrap(Opponents::count - 1 + step, Opponents::MAX);
+		else Opponents::Choose(wrap(Opponents::Chosen() + step, Opponents::MAX + 1));
 		return;
 	}
 	if (key == sf::Keyboard::Escape)
 		State::manager.RequestEnterState(GameTypeSelect);
-	else if (key == sf::Keyboard::Return && cursor_row == ROW_VERSUS)
-		Opponents::enabled = !Opponents::enabled;
 	else if (key == sf::Keyboard::Return && Events.IsUnlocked(sel_event, sel_cup))
 		EnterEvent();
 }
@@ -111,8 +108,7 @@ void CEventSelect::Loop(float time_step) {
 	std::vector<PspUI::Row> rows(ROW_COUNT);
 	rows[ROW_EVENT] = {Trans.Text(TXT_EVENT), Events.EventList[sel_event].name, Events.EventList.size() > 1};
 	rows[ROW_CUP] = {Trans.Text(TXT_CUP), Events.GetCupTrivialName(sel_event, sel_cup), Events.EventList[sel_event].cups.size() > 1};
-	rows[ROW_VERSUS] = {Trans.Text(TXT_VS_PENGUINS), Trans.Text(Opponents::enabled ? TXT_ON : TXT_OFF), true};
-	rows[ROW_PENGUINS] = {Trans.Text(TXT_PENGUINS), Opponents::enabled ? sf::String(Int_StrN(Opponents::count)) : sf::String("-"), Opponents::enabled};
+	rows[ROW_PENGUINS] = {Trans.Text(TXT_VS_PENGUINS), Opponents::Chosen() ? sf::String(Int_StrN(Opponents::Chosen())) : Trans.Text(TXT_NONE), true};
 	PspUI::OptionList(127, 130, 600, rows, cursor_row);
 
 	if (!unlocked) {

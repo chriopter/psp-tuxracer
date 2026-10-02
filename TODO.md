@@ -25,6 +25,8 @@ in [hardware validation](docs/psp-hardware-validation.md).
 - [ ] They follow the ground: no jumps, no flight over a drop.
 - [ ] They do not collect herring or leave tracks in the snow.
 - [ ] A cup takes no notice of the place among them; it is shown only.
+- [ ] Their pace (own physics, scaled by the player's learned level) is
+      tuned against the self-driving player only; it wants a human's races.
 
 ## Not yet tested on hardware
 

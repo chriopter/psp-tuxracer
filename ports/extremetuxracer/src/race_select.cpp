@@ -43,7 +43,7 @@ CRaceSelect RaceSelect;
 // PSP: one list, top to bottom. Up and down choose the row, left and right
 // change it; Cross races, Circle goes back. The preview and the course's
 // description stand beside the list.
-enum { ROW_COURSE, ROW_GROUP, ROW_LIGHT, ROW_SNOW, ROW_WIND, ROW_MIRROR, ROW_VERSUS, ROW_PENGUINS, ROW_RANDOM, ROW_COUNT };
+enum { ROW_COURSE, ROW_GROUP, ROW_LIGHT, ROW_SNOW, ROW_WIND, ROW_MIRROR, ROW_PENGUINS, ROW_RANDOM, ROW_COUNT };
 static int cursor_row = ROW_COURSE;
 static int sel_group = 0, sel_course = 0;
 static int sel_light = 0, sel_snow = 0, sel_wind = 0, sel_mirror = 0;
@@ -85,10 +85,7 @@ void CRaceSelect::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 			case ROW_SNOW: sel_snow = wrap(sel_snow + step, 4); break;
 			case ROW_WIND: sel_wind = wrap(sel_wind + step, 4); break;
 			case ROW_MIRROR: sel_mirror = wrap(sel_mirror + step, 2); break;
-			case ROW_VERSUS: Opponents::enabled = !Opponents::enabled; break;
-			case ROW_PENGUINS:
-				if (Opponents::enabled) Opponents::count = 1 + wrap(Opponents::count - 1 + step, Opponents::MAX);
-				break;
+			case ROW_PENGUINS: Opponents::Choose(wrap(Opponents::Chosen() + step, Opponents::MAX + 1)); break;
 			default: break;
 		}
 		return;
@@ -98,9 +95,7 @@ void CRaceSelect::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 			State::manager.RequestEnterState(GameTypeSelect);
 			break;
 		case sf::Keyboard::Return:
-			if (cursor_row == ROW_VERSUS) {
-				Opponents::enabled = !Opponents::enabled;
-			} else if (cursor_row == ROW_RANDOM) {
+			if (cursor_row == ROW_RANDOM) {
 				sel_mirror = IRandom(0, 1);
 				sel_light = IRandom(0, 3);
 				sel_snow = IRandom(0, 3);
@@ -148,9 +143,8 @@ void CRaceSelect::Loop(float time_step) {
 	PspUI::SplitLabel(Trans.Text(69 + sel_mirror), rows[ROW_MIRROR].label, rows[ROW_MIRROR].value);
 	for (int i = ROW_LIGHT; i <= ROW_MIRROR; ++i) rows[i].adjustable = true;
 	rows[ROW_RANDOM] = {Trans.Text(83), "", false};
-	// Racing against penguins: the tick, and how many while it is set.
-	rows[ROW_VERSUS] = {Trans.Text(TXT_VS_SHORT), Trans.Text(Opponents::enabled ? TXT_ON : TXT_OFF), true};
-	rows[ROW_PENGUINS] = {Trans.Text(TXT_PENGUINS), Opponents::enabled ? sf::String(Int_StrN(Opponents::count)) : sf::String("-"), Opponents::enabled};
+	// Racing against penguins: none, or one to five.
+	rows[ROW_PENGUINS] = {Trans.Text(TXT_VS_SHORT), Opponents::Chosen() ? sf::String(Int_StrN(Opponents::Chosen())) : Trans.Text(TXT_NONE), true};
 	// The signs the game has always had for these, at the head of their rows.
 	rows[ROW_LIGHT].icon = &Tex.GetSFTexture(LIGHT_BUTT); rows[ROW_LIGHT].icon_state = sel_light;
 	rows[ROW_SNOW].icon = &Tex.GetSFTexture(SNOW_BUTT); rows[ROW_SNOW].icon_state = sel_snow;
@@ -172,8 +166,8 @@ void CRaceSelect::Loop(float time_step) {
 	FT.SetSize(18);
 	FT.SetColor(colWhite);
 	int line_y = py + ph + 12;
-	if (cursor_row == ROW_VERSUS || cursor_row == ROW_PENGUINS) {
-		// On the rows for the penguins, what they are instead.
+	if (cursor_row == ROW_PENGUINS) {
+		// On the row for the penguins, what they are instead.
 		FT.DrawString(px, line_y, Trans.Text(TXT_VS_PENGUINS));
 		FT.SetColor(colDYell);
 		FT.DrawString(px, line_y + 24, Trans.Text(TXT_PSP_EXCLUSIVE));

@@ -15,6 +15,7 @@
 !/tools/stage-extremetuxracer.py
 !/tools/test-etr-numerics.py
 !/tools/test-etr-terrain.py
+!/tools/psp-soak.py
 !/ports/
 /ports/*
 !/ports/extremetuxracer/

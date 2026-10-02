@@ -214,6 +214,7 @@ void CTranslation::SetDefaultTranslations() {
 	texts[172] = "This run will not count as a finish.";
 	texts[173] = "QUIT GAME?";
 	texts[174] = "Your saved progress is kept.";
+	texts[175] = "None";
 	texts[102] = "4th";
 	texts[103] = "5th";
 	texts[104] = "6th";

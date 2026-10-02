@@ -146,6 +146,24 @@ void GameOverMessage(const CControl *ctrl) {
 			FT.DrawString(secondMarker, topframe + 140, line);
 		}
 
+		// And the race as it came in, under the figures: every racer's
+		// time, the player's own row picked out.
+		Opponents::Result results[Opponents::MAX + 1];
+		if (const int racers = Opponents::Results(ctrl, results)) {
+			const int row = 20, top = topframe + 218;
+			DrawFrameX(leftframe, top, fwidth, racers * row + 16, 4, backcol, framecol, 0.5f);
+			for (int i = 0; i < racers; ++i) {
+				const Opponents::Result& r = results[i];
+				FT.SetColor(r.player ? colDRed : colDBlue);
+				const int y = top + 8 + i * row;
+				FT.DrawString(firstMarker, y, Int_StrN(i + 1) + ".");
+				FT.DrawString(firstMarker + 36, y, r.player ? sf::String(g_game.player->name) : r.name ? sf::String(*r.name) : Trans.Text(TXT_PENGUINS));
+				FT.DrawString(secondMarker, y, Float_StrN(r.time, 2) + "  s");
+			}
+			if (g_game.race_result >= 0 || g_game.game_type != CUPRACING) FT.SetColor(colDBlue);
+			else FT.SetColor(colDRed);
+		}
+
 		if (param.use_papercut_font > 0) FT.SetSize(28);
 		else FT.SetSize(22);
 		if (g_game.game_type == CUPRACING) {

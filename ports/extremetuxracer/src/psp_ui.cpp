@@ -128,7 +128,13 @@ void OptionList(int x, int y, int w, const std::vector<Row>& rows, int cursor) {
             shown.insert(shown.getSize(), row.value);
             shown.insert(shown.getSize(), sf::String("  >"));
         }
-        FT.DrawString(x + w - 18 - FT.GetTextWidth(shown), top - 1, shown);
+        // A long value (a course's name) is set smaller rather than over
+        // its label: "Verschlungene Piste" ran into "Strecke".
+        const int room = x + w - 18 - (label_x + (int)FT.GetTextWidth(row.label) + 16);
+        int size = 28;
+        while (size > 16 && FT.GetTextWidth(shown) > room) FT.SetSize(--size);
+        FT.DrawString(x + w - 18 - FT.GetTextWidth(shown), top - 1 + (28 - size) / 2, shown);
+        FT.SetSize(28);
     }
 }
 int ListKey(sf::Keyboard::Key key, int& cursor, int rows) {
