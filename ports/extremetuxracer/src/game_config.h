@@ -46,6 +46,7 @@ struct TParam {
 	uint32_t	framerate;
 	int			perf_level;
 	std::size_t	language;
+	bool		language_chosen;	// PSP: the first start has asked for it
 	int			sound_volume;
 	int			music_volume;
 

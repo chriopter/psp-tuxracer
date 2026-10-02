@@ -1,21 +1,33 @@
-# PSP control-diagram illustration
+# PSP control-guide picture
 
-Generated with the built-in image model on 2026-09-17 at the user's request.
-Current source: `psp-guide-1004-source.png`; runtime:
-`../../ports/extremetuxracer/data/textures/psp-guide.png`. The first, superseded
-generic illustration is retained as `psp-guide-source.png`.
+Since 2026-10-01 the guide shows a photograph, not generated artwork:
 
-The source is resized to a 512 × 256 power-of-two texture. It is displayed at the original landscape proportions. The PSP-specific texture cap is increased only for this asset; the RGB565 upload uses 256 KiB. Labels and leader lines are rendered by the game for native-resolution readability and accurate control mapping. They are not invented lettering baked by the image model. The graphic is a stylized illustration, not a precise hardware schematic.
+- The console is Evan-Amos's **Sony-PSP-1000-Body.png**, released into the
+  public domain by the photographer
+  ([references/README.md](references/README.md)), cut out as he published it.
+- The picture on its screen is `psp-guide-gameplay.png`, an unretouched
+  480 x 272 framebuffer capture from a physical PSP running Frozen River on
+  2026-09-17, set into the photographed display in perspective.
+- The background is a plain gradient.
 
-The illustrated screen is now covered at runtime by `psp-guide-gameplay.png`,
-an unretouched 480 × 272 framebuffer capture from the physical PSP running
-Frozen River on 2026-09-17. The game draws it as a separate texture inside the
-screen bezel; it is **not** passed through an image model. Only the surrounding
-console illustration and winter background are generated artwork.
+`tools/make-psp-guide.py` composes the three into the 512 x 256 runtime
+texture `ports/extremetuxracer/data/textures/psp-guide.png`. The labels and
+leader lines are drawn by the game (`src/controls_guide.cpp`) onto the
+buttons as they stand in the photograph; the script and that file hold the
+same placement and change together.
 
 ```sh
-magick docs/artwork/psp-guide-1004-source.png -filter Lanczos -resize '512x256!' ports/extremetuxracer/data/textures/psp-guide.png
+python3 tools/make-psp-guide.py
 ```
+
+Sony's own product photographs were considered and not used: they are Sony's
+copyright and cannot be shipped in a GPL game.
+
+## Superseded: generated illustrations (2026-09-17)
+
+The two earlier guides were made with an image model and are kept only as
+`psp-guide-1004-source.png` and `psp-guide-source.png` for the record. Their
+prompts follow.
 
 ## Photo-referenced PSP-1004 revision
 

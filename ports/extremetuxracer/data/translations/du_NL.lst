@@ -116,3 +116,69 @@
 *[idx] 96 [engl] Loading avatars failed. [trans]Laden van avatars gefaald.
 *[idx] 97 [engl] herrings [trans] haringen
 *[idx] 98 [engl] sec [trans] sec
+
+# PSP menus
+*[idx] 111 [engl] Course [trans] Baan
+*[idx] 112 [engl] Course set [trans] Banenset
+*[idx] 113 [engl] Player [trans] Speler
+*[idx] 114 [engl] Character [trans] Personage
+*[idx] 115 [engl] Event [trans] Evenement
+*[idx] 116 [engl] Cup [trans] Beker
+*[idx] 117 [engl] Name [trans] Naam
+*[idx] 118 [engl] Avatar [trans] Avatar
+*[idx] 119 [engl] Add this player [trans] Deze speler toevoegen
+*[idx] 120 [engl] Language [trans] Taal
+*[idx] 121 [engl] Saved data [trans] Opgeslagen gegevens
+*[idx] 122 [engl] Save progress [trans] Voortgang opslaan
+*[idx] 123 [engl] Load progress [trans] Voortgang laden
+*[idx] 124 [engl] Race [trans] Race
+*[idx] 125 [engl] Continue [trans] Doorgaan
+*[idx] 126 [engl] Quit [trans] Afsluiten
+*[idx] 127 [engl] Choose / change [trans] Kiezen / wijzigen
+*[idx] 128 [engl] Save [trans] Opslaan
+*[idx] 129 [engl] Cancel [trans] Annuleren
+*[idx] 130 [engl] New player [trans] Nieuwe speler
+*[idx] 131 [engl] Edit name [trans] Naam wijzigen
+*[idx] 132 [engl] Add [trans] Toevoegen
+*[idx] 133 [engl] Next [trans] Volgende
+*[idx] 134 [engl] Randomize [trans] Willekeurig
+*[idx] 135 [engl] Load [trans] Laden
+*[idx] 136 [engl] Choose [trans] Kiezen
+*[idx] 137 [engl] Up / down [trans] Omhoog / omlaag
+*[idx] 138 [engl] Players, unlocked cups, scores and settings [trans] Spelers, vrijgespeelde bekers, scores en instellingen
+*[idx] 139 [engl] Play against penguins [trans] Tegen pinguïns racen
+*[idx] 140 [engl] Penguins [trans] Pinguïns
+*[idx] 141 [engl] PSP exclusive [trans] alleen op PSP
+*[idx] 142 [engl] Place [trans] Plaats
+*[idx] 143 [engl] Against penguins [trans] Tegen pinguïns
+*[idx] 144 [engl] On [trans] Aan
+*[idx] 145 [engl] Off [trans] Uit
+*[idx] 146 [engl] YOUR PSP. YOUR SLOPES. [trans] JOUW PSP. JOUW PISTES.
+*[idx] 147 [engl] Brake [trans] Remmen
+*[idx] 148 [engl] Paddle [trans] Peddelen
+*[idx] 149 [engl] Steer [trans] Sturen
+*[idx] 150 [engl] D-pad [trans] Richtingstoetsen
+*[idx] 151 [engl] Analog stick [trans] Analoge stick
+*[idx] 152 [engl] Reset [trans] Terugzetten
+*[idx] 153 [engl] Triangle [trans] Driehoekje
+*[idx] 154 [engl] Trick [trans] Stunt
+*[idx] 155 [engl] Square + steer [trans] Vierkantje + sturen
+*[idx] 156 [engl] Back [trans] Terug
+*[idx] 157 [engl] Circle / menus [trans] Rondje / menu's
+*[idx] 158 [engl] Jump [trans] Sprong
+*[idx] 159 [engl] Cross / select [trans] Kruisje / kiezen
+*[idx] 160 [engl] Start: pause / resume [trans] Start: pauze / verder
+*[idx] 161 [engl] Jump: hold, then release Cross [trans] Sprong: Kruisje vasthouden en loslaten
+*[idx] 162 [engl] START - OPEN MENU [trans] START - MENU OPENEN
+*[idx] 163 [engl] START - BACK TO MENU [trans] START - TERUG NAAR MENU
+*[idx] 164 [engl] PAUSED [trans] PAUZE
+*[idx] 165 [engl] Resume [trans] Verder
+*[idx] 166 [engl] Controls [trans] Besturing
+*[idx] 167 [engl] End race [trans] Race beëindigen
+*[idx] 168 [engl] Select [trans] Kiezen
+*[idx] 169 [engl] Autosave paused: check Saved data [trans] Automatisch opslaan gepauzeerd: zie Opgeslagen data
+*[idx] 170 [engl] Confirm [trans] Bevestigen
+*[idx] 171 [engl] END THIS RACE? [trans] RACE BEËINDIGEN?
+*[idx] 172 [engl] This run will not count as a finish. [trans] Deze afdaling telt niet als finish.
+*[idx] 173 [engl] QUIT GAME? [trans] SPEL AFSLUITEN?
+*[idx] 174 [engl] Your saved progress is kept. [trans] Je voortgang blijft bewaard.

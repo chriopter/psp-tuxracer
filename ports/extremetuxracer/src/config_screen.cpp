@@ -50,45 +50,30 @@ Then edit the below functions:
 #include "gui.h"
 #include "font.h"
 #include "winsys.h"
+#include "psp_ui.h"
 #include "savedata.hpp"
 
 CGameConfig GameConfig;
 static std::string res_names[NUM_RESOLUTIONS];
 
-static TCheckbox* fullscreen;
-static TUpDown* language;
-static TUpDown* resolution;
-static TUpDown* mus_vol;
-static TUpDown* sound_vol;
-static TUpDown* detail_level;
-static TWidget* textbuttons[2];
-static TLabel* descriptions[5];
+// PSP: the four settings that mean something on the console, one under the
+// other. Up and down choose, left and right change, Cross saves, Circle
+// leaves them as they were. Fullscreen and resolution are fixed on a PSP
+// and no longer take two rows.
+enum { ROW_MUSIC, ROW_SOUND, ROW_LANGUAGE, ROW_DETAIL, ROW_COUNT };
+static int cursor_row = ROW_MUSIC;
+static int sel_music = 0, sel_sound = 0, sel_language = 0, sel_detail = 1;
 
 void SetConfig() {
-	if (mus_vol->GetValue() != param.music_volume ||
-	        sound_vol->GetValue() != param.sound_volume ||
-	        language->GetValue() != param.language ||
-	        resolution->GetValue() != param.res_type ||
-	        detail_level->GetValue() != param.perf_level ||
-	        fullscreen->checked != param.fullscreen) {
-
-		if (resolution->GetValue() != param.res_type || fullscreen->checked != param.fullscreen) {
-			// these changes require a new VideoMode
-			param.res_type = resolution->GetValue();
-			param.fullscreen = fullscreen->checked;
-			Winsys.SetupVideoMode(param.res_type);
-			init_ui_snow(); // Reinitialize UI snow to avoid ugly snow-free stripes at the borders
-		}
-
-		// the followind config params don't require a new VideoMode
-		// they only must stored in the param structure (and saved)
-		param.music_volume = mus_vol->GetValue();
+	if (sel_music != param.music_volume || sel_sound != param.sound_volume ||
+	        sel_language != (int)param.language || sel_detail != param.perf_level) {
+		param.music_volume = sel_music;
 		Music.SetVolume(param.music_volume);
-		param.sound_volume = sound_vol->GetValue();
-		param.perf_level = detail_level->GetValue();
+		param.sound_volume = sel_sound;
+		param.perf_level = sel_detail;
 		FT.SetFontFromSettings();
-		if (param.language != language->GetValue()) {
-			param.language = language->GetValue();
+		if ((int)param.language != sel_language) {
+			param.language = sel_language;
 			Trans.ChangeLanguage(param.language);
 		}
 		SaveConfigFile();
@@ -97,89 +82,41 @@ void SetConfig() {
 	State::manager.RequestEnterState(*State::manager.PreviousState());
 }
 
+static int clampi(int value, int low, int high) {
+	return value < low ? low : value > high ? high : value;
+}
+
 void CGameConfig::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 	if (release) return;
-
-	switch (key) {
-		case sf::Keyboard::U:
-			param.ui_snow = !param.ui_snow;
-			break;
-		case sf::Keyboard::Escape:
-			State::manager.RequestEnterState(*State::manager.PreviousState());
-			break;
-		case sf::Keyboard::Return:
-			if (textbuttons[0]->focussed())
-				State::manager.RequestEnterState(*State::manager.PreviousState());
-			else if (textbuttons[1]->focussed())
-				SetConfig();
-			break;
-		default:
-			KeyGUI(key, release);
-			break;
+	const int step = PspUI::ListKey(key, cursor_row, ROW_COUNT);
+	if (step) {
+		const int languages = (int)Trans.languages.size();
+		switch (cursor_row) {
+			case ROW_MUSIC: sel_music = clampi(sel_music + 5 * step, 0, 100); break;
+			case ROW_SOUND: sel_sound = clampi(sel_sound + 5 * step, 0, 100); break;
+			case ROW_LANGUAGE: sel_language = languages > 0 ? ((sel_language + step) % languages + languages) % languages : 0; break;
+			case ROW_DETAIL: sel_detail = clampi(sel_detail + step, 1, 4); break;
+			default: break;
+		}
+		return;
 	}
+	if (key == sf::Keyboard::Escape)
+		State::manager.RequestEnterState(*State::manager.PreviousState());
+	else if (key == sf::Keyboard::Return)
+		SetConfig();
 }
 
-void CGameConfig::Mouse(int button, int state, int x, int y) {
-	if (state == 1) {
-		TWidget* focussed = ClickGUI(x, y);
-
-		if (focussed == textbuttons[0])
-			State::manager.RequestEnterState(*State::manager.PreviousState());
-		else if (focussed == textbuttons[1])
-			SetConfig();
-	}
-}
-
-void CGameConfig::Motion(int x, int y) {
-	MouseMoveGUI(x, y);
-
-	if (param.ui_snow) push_ui_snow(cursor_pos);
-}
-
-// ------------------ Init --------------------------------------------
-
-static TArea area;
-static int dd;
-static int columnAnchor;
+void CGameConfig::Mouse(int button, int state, int x, int y) {}
+void CGameConfig::Motion(int x, int y) {}
 
 void CGameConfig::Enter() {
-	Winsys.ShowCursor(!param.ice_cursor);
-
-	for (int i=0; i<NUM_RESOLUTIONS; i++)
-		res_names[i] = Winsys.GetResName(i);
-
-	int framewidth = 550 * Winsys.scale;
-	area = AutoAreaN(30, 80, framewidth);
-	FT.AutoSizeN(4);
-	dd = FT.AutoDistanceN(3);
-	if (dd < 36) dd = 36;
-	int rightpos = area.right -48;
-
+	Winsys.ShowCursor(false);
 	ResetGUI();
-	unsigned int siz = FT.AutoSizeN(5);
-	fullscreen = AddCheckbox(area.left, area.top, framewidth-16, Trans.Text(31));
-	fullscreen->checked = true;
- fullscreen->SetActive(false);
-
-	resolution = AddUpDown(rightpos, area.top+dd*1, 0, 0, 0);
-	resolution->SetActive(false);
- res_names[0]="480 x 272 (PSP)";
- mus_vol = AddUpDown(rightpos, area.top+dd*2, 0, 100, param.music_volume, 2, true);
-	sound_vol = AddUpDown(rightpos, area.top+dd*3, 0, 100, param.sound_volume, 2, true);
-	language = AddUpDown(rightpos, area.top+dd*4, 0, (int)Trans.languages.size() - 1, (int)param.language);
-	detail_level = AddUpDown(rightpos, area.top+dd*5, 1, 4, param.perf_level, 2, true);
-
-	textbuttons[0] = AddTextButton(Trans.Text(28), area.left+50, AutoYPosN(80), siz);
-	float len = FT.GetTextWidth(Trans.Text(8));
-	textbuttons[1] = AddTextButton(Trans.Text(15), area.right-len-50, AutoYPosN(80), siz);
-
-	columnAnchor = 0;
-	for (int i = 0; i < 5; i++) {
-		descriptions[i] = AddLabel(Trans.Text(32 + i), area.left, area.top + dd*(i + 1), colWhite);
-		columnAnchor = std::max(columnAnchor, (int)descriptions[i]->GetSize().x);
-	}
-	columnAnchor += area.left + 20*Winsys.scale;
-
+	cursor_row = ROW_MUSIC;
+	sel_music = param.music_volume;
+	sel_sound = param.sound_volume;
+	sel_language = (int)param.language;
+	sel_detail = param.perf_level;
 	Music.Play(param.config_music, true);
 }
 
@@ -194,23 +131,22 @@ void CGameConfig::Loop(float time_step) {
 
 	DrawGUIBackground(Winsys.scale);
 
-	FT.AutoSizeN(4);
+	std::vector<PspUI::Row> rows(ROW_COUNT);
+	sf::String unused;
+	PspUI::SplitLabel(Trans.Text(33), rows[ROW_MUSIC].label, unused);
+	PspUI::SplitLabel(Trans.Text(34), rows[ROW_SOUND].label, unused);
+	PspUI::SplitLabel(Trans.Text(35), rows[ROW_LANGUAGE].label, unused);
+	PspUI::SplitLabel(Trans.Text(36), rows[ROW_DETAIL].label, unused);
+	rows[ROW_MUSIC].value = Int_StrN(sel_music);
+	rows[ROW_SOUND].value = Int_StrN(sel_sound);
+	rows[ROW_LANGUAGE].value = Trans.languages[sel_language].language;
+	rows[ROW_DETAIL].value = Int_StrN(sel_detail);
+	for (auto& row : rows) row.adjustable = true;
+	PspUI::OptionList(147, 140, 560, rows, cursor_row);
 
-	descriptions[0]->Focussed(resolution->focussed());
-	descriptions[1]->Focussed(mus_vol->focussed());
-	descriptions[2]->Focussed(sound_vol->focussed());
-	descriptions[3]->Focussed(language->focussed());
-	descriptions[4]->Focussed(detail_level->focussed());
-
-	FT.SetColor(colWhite);
-	FT.DrawString(columnAnchor, area.top + dd + 3, res_names[resolution->GetValue()]);
-	FT.DrawString(columnAnchor, area.top + dd * 2 + 3, Int_StrN(mus_vol->GetValue()));
-	FT.DrawString(columnAnchor, area.top + dd * 3 + 3, Int_StrN(sound_vol->GetValue()));
-	FT.DrawString(columnAnchor, area.top + dd * 4 + 3, Trans.languages[language->GetValue()].language);
-	FT.DrawString(columnAnchor, area.top + dd * 5 + 3, Int_StrN(detail_level->GetValue()));
-
-
-	DrawGUI();
+	PspUI::Hint(44, 432, PspUI::Cross, Trans.Text(TXT_SAVE));
+	PspUI::Hint(320, 432, PspUI::Circle, Trans.Text(TXT_CANCEL));
+	PspUI::Hint(560, 432, PspUI::Dpad, Trans.Text(TXT_CHOOSE_CHANGE));
 
 	Winsys.SwapBuffers();
 }

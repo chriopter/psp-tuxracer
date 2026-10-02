@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parent.parent
-for name, dimensions in [('psp-controls.png', (256, 128)), ('psp-guide.png', (512, 256)), ('psp-guide-gameplay.png', (480, 272))]:
+for name, dimensions in [('psp-controls.png', (256, 128)), ('psp-guide.png', (512, 256))]:
     png = (root / 'ports/extremetuxracer/data/textures' / name).read_bytes()
     assert png[:8] == b'\x89PNG\r\n\x1a\n'
     assert struct.unpack('>II', png[16:24]) == dimensions

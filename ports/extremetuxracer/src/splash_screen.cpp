@@ -33,9 +33,11 @@ GNU General Public License for more details.
 #include "game_ctrl.h"
 #include "translation.h"
 #include "score.h"
+#include "language_select.h"
 #include "regist.h"
 #include "winsys.h"
 
+void PspTraceStep(const char *what);
 CSplashScreen SplashScreen;
 sf::Text* Failure = nullptr;
 sf::String reason;
@@ -45,11 +47,15 @@ void CSplashScreen::Enter() {
 	delete Failure;
 	Failure = nullptr;
 	reason = sf::String();
+	PspTraceStep("splash: enter");
 	Trans.LoadTranslations(param.language);
+	PspTraceStep("splash: translations");
 	Winsys.ShowCursor(!param.ice_cursor);
 	Music.Play(param.menu_music, true);
+	PspTraceStep("splash: music playing");
 }
 
+void PspTraceStep(const char *what);
 void CSplashScreen::Loop(float time_step) {
 	ScopedRenderMode rm(GUI);
 	Winsys.clear();
@@ -76,18 +82,24 @@ void CSplashScreen::Loop(float time_step) {
 	Winsys.SwapBuffers();
 
 	if (!Failure) {
+		PspTraceStep("splash: begin");
 		init_ui_snow();
 
 		Course.MakeStandardPolyhedrons();
+		PspTraceStep("splash: snow+polyhedrons");
 		Sound.LoadSoundList();
+		PspTraceStep("splash: sounds");
 		if (!Char.LoadCharacterList())
 			reason += Trans.Text(93) + "\n";
+		PspTraceStep("splash: characters");
 		if (!Course.LoadObjectTypes())
 			reason += "Loading objects failed\n";
 		if (!Course.LoadTerrainTypes())
 			reason += Trans.Text(95) + "\n";
+		PspTraceStep("splash: object+terrain types");
 		if (Env.LoadEnvironmentList()) {
 			if (Course.LoadCourseList()) {
+				PspTraceStep("splash: course list");
 				Score.LoadHighScore();  // after LoadCourseList !!!
 				Events.LoadEventList();
 
@@ -100,10 +112,13 @@ void CSplashScreen::Loop(float time_step) {
 		} else
 			reason += Trans.Text(94) + "\n";
 
+		PspTraceStep("splash: done");
+		extern bool PspBenchmarkActive();
 		if (reason.isEmpty())
-			State::manager.RequestEnterState(Regist);
+			State::manager.RequestEnterState(
+			    param.language_chosen || PspBenchmarkActive() ? static_cast<State&>(Regist) : LanguageSelect);
 		else { // Failure
-			reason += "Check etr-errors.log and the complete data folder.";
+			reason += "Check that the data folder is complete.";
 			FT.SetSize(22);
 			int top = AutoYPosN(53);
 			Failure = new sf::Text(reason, FT.getCurrentFont(), FT.GetSize());

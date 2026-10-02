@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #include "translation.h"
 #include "course.h"
 #include "spx.h"
+#include "psp_ui.h"
 #include "winsys.h"
 
 CScore Score;
@@ -166,87 +167,46 @@ int CScore::CalcRaceResult() {
 //				score screen
 // --------------------------------------------------------------------
 
+// PSP: two rows choose the course set and the course, the scores of that
+// course stand under them. Up and down choose the row, left and right
+// change it, Circle or Cross goes back.
+enum { ROW_GROUP, ROW_COURSE, ROW_COUNT };
 static CCourseList *CourseList;
-static int prevGroup = 0;
-static TUpDown* course;
-static TUpDown* courseGroup;
-static TWidget* textbutton;
-static TFramedText* courseName;
-static TFramedText* courseGroupName;
-static TLabel* headline;
+static int cursor_row = ROW_COURSE;
+static int sel_group = 0, sel_course = 0;
+
+static int wrap(int value, int count) {
+	return count > 0 ? (value % count + count) % count : 0;
+}
 
 void CScore::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
-	KeyGUI(key, release);
 	if (release) return;
-	switch (key) {
-		case sf::Keyboard::Escape:
-			State::manager.RequestEnterState(*State::manager.PreviousState());
-			break;
-		case sf::Keyboard::Q:
-			State::manager.RequestQuit();
-			break;
-		case sf::Keyboard::S:
-			Score.SaveHighScore();
-			break;
-		case sf::Keyboard::L:
-			Score.LoadHighScore();
-			break;
-		case sf::Keyboard::Return:
-			State::manager.RequestEnterState(*State::manager.PreviousState());
-			break;
-		default:
-			break;
+	const int step = PspUI::ListKey(key, cursor_row, ROW_COUNT);
+	if (step) {
+		if (cursor_row == ROW_GROUP) {
+			sel_group = wrap(sel_group + step, (int)Course.CourseLists.size());
+			CourseList = Course.getGroup((std::size_t)sel_group);
+			sel_course = 0;
+		} else sel_course = wrap(sel_course + step, (int)CourseList->size());
+		return;
 	}
+	if (key == sf::Keyboard::Escape || key == sf::Keyboard::Return)
+		State::manager.RequestEnterState(*State::manager.PreviousState());
 }
 
-void CScore::Mouse(int button, int state, int x, int y) {
-	if (state == 1) {
-		TWidget* clicked = ClickGUI(x, y);
-		if (clicked == textbutton)
-			State::manager.RequestEnterState(*State::manager.PreviousState());
-	}
-}
-
-void CScore::Motion(int x, int y) {
-	MouseMoveGUI(x, y);
-
-	if (param.ui_snow) push_ui_snow(cursor_pos);
-}
-
-static TArea area;
-static int linedist, listtop;
-static int dd1, dd2, dd3, dd4;
+void CScore::Mouse(int button, int state, int x, int y) {}
+void CScore::Motion(int x, int y) {}
 
 void CScore::Enter() {
-	Winsys.ShowCursor(!param.ice_cursor);
+	Winsys.ShowCursor(false);
 	Music.Play(param.menu_music, true);
-
-	int framewidth = 550 * Winsys.scale;
-	int frameheight = 50 * Winsys.scale;
-	int frametop = AutoYPosN(28);
-	area = AutoAreaN(30, 80, framewidth);
-	FT.AutoSizeN(3);
-	linedist = FT.AutoDistanceN(1);
-	listtop = AutoYPosN(46);
-	dd1 = 50 * Winsys.scale;
-	dd2 = 115 * Winsys.scale;
-	dd3 = 250 * Winsys.scale;
-	dd4 = 375 * Winsys.scale;
+	ResetGUI();
 
 	CourseList = &Course.CourseLists["default"];
-
-	ResetGUI();
-	courseGroup = AddUpDown(area.right + 8, frametop, 0, (int)Course.CourseLists.size() - 1, 0);
-	course = AddUpDown(area.right + 8, frametop + frameheight + 20, 0, (int)CourseList->size() - 1, 0);
-	int siz = FT.AutoSizeN(5);
-	textbutton = AddTextButton(Trans.Text(64), CENTER, AutoYPosN(85), siz);
-
-	FT.AutoSizeN(7);
-	headline = AddLabel(Trans.Text(62), CENTER, AutoYPosN(18), colWhite);
-
-	FT.AutoSizeN(4);
-	courseGroupName = AddFramedText(area.left, frametop - 2, framewidth, frameheight, 3, colMBackgr, "default", FT.GetSize(), true);
-	courseName = AddFramedText(area.left, frametop - 2 + frameheight + 20, framewidth, frameheight, 3, colMBackgr, "", FT.GetSize(), true);
+	for (int i = 0; i < (int)Course.CourseLists.size(); ++i)
+		if (Course.getGroup((std::size_t)i) == CourseList) sel_group = i;
+	sel_course = wrap(sel_course, (int)CourseList->size());
+	cursor_row = ROW_COURSE;
 }
 
 void CScore::Loop(float time_step) {
@@ -260,38 +220,33 @@ void CScore::Loop(float time_step) {
 
 	DrawGUIBackground(Winsys.scale);
 
-	if (courseGroup->GetValue() != prevGroup) {
-		prevGroup = courseGroup->GetValue();
-		CourseList = Course.getGroup((std::size_t)courseGroup->GetValue());
-		course->SetValue(0);
-		course->SetMaximum((int)CourseList->size() - 1);
-		courseGroupName->SetString(CourseList->name);
-	}
+	std::vector<PspUI::Row> rows(ROW_COUNT);
+	rows[ROW_GROUP] = {Trans.Text(TXT_COURSE_SET), CourseList->name, Course.CourseLists.size() > 1};
+	rows[ROW_COURSE] = {Trans.Text(TXT_COURSE), (*CourseList)[sel_course].name, CourseList->size() > 1};
+	PspUI::OptionList(127, 100, 600, rows, cursor_row);
 
-	courseGroupName->Focussed(courseGroup->focussed());
+	const TScoreList *list = Score.GetScorelist(CourseList->name, (*CourseList)[sel_course].dir);
 
-	courseName->Focussed(course->focussed());
-	courseName->SetString((*CourseList)[course->GetValue()].name);
-
-	const TScoreList *list = Score.GetScorelist(CourseList->name, (*CourseList)[course->GetValue()].dir);
-
+	// The scores: place, points, player, herring and time, in columns.
+	const int left = 137, top = 100 + ROW_COUNT * PspUI::RowHeight + 14, line = 30;
 	FT.SetColor(colWhite);
-	FT.AutoSizeN(3);
+	FT.SetSize(22);
 	if (list != nullptr && list->numScores > 0) {
-		for (int i=0; i<std::min(MAX_SCORES, list->numScores); i++) {
-			int y = listtop + i*linedist;
-			FT.DrawString(area.left, y, Trans.Text(99+i));
-			FT.DrawString(area.left + dd1, y, Int_StrN(list->scores[i].points));
-			FT.DrawString(area.left + dd2, y, list->scores[i].player);
-			FT.DrawString(area.left + dd3, y,
+		for (int i=0; i<std::min(MAX_SCORES, list->numScores) && top + (i + 1) * line < 428; i++) {
+			int y = top + i*line;
+			FT.DrawString(left, y, Trans.Text(99+i));
+			FT.DrawString(left + 60, y, Int_StrN(list->scores[i].points));
+			FT.DrawString(left + 140, y, list->scores[i].player);
+			FT.DrawString(left + 340, y,
 			              Int_StrN(list->scores[i].herrings) + "  " + Trans.Text(97));
-			FT.DrawString(area.left + dd4, y,
+			FT.DrawString(left + 460, y,
 			              Float_StrN(list->scores[i].time, 1) + "  " + Trans.Text(98));
 		}
 	} else
-		FT.DrawString(CENTER, area.top + 140, Trans.Text(63));
+		FT.DrawString(CENTER, top + 40, Trans.Text(63));
 
-	DrawGUI();
+	PspUI::Hint(44, 432, PspUI::Circle, Trans.Text(8));
+	PspUI::Hint(560, 432, PspUI::Dpad, Trans.Text(TXT_CHOOSE_CHANGE));
 
 	Winsys.SwapBuffers();
 }

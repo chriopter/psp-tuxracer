@@ -37,6 +37,7 @@ GNU General Public License for more details.
 #include "game_over.h"
 #include "game_config.h"
 #include "loading.h"
+#include "psp_ui.h"
 #include "winsys.h"
 
 CEvent Event;
@@ -46,10 +47,7 @@ static int ready = 0; // indicates if last race is done
 static TCup *ecup = 0;
 static std::size_t curr_race = 0;
 static std::size_t curr_bonus = 0;
-static TWidget* textbuttons[3];
-static TLabel* headline;
-static TLabel* info1;
-static TLabel* info2;
+static sf::String info1, info2;
 
 void StartRace() {
 	if (ready > 0) {
@@ -71,8 +69,8 @@ void CEvent::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 	if (release) return;
 	switch (key) {
 		case sf::Keyboard::Return:
-			if (textbuttons[0]->focussed() && ready < 1) StartRace();
-			else State::manager.RequestEnterState(EventSelect);
+			// Cross races the next course, or leaves a cup that is over.
+			StartRace();
 			break;
 		case sf::Keyboard::Escape:
 			State::manager.RequestEnterState(EventSelect);
@@ -81,26 +79,12 @@ void CEvent::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 			param.ui_snow = !param.ui_snow;
 			break;
 		default:
-			KeyGUI(key, release);
+			break;
 	}
 }
 
-void CEvent::Mouse(int button, int state, int x, int y) {
-	if (state != 1) return;
-
-	TWidget* clicked = ClickGUI(x, y);
-	if (clicked == textbuttons[0]) {
-		if (ready < 1)
-			StartRace();
-	} else if (clicked == textbuttons[1] || clicked == textbuttons[2])
-		State::manager.RequestEnterState(EventSelect);
-}
-
-void CEvent::Motion(int x, int y) {
-	MouseMoveGUI(x, y);
-
-	if (param.ui_snow) push_ui_snow(cursor_pos);
-}
+void CEvent::Mouse(int button, int state, int x, int y) {}
+void CEvent::Motion(int x, int y) {}
 
 void InitCupRacing() {
 	ecup = g_game.cup;
@@ -127,56 +111,28 @@ void UpdateCupRacing() {
 
 // --------------------------------------------------------------------
 
-static TArea area;
-static int messtop, messtop2;
-static int bonustop, framewidth, frametop;
-static int dist, texsize;
+// PSP layout, in the menus' 854x480: the cup's name, the row of bonus
+// penguins, the races one under the other, and under them what the next
+// race asks for. Cross and Circle are named at the foot.
+enum { LIST_LEFT = 177, LIST_WIDTH = 500, LIST_TOP = 188, RACE_ROW = 40 };
 
 void CEvent::Enter() {
-	Winsys.ShowCursor(!param.ice_cursor);
+	Winsys.ShowCursor(false);
 
 	if (State::manager.PreviousState() == &GameOver) UpdateCupRacing();
 	else InitCupRacing();
 
-	framewidth = 500*Winsys.scale;
-	frametop = AutoYPosN(45);
-	area = AutoAreaN(30, 80, framewidth);
-	messtop = AutoYPosN(50);
-	messtop2 = AutoYPosN(60);
-	bonustop = AutoYPosN(35);
-	texsize = 32 * Winsys.scale / 0.8f;
-	dist = texsize + 2 * 4;
-	int framebottom = frametop + (int) ecup->races.size() * dist + 10;
-
 	ResetGUI();
-	unsigned int siz = FT.AutoSizeN(5);
-	textbuttons[1] = AddTextButton(Trans.Text(8), area.left + 100, AutoYPosN(80), siz);
-	int len = FT.GetTextWidth(Trans.Text(13));
-	textbuttons[0] = AddTextButton(Trans.Text(13), area.right -len - 100, AutoYPosN(80), siz);
-	textbuttons[2] = AddTextButton(Trans.Text(15), CENTER, AutoYPosN(80), siz);
-	SetFocus((ready >= 1) ? textbuttons[2] : textbuttons[0]);
+	info1 = Trans.Text(11);
+	info1 += "   " + Int_StrN(ecup->races[curr_race]->herrings.x);
+	info1 += "   " + Int_StrN(ecup->races[curr_race]->herrings.y);
+	info1 += "   " + Int_StrN(ecup->races[curr_race]->herrings.z);
 
-	FT.AutoSizeN(6);
-	headline = AddLabel(ecup->name, CENTER, AutoYPosN(25), colWhite);
-
-	FT.AutoSizeN(3);
-	int ddd = FT.AutoDistanceN(1);
-	sf::String info = Trans.Text(11);
-	info += "   " + Int_StrN(ecup->races[curr_race]->herrings.x);
-	info += "   " + Int_StrN(ecup->races[curr_race]->herrings.y);
-	info += "   " + Int_StrN(ecup->races[curr_race]->herrings.z);
-	info1 = AddLabel(info, CENTER, framebottom + 15, colDBlue);
-
-	info = Trans.Text(12);
-	info += "   " + Int_StrN((int)ecup->races[curr_race]->time.x);
-	info += "   " + Int_StrN((int)ecup->races[curr_race]->time.y);
-	info += "   " + Int_StrN((int)ecup->races[curr_race]->time.z);
-	info += "  " + Trans.Text(14);
-	info2 = AddLabel(info, CENTER, framebottom + 15 + ddd, colDBlue);
-
-	headline->SetVisible(ready == 0);
-	info1->SetVisible(ready == 0);
-	info2->SetVisible(ready == 0);
+	info2 = Trans.Text(12);
+	info2 += "   " + Int_StrN((int)ecup->races[curr_race]->time.x);
+	info2 += "   " + Int_StrN((int)ecup->races[curr_race]->time.y);
+	info2 += "   " + Int_StrN((int)ecup->races[curr_race]->time.z);
+	info2 += "  " + Trans.Text(14);
 
 	Music.Play(param.menu_music, true);
 }
@@ -197,48 +153,51 @@ void CEvent::Loop(float time_step) {
 	}
 	DrawGUIBackground(Winsys.scale);
 
+	const int bonustop = 136;
 	if (ready == 0) {			// cup not finished
+		FT.SetSize(30);
+		FT.SetColor(colWhite);
+		FT.DrawString(CENTER, 92, ecup->name);
 		DrawBonusExt(bonustop, (int)ecup->races.size(), curr_bonus);
 
-		DrawFrameX(area.left, frametop, framewidth,
-		           (int)ecup->races.size() * dist + 20, 3, colBackgr, colWhite, 1);
+		const int races = (int)ecup->races.size();
+		DrawFrameX(LIST_LEFT, LIST_TOP, LIST_WIDTH, races * RACE_ROW + 16, 3, colBackgr, colWhite, 1);
 
-		TCheckbox checkbox(area.right - 50, frametop, texsize, "");
+		TCheckbox checkbox(LIST_LEFT + LIST_WIDTH - 50, LIST_TOP, 32, "");
+		FT.SetSize(26);
 		for (std::size_t i=0; i<ecup->races.size(); i++) {
-			FT.AutoSizeN(4);
-
-			int y = frametop + 10 + (int)i * dist;
-			if (i == curr_race)
-				FT.SetColor(colDYell);
-			else
-				FT.SetColor(colWhite);
-			FT.DrawString(area.left + 29, y, ecup->races[i]->course->name);
-			checkbox.SetPosition(area.right - 50*Winsys.scale/0.8f, y + 4);
+			int y = LIST_TOP + 8 + (int)i * RACE_ROW;
+			FT.SetColor(i == curr_race ? colDYell : colWhite);
+			FT.DrawString(LIST_LEFT + 24, y - 2, ecup->races[i]->course->name);
+			checkbox.SetPosition(LIST_LEFT + LIST_WIDTH - 50, y + 2);
 			checkbox.SetChecked(curr_race > i);
 			checkbox.Draw();
 		}
-	} else if (ready == 1) {		// cup successfully finished
-		FT.AutoSizeN(5);
+		// What the next race asks for, clear of the list and of the foot.
+		const int below = LIST_TOP + races * RACE_ROW + 26;
+		FT.SetSize(20);
 		FT.SetColor(colWhite);
-		FT.DrawString(CENTER, messtop, Trans.Text(16));
+		FT.DrawString(CENTER, below, info1);
+		FT.DrawString(CENTER, below + 26, info2);
+	} else if (ready == 1) {		// cup successfully finished
+		FT.SetSize(30);
+		FT.SetColor(colWhite);
+		FT.DrawString(CENTER, 230, Trans.Text(16));
 		DrawBonusExt(bonustop, (int)ecup->races.size(), curr_bonus);
 		int res = resultlevel(curr_bonus, ecup->races.size());
-		FT.DrawString(CENTER, messtop2, Trans.Text(17) + " " + Int_StrN(res));
+		FT.DrawString(CENTER, 280, Trans.Text(17) + " " + Int_StrN(res));
 	} else if (ready == 2) {		// cup finished but failed
-		FT.AutoSizeN(5);
+		FT.SetSize(30);
 		FT.SetColor(colLRed);
-		FT.DrawString(CENTER, messtop, Trans.Text(18));
+		FT.DrawString(CENTER, 230, Trans.Text(18));
 		DrawBonusExt(bonustop, ecup->races.size(), curr_bonus);
-		FT.DrawString(CENTER, messtop2, Trans.Text(19));
+		FT.DrawString(CENTER, 280, Trans.Text(19));
 	}
 
-	textbuttons[0]->SetVisible(ready < 1);
-	textbuttons[1]->SetVisible(ready < 1);
-	textbuttons[2]->SetVisible(!(ready < 1));
-	textbuttons[0]->SetActive(ready < 1);
-	textbuttons[1]->SetActive(ready < 1);
-	textbuttons[2]->SetActive(!(ready < 1));
+	if (ready < 1) {
+		PspUI::Hint(44, 432, PspUI::Cross, Trans.Text(TXT_RACE));
+		PspUI::Hint(320, 432, PspUI::Circle, Trans.Text(8));
+	} else PspUI::Hint(44, 432, PspUI::Cross, Trans.Text(TXT_CONTINUE));
 
-	DrawGUI();
 	Winsys.SwapBuffers();
 }

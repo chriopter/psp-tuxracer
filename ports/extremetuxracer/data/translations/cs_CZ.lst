@@ -110,3 +110,69 @@
 *[idx] 90 [engl] in highscore list [trans] na seznamu nejlepších výsledků
 
 *[idx] 91 [engl] Author [trans] Autor
+
+# PSP menus
+*[idx] 111 [engl] Course [trans] Trať
+*[idx] 112 [engl] Course set [trans] Sada tratí
+*[idx] 113 [engl] Player [trans] Hráč
+*[idx] 114 [engl] Character [trans] Postava
+*[idx] 115 [engl] Event [trans] Událost
+*[idx] 116 [engl] Cup [trans] Pohár
+*[idx] 117 [engl] Name [trans] Jméno
+*[idx] 118 [engl] Avatar [trans] Avatar
+*[idx] 119 [engl] Add this player [trans] Přidat tohoto hráče
+*[idx] 120 [engl] Language [trans] Jazyk
+*[idx] 121 [engl] Saved data [trans] Uložená data
+*[idx] 122 [engl] Save progress [trans] Uložit postup
+*[idx] 123 [engl] Load progress [trans] Načíst postup
+*[idx] 124 [engl] Race [trans] Závod
+*[idx] 125 [engl] Continue [trans] Pokračovat
+*[idx] 126 [engl] Quit [trans] Ukončit
+*[idx] 127 [engl] Choose / change [trans] Vybrat / změnit
+*[idx] 128 [engl] Save [trans] Uložit
+*[idx] 129 [engl] Cancel [trans] Zrušit
+*[idx] 130 [engl] New player [trans] Nový hráč
+*[idx] 131 [engl] Edit name [trans] Upravit jméno
+*[idx] 132 [engl] Add [trans] Přidat
+*[idx] 133 [engl] Next [trans] Další
+*[idx] 134 [engl] Randomize [trans] Náhodně
+*[idx] 135 [engl] Load [trans] Načíst
+*[idx] 136 [engl] Choose [trans] Vybrat
+*[idx] 137 [engl] Up / down [trans] Nahoru / dolů
+*[idx] 138 [engl] Players, unlocked cups, scores and settings [trans] Hráči, odemčené poháry, skóre a nastavení
+*[idx] 139 [engl] Play against penguins [trans] Závodit proti tučňákům
+*[idx] 140 [engl] Penguins [trans] Tučňáci
+*[idx] 141 [engl] PSP exclusive [trans] jen na PSP
+*[idx] 142 [engl] Place [trans] Místo
+*[idx] 143 [engl] Against penguins [trans] Proti tučňákům
+*[idx] 144 [engl] On [trans] Ano
+*[idx] 145 [engl] Off [trans] Ne
+*[idx] 146 [engl] YOUR PSP. YOUR SLOPES. [trans] TVOJE PSP. TVOJE SJEZDOVKY.
+*[idx] 147 [engl] Brake [trans] Brzda
+*[idx] 148 [engl] Paddle [trans] Pádlování
+*[idx] 149 [engl] Steer [trans] Zatáčení
+*[idx] 150 [engl] D-pad [trans] Směrový kříž
+*[idx] 151 [engl] Analog stick [trans] Analogová páčka
+*[idx] 152 [engl] Reset [trans] Návrat na trať
+*[idx] 153 [engl] Triangle [trans] Trojúhelník
+*[idx] 154 [engl] Trick [trans] Trik
+*[idx] 155 [engl] Square + steer [trans] Čtvereček + směr
+*[idx] 156 [engl] Back [trans] Zpět
+*[idx] 157 [engl] Circle / menus [trans] Kolečko / nabídky
+*[idx] 158 [engl] Jump [trans] Skok
+*[idx] 159 [engl] Cross / select [trans] Křížek / výběr
+*[idx] 160 [engl] Start: pause / resume [trans] Start: pauza / pokračovat
+*[idx] 161 [engl] Jump: hold, then release Cross [trans] Skok: podrž Křížek a pusť
+*[idx] 162 [engl] START - OPEN MENU [trans] START - OTEVŘÍT NABÍDKU
+*[idx] 163 [engl] START - BACK TO MENU [trans] START - ZPĚT DO NABÍDKY
+*[idx] 164 [engl] PAUSED [trans] PAUZA
+*[idx] 165 [engl] Resume [trans] Pokračovat
+*[idx] 166 [engl] Controls [trans] Ovládání
+*[idx] 167 [engl] End race [trans] Ukončit závod
+*[idx] 168 [engl] Select [trans] Vybrat
+*[idx] 169 [engl] Autosave paused: check Saved data [trans] Automatické ukládání pozastaveno: viz Uložená data
+*[idx] 170 [engl] Confirm [trans] Potvrdit
+*[idx] 171 [engl] END THIS RACE? [trans] UKONČIT ZÁVOD?
+*[idx] 172 [engl] This run will not count as a finish. [trans] Tato jízda se nezapočítá jako dojetá.
+*[idx] 173 [engl] QUIT GAME? [trans] UKONČIT HRU?
+*[idx] 174 [engl] Your saved progress is kept. [trans] Tvůj postup zůstane uložen.

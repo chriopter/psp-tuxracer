@@ -118,3 +118,69 @@
 *[idx] 96 [engl] Loading avatars failed. [trans] Atentie! Incarcarea avatarurilor a esuat.
 *[idx] 97 [engl] herrings [trans] heringi
 *[idx] 98 [engl] sec [trans] sec
+
+# PSP menus
+*[idx] 111 [engl] Course [trans] Traseu
+*[idx] 112 [engl] Course set [trans] Set de trasee
+*[idx] 113 [engl] Player [trans] Jucător
+*[idx] 114 [engl] Character [trans] Personaj
+*[idx] 115 [engl] Event [trans] Eveniment
+*[idx] 116 [engl] Cup [trans] Cupă
+*[idx] 117 [engl] Name [trans] Nume
+*[idx] 118 [engl] Avatar [trans] Avatar
+*[idx] 119 [engl] Add this player [trans] Adaugă acest jucător
+*[idx] 120 [engl] Language [trans] Limbă
+*[idx] 121 [engl] Saved data [trans] Date salvate
+*[idx] 122 [engl] Save progress [trans] Salvează progresul
+*[idx] 123 [engl] Load progress [trans] Încarcă progresul
+*[idx] 124 [engl] Race [trans] Cursă
+*[idx] 125 [engl] Continue [trans] Continuă
+*[idx] 126 [engl] Quit [trans] Ieșire
+*[idx] 127 [engl] Choose / change [trans] Alege / schimbă
+*[idx] 128 [engl] Save [trans] Salvează
+*[idx] 129 [engl] Cancel [trans] Anulează
+*[idx] 130 [engl] New player [trans] Jucător nou
+*[idx] 131 [engl] Edit name [trans] Editează numele
+*[idx] 132 [engl] Add [trans] Adaugă
+*[idx] 133 [engl] Next [trans] Următorul
+*[idx] 134 [engl] Randomize [trans] Aleatoriu
+*[idx] 135 [engl] Load [trans] Încarcă
+*[idx] 136 [engl] Choose [trans] Alege
+*[idx] 137 [engl] Up / down [trans] Sus / jos
+*[idx] 138 [engl] Players, unlocked cups, scores and settings [trans] Jucători, cupe deblocate, scoruri și setări
+*[idx] 139 [engl] Play against penguins [trans] Concurează cu pinguini
+*[idx] 140 [engl] Penguins [trans] Pinguini
+*[idx] 141 [engl] PSP exclusive [trans] exclusiv pe PSP
+*[idx] 142 [engl] Place [trans] Locul
+*[idx] 143 [engl] Against penguins [trans] Contra pinguini
+*[idx] 144 [engl] On [trans] Da
+*[idx] 145 [engl] Off [trans] Nu
+*[idx] 146 [engl] YOUR PSP. YOUR SLOPES. [trans] PSP-UL TĂU. PÂRTIILE TALE.
+*[idx] 147 [engl] Brake [trans] Frână
+*[idx] 148 [engl] Paddle [trans] Vâslește
+*[idx] 149 [engl] Steer [trans] Direcție
+*[idx] 150 [engl] D-pad [trans] Butoane direcționale
+*[idx] 151 [engl] Analog stick [trans] Manetă analogică
+*[idx] 152 [engl] Reset [trans] Repune pe traseu
+*[idx] 153 [engl] Triangle [trans] Triunghi
+*[idx] 154 [engl] Trick [trans] Figură
+*[idx] 155 [engl] Square + steer [trans] Pătrat + direcție
+*[idx] 156 [engl] Back [trans] Înapoi
+*[idx] 157 [engl] Circle / menus [trans] Cerc / meniuri
+*[idx] 158 [engl] Jump [trans] Salt
+*[idx] 159 [engl] Cross / select [trans] Cruce / alege
+*[idx] 160 [engl] Start: pause / resume [trans] Start: pauză / continuă
+*[idx] 161 [engl] Jump: hold, then release Cross [trans] Salt: ține apăsat Cruce, apoi eliberează
+*[idx] 162 [engl] START - OPEN MENU [trans] START - DESCHIDE MENIUL
+*[idx] 163 [engl] START - BACK TO MENU [trans] START - ÎNAPOI LA MENIU
+*[idx] 164 [engl] PAUSED [trans] PAUZĂ
+*[idx] 165 [engl] Resume [trans] Continuă
+*[idx] 166 [engl] Controls [trans] Comenzi
+*[idx] 167 [engl] End race [trans] Încheie cursa
+*[idx] 168 [engl] Select [trans] Alege
+*[idx] 169 [engl] Autosave paused: check Saved data [trans] Salvare automată oprită: vezi Date salvate
+*[idx] 170 [engl] Confirm [trans] Confirmă
+*[idx] 171 [engl] END THIS RACE? [trans] ÎNCHEI CURSA?
+*[idx] 172 [engl] This run will not count as a finish. [trans] Această coborâre nu va conta ca sosire.
+*[idx] 173 [engl] QUIT GAME? [trans] IEȘI DIN JOC?
+*[idx] 174 [engl] Your saved progress is kept. [trans] Progresul tău rămâne salvat.

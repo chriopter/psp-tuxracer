@@ -62,6 +62,7 @@ void LoadConfigFile() {
 		param.res_type = SPIntN(*line, "res_type", 0);
 		param.perf_level = SPIntN(*line, "detail_level", 3);
 		param.language = Trans.GetLangIdx(SPStrN(*line, "language", "EN_en"));
+		param.language_chosen = SPIntN(*line, "language_chosen", 0) != 0;
 		param.sound_volume = SPIntN(*line, "sound_volume", 90);
 		param.music_volume = SPIntN(*line, "music_volume", 20);
 
@@ -91,6 +92,7 @@ void SetConfigDefaults() {
 	param.fullscreen = true;
 	param.res_type = 0; // 0=auto / 1=800x600 / 2=1024x768 ...
 	param.perf_level = 3;	// detail level
+	param.language_chosen = false;
 	param.language = std::string::npos; // If language is set to npos, ETR will try to load default system language
 	param.sound_volume = 90;
 	param.music_volume = 20;
@@ -159,6 +161,8 @@ bool SaveConfigFile() {
 	AddComment(liste, "Language code");
 	AddComment(liste, "en_GB = English etc.");
 	AddItem(liste, "language", Trans.languages[param.language].lang);
+	AddComment(liste, "1 once the first start has asked for the language");
+	AddItem(liste, "language_chosen", param.language_chosen ? 1 : 0);
 	liste.Add();
 
 	AddComment(liste, "Sound volume [0...100]");

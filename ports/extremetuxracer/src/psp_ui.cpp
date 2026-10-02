@@ -1,15 +1,22 @@
 // Lightweight PSP-native menu artwork; no additional textures or asset loads.
 #include "psp_ui.h"
+#include "translation.h"
 #include "gui.h"
 #include "font.h"
 #include "ogl.h"
 #include "winsys.h"
+#include "spx.h"
+#include "textures.h"
 #include <cmath>
 namespace PspUI {
 void Box(int x, int y, int w, int h, sf::Color color) {
     DrawFrameX(x, y, w, h, 0, color, color, 1.0f);
 }
 void Text(int x, int y, const char* text, unsigned size) {
+    FT.SetColor(sf::Color(225, 239, 248)); FT.SetSize(size);
+    FT.DrawString(x, y, text);
+}
+void Text(int x, int y, const sf::String& text, unsigned size) {
     FT.SetColor(sf::Color(225, 239, 248)); FT.SetSize(size);
     FT.DrawString(x, y, text);
 }
@@ -66,6 +73,11 @@ void Icon(int x, int y, Button b) {
     } else Text(x+9,y+1,b==ShoulderL?"L":"R",24);
 }
 void Hint(int x,int y,Button button,const char* text) { Icon(x,y,button); Text(x+44,y+1,text); }
+void Hint(int x,int y,Button button,const sf::String& text) {
+    Icon(x,y,button);
+    FT.SetColor(sf::Color(225, 239, 248)); FT.SetSize(22);
+    FT.DrawString(x+44,y+1,text);
+}
 void Background() {
     Box(0,0,854,480,sf::Color(12,25,41));
     Box(0,0,854,106,sf::Color(18,38,58));
@@ -84,11 +96,66 @@ void Controls(int x,int y) {
     Hint(x,y+242,ShoulderR,"Paddle / D-pad up");
     Hint(x,y+282,Start,"Start: pause / controls");
 }
-void Confirm(const char* title,const char* detail) {
+void OptionList(int x, int y, int w, const std::vector<Row>& rows, int cursor) {
+    // With a sign on any row, every label starts past the signs' column.
+    bool signs = false;
+    for (const Row& row : rows) signs = signs || row.icon;
+    const int label_x = x + (signs ? 58 : 18);
+    FT.SetSize(28);
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        const Row& row = rows[i];
+        const int top = y + int(i) * RowHeight;
+        const bool on = int(i) == cursor;
+        // The frame stands around the line with the same room above and
+        // below it, and clear of the rows next to it.
+        if (on) DrawFrameX(x, top + 2, w, RowHeight - 6, 2, colMBackgr, colWhite, 1.f);
+        if (row.icon) {
+            const sf::Vector2u sheet = row.icon->getSize();
+            sf::Sprite sign;
+            sign.setTexture(*row.icon);
+            sign.setTextureRect(sf::IntRect((row.icon_state & 1) * sheet.x / 2, (row.icon_state >> 1) * sheet.y / 2,
+                                            sheet.x / 2, sheet.y / 2));
+            sign.setScale(30.f / (sheet.x / 2.f), 30.f / (sheet.y / 2.f));
+            sign.setPosition(x + 14, top + 7);
+            Winsys.draw(sign);
+        }
+        FT.SetColor(on ? colDYell : colWhite);
+        FT.DrawString(label_x, top - 1, row.label);
+        if (row.value.isEmpty()) continue;
+        sf::String shown = row.value;
+        if (on && row.adjustable) {
+            shown = sf::String("<  ");
+            shown.insert(shown.getSize(), row.value);
+            shown.insert(shown.getSize(), sf::String("  >"));
+        }
+        FT.DrawString(x + w - 18 - FT.GetTextWidth(shown), top - 1, shown);
+    }
+}
+int ListKey(sf::Keyboard::Key key, int& cursor, int rows) {
+    if (rows <= 0) return 0;
+    if (key == sf::Keyboard::Down) cursor = (cursor + 1) % rows;
+    else if (key == sf::Keyboard::Up) cursor = (cursor + rows - 1) % rows;
+    else if (key == sf::Keyboard::Left) return -1;
+    else if (key == sf::Keyboard::Right) return 1;
+    return 0;
+}
+void SplitLabel(const sf::String& text, sf::String& label, sf::String& value) {
+    std::size_t colon = 0;
+    while (colon < text.getSize() && text[colon] != ':') ++colon;
+    label = text;
+    value = sf::String("");
+    if (colon >= text.getSize()) return;
+    label.erase(colon, text.getSize() - colon);
+    std::size_t from = colon + 1;
+    while (from < text.getSize() && text[from] == ' ') ++from;
+    value = text;
+    value.erase(0, from);
+}
+void Confirm(const sf::String& title,const sf::String& detail) {
     Box(0,0,854,480,sf::Color(5,13,23,220));
     Box(118,151,618,190,sf::Color(22,45,65));
     Box(118,151,618,3,sf::Color(107,211,232));
     Text(148,176,title,30); Text(148,222,detail,22);
-    Hint(148,285,Cross,"Confirm"); Hint(450,285,Circle,"Cancel");
+    Hint(148,285,Cross,Trans.Text(TXT_CONFIRM)); Hint(450,285,Circle,Trans.Text(129));
 }
 }

@@ -130,3 +130,69 @@
 *[idx] 108 [engl] 10th [trans] 10.
 
 *[idx] 109 [engl] Unknown [trans] Tuntematon
+
+# PSP menus
+*[idx] 111 [engl] Course [trans] Rata
+*[idx] 112 [engl] Course set [trans] Ratasarja
+*[idx] 113 [engl] Player [trans] Pelaaja
+*[idx] 114 [engl] Character [trans] Hahmo
+*[idx] 115 [engl] Event [trans] Tapahtuma
+*[idx] 116 [engl] Cup [trans] Cup
+*[idx] 117 [engl] Name [trans] Nimi
+*[idx] 118 [engl] Avatar [trans] Avatar
+*[idx] 119 [engl] Add this player [trans] Lisää tämä pelaaja
+*[idx] 120 [engl] Language [trans] Kieli
+*[idx] 121 [engl] Saved data [trans] Tallennetut tiedot
+*[idx] 122 [engl] Save progress [trans] Tallenna eteneminen
+*[idx] 123 [engl] Load progress [trans] Lataa eteneminen
+*[idx] 124 [engl] Race [trans] Kisa
+*[idx] 125 [engl] Continue [trans] Jatka
+*[idx] 126 [engl] Quit [trans] Lopeta
+*[idx] 127 [engl] Choose / change [trans] Valitse / muuta
+*[idx] 128 [engl] Save [trans] Tallenna
+*[idx] 129 [engl] Cancel [trans] Peruuta
+*[idx] 130 [engl] New player [trans] Uusi pelaaja
+*[idx] 131 [engl] Edit name [trans] Muokkaa nimeä
+*[idx] 132 [engl] Add [trans] Lisää
+*[idx] 133 [engl] Next [trans] Seuraava
+*[idx] 134 [engl] Randomize [trans] Satunnainen
+*[idx] 135 [engl] Load [trans] Lataa
+*[idx] 136 [engl] Choose [trans] Valitse
+*[idx] 137 [engl] Up / down [trans] Ylös / alas
+*[idx] 138 [engl] Players, unlocked cups, scores and settings [trans] Pelaajat, avatut cupit, tulokset ja asetukset
+*[idx] 139 [engl] Play against penguins [trans] Kisaa pingviinejä vastaan
+*[idx] 140 [engl] Penguins [trans] Pingviinit
+*[idx] 141 [engl] PSP exclusive [trans] vain PSP:llä
+*[idx] 142 [engl] Place [trans] Sija
+*[idx] 143 [engl] Against penguins [trans] Vastustajat
+*[idx] 144 [engl] On [trans] Kyllä
+*[idx] 145 [engl] Off [trans] Ei
+*[idx] 146 [engl] YOUR PSP. YOUR SLOPES. [trans] SINUN PSP. SINUN RINTEESI.
+*[idx] 147 [engl] Brake [trans] Jarru
+*[idx] 148 [engl] Paddle [trans] Melo
+*[idx] 149 [engl] Steer [trans] Ohjaa
+*[idx] 150 [engl] D-pad [trans] Suuntanäppäimet
+*[idx] 151 [engl] Analog stick [trans] Analogisauva
+*[idx] 152 [engl] Reset [trans] Palauta
+*[idx] 153 [engl] Triangle [trans] Kolmio
+*[idx] 154 [engl] Trick [trans] Temppu
+*[idx] 155 [engl] Square + steer [trans] Neliö + ohjaus
+*[idx] 156 [engl] Back [trans] Takaisin
+*[idx] 157 [engl] Circle / menus [trans] Ympyrä / valikot
+*[idx] 158 [engl] Jump [trans] Hyppy
+*[idx] 159 [engl] Cross / select [trans] Risti / valitse
+*[idx] 160 [engl] Start: pause / resume [trans] Start: tauko / jatka
+*[idx] 161 [engl] Jump: hold, then release Cross [trans] Hyppy: pidä Risti pohjassa ja vapauta
+*[idx] 162 [engl] START - OPEN MENU [trans] START - AVAA VALIKKO
+*[idx] 163 [engl] START - BACK TO MENU [trans] START - TAKAISIN VALIKKOON
+*[idx] 164 [engl] PAUSED [trans] TAUKO
+*[idx] 165 [engl] Resume [trans] Jatka
+*[idx] 166 [engl] Controls [trans] Ohjaimet
+*[idx] 167 [engl] End race [trans] Lopeta kisa
+*[idx] 168 [engl] Select [trans] Valitse
+*[idx] 169 [engl] Autosave paused: check Saved data [trans] Automaattitallennus tauolla: katso Tallennetut tiedot
+*[idx] 170 [engl] Confirm [trans] Vahvista
+*[idx] 171 [engl] END THIS RACE? [trans] LOPETETAANKO KISA?
+*[idx] 172 [engl] This run will not count as a finish. [trans] Tätä laskua ei lasketa maaliintuloksi.
+*[idx] 173 [engl] QUIT GAME? [trans] LOPETETAANKO PELI?
+*[idx] 174 [engl] Your saved progress is kept. [trans] Edistymisesi säilyy.

@@ -40,6 +40,7 @@ GNU General Public License for more details.
 #include "gui.h"
 #include "game_over.h"
 #include "psp_ui.h"
+#include "translation.h"
 #include "controls_guide.h"
 
 CPaused Paused;
@@ -147,14 +148,14 @@ void CPaused::Loop(float time_step) {
 	{
 		ScopedRenderMode overlay(GUI);
 		PspUI::Box(137,91,580,286,sf::Color(18,36,53));
-		PspUI::Text(169,106,"PAUSED",34);
+		PspUI::Text(169,106,Trans.Text(TXT_PAUSED),34);
 		PspUI::Box(163,160+selection*50,528,46,sf::Color(30,72,98));
-		PspUI::Text(185,167,"Resume",28);
-		PspUI::Text(185,217,"Controls",28);
-		PspUI::Text(185,267,"End race",28);
-		PspUI::Hint(169,328,PspUI::Cross,"Select");
-		PspUI::Hint(420,328,PspUI::Circle,"Resume");
-		if (confirmEnd) PspUI::Confirm("END THIS RACE?", "This run will not count as a finish.");
+		PspUI::Text(185,167,Trans.Text(TXT_RESUME),28);
+		PspUI::Text(185,217,Trans.Text(TXT_CONTROLS),28);
+		PspUI::Text(185,267,Trans.Text(TXT_END_RACE),28);
+		PspUI::Hint(169,328,PspUI::Cross,Trans.Text(TXT_SELECT));
+		PspUI::Hint(420,328,PspUI::Circle,Trans.Text(TXT_RESUME));
+		if (confirmEnd) PspUI::Confirm(Trans.Text(TXT_END_RACE_ASK), Trans.Text(TXT_END_RACE_NOTE));
 	}
 	Winsys.SwapBuffers();
 }

@@ -129,7 +129,7 @@ void CGameTypeSelect::Enter() {
 	textbuttons[3] = AddTextButton(Trans.Text(62), CENTER, top + dist * 3, siz);
 	textbuttons[4] = AddTextButton(Trans.Text(43), CENTER, top + dist * 4, siz);
 	textbuttons[5] = AddTextButton(Trans.Text(4), CENTER, top + dist * 5, siz);
-	textbuttons[6] = AddTextButton("Saved data", CENTER, top + dist * 6, siz);
+	textbuttons[6] = AddTextButton(Trans.Text(TXT_SAVED_DATA), CENTER, top + dist * 6, siz);
 	textbuttons[7] = AddTextButton(Trans.Text(5), CENTER, top + dist * 7, siz);
 	SetFocus(textbuttons[selectedIndex]);
 	logo.setTexture(Tex.GetSFTexture(T_TITLE));
@@ -152,9 +152,9 @@ void CGameTypeSelect::Loop(float time_step) {
 	DrawGUIFrame();
 	DrawGUI();
 	if (PspSave::NeedsAttention()) {
-		PspUI::Text(CENTER,445,"Autosave paused: check Saved data",18);
+		PspUI::Text(CENTER,445,Trans.Text(TXT_AUTOSAVE_PAUSED),18);
 	}
-	if (confirmQuit) PspUI::Confirm("QUIT GAME?", "Your saved progress is kept.");
+	if (confirmQuit) PspUI::Confirm(Trans.Text(TXT_QUIT_ASK), Trans.Text(TXT_QUIT_NOTE));
 
 	Winsys.SwapBuffers();
 }

@@ -71,3 +71,69 @@
 *[idx] 55 [engl] CRSR Up - accelerate [trans] STRZAŁKA w górę - przyśpieszanie
 *[idx] 56 [engl] CRSR down - brake [trans] STRZAŁKA w dół - hamowanie
 *[idx] 57 [engl] Keyboard Functions [trans] Klawisze Funkcyjne
+
+# PSP menus
+*[idx] 111 [engl] Course [trans] Trasa
+*[idx] 112 [engl] Course set [trans] Zestaw tras
+*[idx] 113 [engl] Player [trans] Gracz
+*[idx] 114 [engl] Character [trans] Postać
+*[idx] 115 [engl] Event [trans] Zawody
+*[idx] 116 [engl] Cup [trans] Puchar
+*[idx] 117 [engl] Name [trans] Imię
+*[idx] 118 [engl] Avatar [trans] Awatar
+*[idx] 119 [engl] Add this player [trans] Dodaj tego gracza
+*[idx] 120 [engl] Language [trans] Język
+*[idx] 121 [engl] Saved data [trans] Zapisane dane
+*[idx] 122 [engl] Save progress [trans] Zapisz postęp
+*[idx] 123 [engl] Load progress [trans] Wczytaj postęp
+*[idx] 124 [engl] Race [trans] Wyścig
+*[idx] 125 [engl] Continue [trans] Dalej
+*[idx] 126 [engl] Quit [trans] Wyjdź
+*[idx] 127 [engl] Choose / change [trans] Wybierz / zmień
+*[idx] 128 [engl] Save [trans] Zapisz
+*[idx] 129 [engl] Cancel [trans] Anuluj
+*[idx] 130 [engl] New player [trans] Nowy gracz
+*[idx] 131 [engl] Edit name [trans] Zmień imię
+*[idx] 132 [engl] Add [trans] Dodaj
+*[idx] 133 [engl] Next [trans] Dalej
+*[idx] 134 [engl] Randomize [trans] Losowo
+*[idx] 135 [engl] Load [trans] Wczytaj
+*[idx] 136 [engl] Choose [trans] Wybierz
+*[idx] 137 [engl] Up / down [trans] Góra / dół
+*[idx] 138 [engl] Players, unlocked cups, scores and settings [trans] Gracze, odblokowane puchary, wyniki i ustawienia
+*[idx] 139 [engl] Play against penguins [trans] Ścigaj się z pingwinami
+*[idx] 140 [engl] Penguins [trans] Pingwiny
+*[idx] 141 [engl] PSP exclusive [trans] tylko na PSP
+*[idx] 142 [engl] Place [trans] Miejsce
+*[idx] 143 [engl] Against penguins [trans] Kontra pingwiny
+*[idx] 144 [engl] On [trans] Tak
+*[idx] 145 [engl] Off [trans] Nie
+*[idx] 146 [engl] YOUR PSP. YOUR SLOPES. [trans] TWOJE PSP. TWOJE STOKI.
+*[idx] 147 [engl] Brake [trans] Hamuj
+*[idx] 148 [engl] Paddle [trans] Wiosłuj
+*[idx] 149 [engl] Steer [trans] Skręt
+*[idx] 150 [engl] D-pad [trans] Krzyżak
+*[idx] 151 [engl] Analog stick [trans] Drążek analogowy
+*[idx] 152 [engl] Reset [trans] Powrót na trasę
+*[idx] 153 [engl] Triangle [trans] Trójkąt
+*[idx] 154 [engl] Trick [trans] Sztuczka
+*[idx] 155 [engl] Square + steer [trans] Kwadrat + skręt
+*[idx] 156 [engl] Back [trans] Wstecz
+*[idx] 157 [engl] Circle / menus [trans] Kółko / menu
+*[idx] 158 [engl] Jump [trans] Skok
+*[idx] 159 [engl] Cross / select [trans] Krzyżyk / wybierz
+*[idx] 160 [engl] Start: pause / resume [trans] Start: pauza / dalej
+*[idx] 161 [engl] Jump: hold, then release Cross [trans] Skok: przytrzymaj Krzyżyk i puść
+*[idx] 162 [engl] START - OPEN MENU [trans] START - OTWÓRZ MENU
+*[idx] 163 [engl] START - BACK TO MENU [trans] START - WRÓĆ DO MENU
+*[idx] 164 [engl] PAUSED [trans] PAUZA
+*[idx] 165 [engl] Resume [trans] Dalej
+*[idx] 166 [engl] Controls [trans] Sterowanie
+*[idx] 167 [engl] End race [trans] Zakończ wyścig
+*[idx] 168 [engl] Select [trans] Wybierz
+*[idx] 169 [engl] Autosave paused: check Saved data [trans] Autozapis wstrzymany: sprawdź Zapisane dane
+*[idx] 170 [engl] Confirm [trans] Potwierdź
+*[idx] 171 [engl] END THIS RACE? [trans] ZAKOŃCZYĆ WYŚCIG?
+*[idx] 172 [engl] This run will not count as a finish. [trans] Ten zjazd nie zostanie zaliczony.
+*[idx] 173 [engl] QUIT GAME? [trans] WYJŚĆ Z GRY?
+*[idx] 174 [engl] Your saved progress is kept. [trans] Twoje postępy zostaną zachowane.

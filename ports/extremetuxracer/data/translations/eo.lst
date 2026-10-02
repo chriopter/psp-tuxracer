@@ -132,3 +132,69 @@
 *[idx] 108 [engl] 10th [trans] 10a
 
 *[idx] 109 [engl] Unknown [trans] Nekonata
+
+# PSP menus
+*[idx] 111 [engl] Course [trans] Kurejo
+*[idx] 112 [engl] Course set [trans] Kurejaro
+*[idx] 113 [engl] Player [trans] Ludanto
+*[idx] 114 [engl] Character [trans] Rolulo
+*[idx] 115 [engl] Event [trans] Evento
+*[idx] 116 [engl] Cup [trans] Pokalo
+*[idx] 117 [engl] Name [trans] Nomo
+*[idx] 118 [engl] Avatar [trans] Avataro
+*[idx] 119 [engl] Add this player [trans] Aldoni ĉi tiun ludanton
+*[idx] 120 [engl] Language [trans] Lingvo
+*[idx] 121 [engl] Saved data [trans] Konservitaj datumoj
+*[idx] 122 [engl] Save progress [trans] Konservi progreson
+*[idx] 123 [engl] Load progress [trans] Ŝargi progreson
+*[idx] 124 [engl] Race [trans] Kuro
+*[idx] 125 [engl] Continue [trans] Daŭrigi
+*[idx] 126 [engl] Quit [trans] Eliri
+*[idx] 127 [engl] Choose / change [trans] Elekti / ŝanĝi
+*[idx] 128 [engl] Save [trans] Konservi
+*[idx] 129 [engl] Cancel [trans] Nuligi
+*[idx] 130 [engl] New player [trans] Nova ludanto
+*[idx] 131 [engl] Edit name [trans] Redakti nomon
+*[idx] 132 [engl] Add [trans] Aldoni
+*[idx] 133 [engl] Next [trans] Sekva
+*[idx] 134 [engl] Randomize [trans] Hazarde
+*[idx] 135 [engl] Load [trans] Ŝargi
+*[idx] 136 [engl] Choose [trans] Elekti
+*[idx] 137 [engl] Up / down [trans] Supren / malsupren
+*[idx] 138 [engl] Players, unlocked cups, scores and settings [trans] Ludantoj, malŝlositaj pokaloj, poentoj kaj agordoj
+*[idx] 139 [engl] Play against penguins [trans] Konkuri kontraŭ pingvenoj
+*[idx] 140 [engl] Penguins [trans] Pingvenoj
+*[idx] 141 [engl] PSP exclusive [trans] nur ĉe PSP
+*[idx] 142 [engl] Place [trans] Loko
+*[idx] 143 [engl] Against penguins [trans] Kontraŭ pingvenoj
+*[idx] 144 [engl] On [trans] Jes
+*[idx] 145 [engl] Off [trans] Ne
+*[idx] 146 [engl] YOUR PSP. YOUR SLOPES. [trans] VIA PSP. VIAJ DEKLIVOJ.
+*[idx] 147 [engl] Brake [trans] Bremsi
+*[idx] 148 [engl] Paddle [trans] Pagaji
+*[idx] 149 [engl] Steer [trans] Stiri
+*[idx] 150 [engl] D-pad [trans] Direktobutonoj
+*[idx] 151 [engl] Analog stick [trans] Analoga stirilo
+*[idx] 152 [engl] Reset [trans] Remeti
+*[idx] 153 [engl] Triangle [trans] Triangulo
+*[idx] 154 [engl] Trick [trans] Artifiko
+*[idx] 155 [engl] Square + steer [trans] Kvadrato + stiri
+*[idx] 156 [engl] Back [trans] Reen
+*[idx] 157 [engl] Circle / menus [trans] Cirklo / menuoj
+*[idx] 158 [engl] Jump [trans] Salto
+*[idx] 159 [engl] Cross / select [trans] Kruco / elekti
+*[idx] 160 [engl] Start: pause / resume [trans] Start: paŭzo / daŭrigi
+*[idx] 161 [engl] Jump: hold, then release Cross [trans] Salto: tenu Krucon, poste liberigu
+*[idx] 162 [engl] START - OPEN MENU [trans] START - MALFERMI MENUON
+*[idx] 163 [engl] START - BACK TO MENU [trans] START - REEN AL MENUO
+*[idx] 164 [engl] PAUSED [trans] PAŬZO
+*[idx] 165 [engl] Resume [trans] Daŭrigi
+*[idx] 166 [engl] Controls [trans] Regiloj
+*[idx] 167 [engl] End race [trans] Fini vetkuron
+*[idx] 168 [engl] Select [trans] Elekti
+*[idx] 169 [engl] Autosave paused: check Saved data [trans] Aŭtomata konservo paŭzas: vidu Konservitajn datumojn
+*[idx] 170 [engl] Confirm [trans] Konfirmi
+*[idx] 171 [engl] END THIS RACE? [trans] ĈU FINI LA VETKURON?
+*[idx] 172 [engl] This run will not count as a finish. [trans] Ĉi tiu malsupreniro ne kalkuliĝos.
+*[idx] 173 [engl] QUIT GAME? [trans] ĈU ELIRI LA LUDON?
+*[idx] 174 [engl] Your saved progress is kept. [trans] Via progreso estas konservita.

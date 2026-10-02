@@ -132,3 +132,69 @@
 *[idx] 108 [engl] 10th [trans] 10º
 
 *[idx] 109 [engl] Unknown [trans] Desconhecido
+
+# PSP menus
+*[idx] 111 [engl] Course [trans] Pista
+*[idx] 112 [engl] Course set [trans] Conjunto de pistas
+*[idx] 113 [engl] Player [trans] Jogador
+*[idx] 114 [engl] Character [trans] Personagem
+*[idx] 115 [engl] Event [trans] Evento
+*[idx] 116 [engl] Cup [trans] Taça
+*[idx] 117 [engl] Name [trans] Nome
+*[idx] 118 [engl] Avatar [trans] Avatar
+*[idx] 119 [engl] Add this player [trans] Adicionar este jogador
+*[idx] 120 [engl] Language [trans] Idioma
+*[idx] 121 [engl] Saved data [trans] Dados guardados
+*[idx] 122 [engl] Save progress [trans] Guardar progresso
+*[idx] 123 [engl] Load progress [trans] Carregar progresso
+*[idx] 124 [engl] Race [trans] Corrida
+*[idx] 125 [engl] Continue [trans] Continuar
+*[idx] 126 [engl] Quit [trans] Sair
+*[idx] 127 [engl] Choose / change [trans] Escolher / alterar
+*[idx] 128 [engl] Save [trans] Guardar
+*[idx] 129 [engl] Cancel [trans] Cancelar
+*[idx] 130 [engl] New player [trans] Novo jogador
+*[idx] 131 [engl] Edit name [trans] Editar nome
+*[idx] 132 [engl] Add [trans] Adicionar
+*[idx] 133 [engl] Next [trans] Seguinte
+*[idx] 134 [engl] Randomize [trans] Aleatório
+*[idx] 135 [engl] Load [trans] Carregar
+*[idx] 136 [engl] Choose [trans] Escolher
+*[idx] 137 [engl] Up / down [trans] Cima / baixo
+*[idx] 138 [engl] Players, unlocked cups, scores and settings [trans] Jogadores, taças desbloqueadas, pontuações e definições
+*[idx] 139 [engl] Play against penguins [trans] Correr contra pinguins
+*[idx] 140 [engl] Penguins [trans] Pinguins
+*[idx] 141 [engl] PSP exclusive [trans] exclusivo PSP
+*[idx] 142 [engl] Place [trans] Lugar
+*[idx] 143 [engl] Against penguins [trans] Contra pinguins
+*[idx] 144 [engl] On [trans] Sim
+*[idx] 145 [engl] Off [trans] Não
+*[idx] 146 [engl] YOUR PSP. YOUR SLOPES. [trans] A TUA PSP. AS TUAS PISTAS.
+*[idx] 147 [engl] Brake [trans] Travar
+*[idx] 148 [engl] Paddle [trans] Remar
+*[idx] 149 [engl] Steer [trans] Virar
+*[idx] 150 [engl] D-pad [trans] Botões direcionais
+*[idx] 151 [engl] Analog stick [trans] Manípulo analógico
+*[idx] 152 [engl] Reset [trans] Recolocar
+*[idx] 153 [engl] Triangle [trans] Triângulo
+*[idx] 154 [engl] Trick [trans] Truque
+*[idx] 155 [engl] Square + steer [trans] Quadrado + virar
+*[idx] 156 [engl] Back [trans] Voltar
+*[idx] 157 [engl] Circle / menus [trans] Círculo / menus
+*[idx] 158 [engl] Jump [trans] Salto
+*[idx] 159 [engl] Cross / select [trans] Cruz / escolher
+*[idx] 160 [engl] Start: pause / resume [trans] Start: pausa / continuar
+*[idx] 161 [engl] Jump: hold, then release Cross [trans] Salto: manter Cruz e soltar
+*[idx] 162 [engl] START - OPEN MENU [trans] START - ABRIR MENU
+*[idx] 163 [engl] START - BACK TO MENU [trans] START - VOLTAR AO MENU
+*[idx] 164 [engl] PAUSED [trans] PAUSA
+*[idx] 165 [engl] Resume [trans] Continuar
+*[idx] 166 [engl] Controls [trans] Comandos
+*[idx] 167 [engl] End race [trans] Terminar corrida
+*[idx] 168 [engl] Select [trans] Escolher
+*[idx] 169 [engl] Autosave paused: check Saved data [trans] Gravação automática em pausa: ver Dados gravados
+*[idx] 170 [engl] Confirm [trans] Confirmar
+*[idx] 171 [engl] END THIS RACE? [trans] TERMINAR A CORRIDA?
+*[idx] 172 [engl] This run will not count as a finish. [trans] Esta descida não contará como chegada.
+*[idx] 173 [engl] QUIT GAME? [trans] SAIR DO JOGO?
+*[idx] 174 [engl] Your saved progress is kept. [trans] O teu progresso fica guardado.

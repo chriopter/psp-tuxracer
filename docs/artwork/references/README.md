@@ -15,9 +15,11 @@ Downloaded 2026-09-17 for the user-requested PSP-1004 control-guide revision.
   reference for original-generation hardware; the source labels this a North
   American PSP-1000, not specifically the European PSP-1004.
 
-The generated revision `../psp-guide-1004-source.png` and its runtime version
-`ports/extremetuxracer/data/textures/psp-guide.png` use these photographs as
-references and are distributed under CC BY-SA 2.5. Changes: generated front-on
-reconstruction, winter background, empty display, runtime resizing. No claim
-of endorsement by the photographers or Sony. The gameplay screen is a separate,
-unaltered screenshot and retains the game's existing artwork licenses.
+The runtime guide `ports/extremetuxracer/data/textures/psp-guide.png` is,
+since 2026-10-01, Evan-Amos's public-domain photograph itself with a capture
+of the game set into its screen (`tools/make-psp-guide.py`); it carries no
+further restriction. Stefano Palazzo's photograph is no longer used in any
+shipped file and stays here as the reference it was. The superseded generated
+revision `../psp-guide-1004-source.png` used both photographs as references
+and remains under CC BY-SA 2.5. No claim of endorsement by the photographers
+or Sony.

@@ -33,93 +33,66 @@ GNU General Public License for more details.
 #include "regist.h"
 #include "winsys.h"
 #include "spx.h"
+#include "psp_ui.h"
 #include "savedata.hpp"
 
 CNewPlayer NewPlayer;
 
-static TUpDown* avatar;
-static TWidget* textbuttons[2];
-static TTextField* textfield;
+// PSP: three rows. Cross on the name opens the console's own keyboard,
+// left and right on the avatar row turn through the pictures, Cross on the
+// last row adds the player. Circle leaves without adding one.
+enum { ROW_NAME, ROW_AVATAR, ROW_ADD, ROW_COUNT };
+static int cursor_row = ROW_NAME;
+static int sel_avatar = 0;
+static std::string new_name;
+
+static int wrap(int value, int count) {
+	return count > 0 ? (value % count + count) % count : 0;
+}
 
 void QuitAndAddPlayer() {
-	if (textfield->Text().getSize() > 0)
-		Players.AddPlayer(textfield->Text(), Players.GetDirectAvatarName(avatar->GetValue()));
+	if (!new_name.empty())
+		Players.AddPlayer(new_name, Players.GetDirectAvatarName(sel_avatar));
 	State::manager.RequestEnterState(Regist);
 }
 
 void CNewPlayer::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 	if (release) return;
-
-	KeyGUI(key, release);
+	const int step = PspUI::ListKey(key, cursor_row, ROW_COUNT);
+	if (step) {
+		if (cursor_row == ROW_AVATAR) sel_avatar = wrap(sel_avatar + step, (int)Players.numAvatars());
+		return;
+	}
 	switch (key) {
 		case sf::Keyboard::Escape:
 			State::manager.RequestEnterState(Regist);
 			break;
 		case sf::Keyboard::Return:
-			if (textfield->focussed()) {
-				std::string name = textfield->Text();
-				if (PspSave::EditPlayerName(name)) textfield->SetText(name);
-				break;
-			}
-			if (textbuttons[0]->focussed()) State::manager.RequestEnterState(Regist);
-			else QuitAndAddPlayer();
+			if (cursor_row == ROW_NAME) {
+				std::string name = new_name;
+				if (PspSave::EditPlayerName(name)) new_name = name;
+			} else if (cursor_row == ROW_ADD) QuitAndAddPlayer();
+			else cursor_row = ROW_ADD;
 			break;
 		default:
 			break;
 	}
 }
 
-void CNewPlayer::TextEntered(char text) {
-	TextEnterGUI(text);
-}
-
-void CNewPlayer::Mouse(int button, int state, int x, int y) {
-	if (state == 1) {
-		TWidget* clicked = ClickGUI(x, y);
-
-		if (clicked == textbuttons[0])
-			State::manager.RequestEnterState(Regist);
-		else if (clicked == textbuttons[1])
-			QuitAndAddPlayer();
-	}
-}
-
-void CNewPlayer::Motion(int x, int y) {
-	MouseMoveGUI(x, y);
-
-	if (param.ui_snow) push_ui_snow(cursor_pos);
-}
-
-static int prevleft, prevtop, prevwidth;
+void CNewPlayer::TextEntered(char text) {}
+void CNewPlayer::Mouse(int button, int state, int x, int y) {}
+void CNewPlayer::Motion(int x, int y) {}
 
 void CNewPlayer::Enter() {
-	Winsys.ShowCursor(!param.ice_cursor);
+	Winsys.ShowCursor(false);
 	Music.Play(param.menu_music, true);
-
-	int framewidth = 400 * Winsys.scale;
-	int frameheight = 50 * Winsys.scale;
-	int frametop = AutoYPosN(38);
-	TArea area = AutoAreaN(30, 80, framewidth);
-	int prevoffs = 80;
-	prevleft = area.left + prevoffs;
-	prevtop = AutoYPosN(52);
-	prevwidth = 75 * Winsys.scale;
-
 	ResetGUI();
-
-	avatar = AddUpDown(area.left + prevwidth + prevoffs + 8, prevtop, 0, (int)Players.numAvatars() - 1, 0, prevwidth - 34);
-	int siz = FT.AutoSizeN(5);
-	textbuttons[0] = AddTextButton(Trans.Text(8), area.left+50, AutoYPosN(70), siz);
-	float len = FT.GetTextWidth(Trans.Text(15));
-	textbuttons[1] = AddTextButton(Trans.Text(15), area.right-len-50, AutoYPosN(70), siz);
-
-	textfield = AddTextField("Player " + Int_StrN(Players.numPlayers()+1), area.left, frametop, framewidth, frameheight);
-	SetFocus(textfield);
+	cursor_row = ROW_NAME;
+	sel_avatar = wrap(sel_avatar, (int)Players.numAvatars());
+	new_name = "Player " + Int_StrN(Players.numPlayers()+1);
 }
 
 void CNewPlayer::Loop(float time_step) {
-	sf::Color col;
-
 	ScopedRenderMode rm(GUI);
 	Winsys.clear();
 
@@ -128,19 +101,20 @@ void CNewPlayer::Loop(float time_step) {
 		draw_ui_snow();
 	}
 
-	textfield->UpdateCursor(time_step);
-
 	DrawGUIBackground(Winsys.scale);
 
-	FT.SetColor(colWhite);
-	FT.AutoSizeN(4);
-	FT.DrawString(CENTER, AutoYPosN(30), "Select the name field and press Cross to edit");
+	std::vector<PspUI::Row> rows(ROW_COUNT);
+	rows[ROW_NAME] = {Trans.Text(TXT_NAME), new_name, false};
+	rows[ROW_AVATAR] = {Trans.Text(TXT_AVATAR), Int_StrN(sel_avatar + 1) + " / " + Int_StrN((int)Players.numAvatars()), true};
+	rows[ROW_ADD] = {Trans.Text(TXT_ADD_PLAYER), "", false};
+	PspUI::OptionList(40, 140, 440, rows, cursor_row);
 
-	if (avatar->focussed()) col = colDYell;
-	else col = colWhite;
-	Players.GetAvatarTexture(avatar->GetValue())->DrawFrame(
-	    prevleft, prevtop, prevwidth, prevwidth, 2, col);
+	if (TTexture* picture = Players.GetAvatarTexture(sel_avatar)) picture->DrawFrame(560, 142, 150, 150, 3,
+	    cursor_row == ROW_AVATAR ? colDYell : colWhite);
 
-	DrawGUI();
+	PspUI::Hint(44, 432, PspUI::Cross, cursor_row == ROW_NAME ? Trans.Text(TXT_EDIT_NAME) : cursor_row == ROW_ADD ? Trans.Text(TXT_ADD) : Trans.Text(TXT_NEXT));
+	PspUI::Hint(320, 432, PspUI::Circle, Trans.Text(8));
+	PspUI::Hint(560, 432, PspUI::Dpad, Trans.Text(TXT_CHOOSE_CHANGE));
+
 	Winsys.SwapBuffers();
 }

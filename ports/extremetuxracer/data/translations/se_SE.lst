@@ -130,3 +130,69 @@
 *[idx] 108 [engl] 10th [trans] 10.
 
 *[idx] 109 [engl] Unknown [trans] Okänd
+
+# PSP menus
+*[idx] 111 [engl] Course [trans] Bana
+*[idx] 112 [engl] Course set [trans] Banuppsättning
+*[idx] 113 [engl] Player [trans] Spelare
+*[idx] 114 [engl] Character [trans] Figur
+*[idx] 115 [engl] Event [trans] Evenemang
+*[idx] 116 [engl] Cup [trans] Cup
+*[idx] 117 [engl] Name [trans] Namn
+*[idx] 118 [engl] Avatar [trans] Avatar
+*[idx] 119 [engl] Add this player [trans] Lägg till den här spelaren
+*[idx] 120 [engl] Language [trans] Språk
+*[idx] 121 [engl] Saved data [trans] Sparad data
+*[idx] 122 [engl] Save progress [trans] Spara framsteg
+*[idx] 123 [engl] Load progress [trans] Ladda framsteg
+*[idx] 124 [engl] Race [trans] Lopp
+*[idx] 125 [engl] Continue [trans] Fortsätt
+*[idx] 126 [engl] Quit [trans] Avsluta
+*[idx] 127 [engl] Choose / change [trans] Välj / ändra
+*[idx] 128 [engl] Save [trans] Spara
+*[idx] 129 [engl] Cancel [trans] Avbryt
+*[idx] 130 [engl] New player [trans] Ny spelare
+*[idx] 131 [engl] Edit name [trans] Ändra namn
+*[idx] 132 [engl] Add [trans] Lägg till
+*[idx] 133 [engl] Next [trans] Nästa
+*[idx] 134 [engl] Randomize [trans] Slumpa
+*[idx] 135 [engl] Load [trans] Ladda
+*[idx] 136 [engl] Choose [trans] Välj
+*[idx] 137 [engl] Up / down [trans] Upp / ner
+*[idx] 138 [engl] Players, unlocked cups, scores and settings [trans] Spelare, upplåsta cuper, resultat och inställningar
+*[idx] 139 [engl] Play against penguins [trans] Tävla mot pingviner
+*[idx] 140 [engl] Penguins [trans] Pingviner
+*[idx] 141 [engl] PSP exclusive [trans] endast på PSP
+*[idx] 142 [engl] Place [trans] Plats
+*[idx] 143 [engl] Against penguins [trans] Mot pingviner
+*[idx] 144 [engl] On [trans] På
+*[idx] 145 [engl] Off [trans] Av
+*[idx] 146 [engl] YOUR PSP. YOUR SLOPES. [trans] DIN PSP. DINA BACKAR.
+*[idx] 147 [engl] Brake [trans] Bromsa
+*[idx] 148 [engl] Paddle [trans] Paddla
+*[idx] 149 [engl] Steer [trans] Styr
+*[idx] 150 [engl] D-pad [trans] Riktningsknappar
+*[idx] 151 [engl] Analog stick [trans] Analog spak
+*[idx] 152 [engl] Reset [trans] Återställ
+*[idx] 153 [engl] Triangle [trans] Triangel
+*[idx] 154 [engl] Trick [trans] Trick
+*[idx] 155 [engl] Square + steer [trans] Fyrkant + styr
+*[idx] 156 [engl] Back [trans] Tillbaka
+*[idx] 157 [engl] Circle / menus [trans] Cirkel / menyer
+*[idx] 158 [engl] Jump [trans] Hopp
+*[idx] 159 [engl] Cross / select [trans] Kryss / välj
+*[idx] 160 [engl] Start: pause / resume [trans] Start: paus / fortsätt
+*[idx] 161 [engl] Jump: hold, then release Cross [trans] Hopp: håll in Kryss och släpp
+*[idx] 162 [engl] START - OPEN MENU [trans] START - ÖPPNA MENYN
+*[idx] 163 [engl] START - BACK TO MENU [trans] START - TILLBAKA TILL MENYN
+*[idx] 164 [engl] PAUSED [trans] PAUS
+*[idx] 165 [engl] Resume [trans] Fortsätt
+*[idx] 166 [engl] Controls [trans] Kontroller
+*[idx] 167 [engl] End race [trans] Avsluta loppet
+*[idx] 168 [engl] Select [trans] Välj
+*[idx] 169 [engl] Autosave paused: check Saved data [trans] Autosparning pausad: se Sparade data
+*[idx] 170 [engl] Confirm [trans] Bekräfta
+*[idx] 171 [engl] END THIS RACE? [trans] AVSLUTA LOPPET?
+*[idx] 172 [engl] This run will not count as a finish. [trans] Det här åket räknas inte som målgång.
+*[idx] 173 [engl] QUIT GAME? [trans] AVSLUTA SPELET?
+*[idx] 174 [engl] Your saved progress is kept. [trans] Dina framsteg sparas.

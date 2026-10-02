@@ -31,71 +31,53 @@ GNU General Public License for more details.
 #include "translation.h"
 #include "event.h"
 #include "game_type_select.h"
+#include "opponents.h"
+#include "psp_ui.h"
 #include "winsys.h"
 
 CEventSelect EventSelect;
 
-static TUpDown* event;
-static TUpDown* cup;
-static TWidget* textbuttons[2];
-static TLabel* selectEvent;
-static TLabel* selectCup;
-static TFramedText* selectedEvent;
-static TFramedText* selectedCup;
-static TLabel* cupLocked;
+// PSP: two rows, the event and the cup in it. Up and down choose the row,
+// left and right change it, Cross enters the cup if it is unlocked.
+enum { ROW_EVENT, ROW_CUP, ROW_VERSUS, ROW_PENGUINS, ROW_COUNT };
+static int cursor_row = ROW_EVENT;
+static int sel_event = 0, sel_cup = 0;
+
+static int wrap(int value, int count) {
+	return count > 0 ? (value % count + count) % count : 0;
+}
 
 void EnterEvent() {
 	g_game.game_type = CUPRACING;
-	g_game.cup = Events.EventList[event->GetValue()].cups[cup->GetValue()];
+	g_game.cup = Events.EventList[sel_event].cups[sel_cup];
 	State::manager.RequestEnterState(Event);
 }
 
 void CEventSelect::Keyb(sf::Keyboard::Key key, bool release, int x, int y) {
 	if (release) return;
-	switch (key) {
-		case sf::Keyboard::Escape:
-			State::manager.RequestEnterState(GameTypeSelect);
-			break;
-		case sf::Keyboard::Q:
-			State::manager.RequestQuit();
-			break;
-		case sf::Keyboard::Return:
-			if (textbuttons[1]->focussed()) State::manager.RequestEnterState(GameTypeSelect);
-			else if (Events.IsUnlocked(event->GetValue(), cup->GetValue())) EnterEvent();
-			break;
-		case sf::Keyboard::U:
-			param.ui_snow = !param.ui_snow;
-			break;
-		default:
-			KeyGUI(key, release);
+	const int step = PspUI::ListKey(key, cursor_row, ROW_COUNT);
+	if (step) {
+		if (cursor_row == ROW_EVENT) {
+			sel_event = wrap(sel_event + step, (int)Events.EventList.size());
+			sel_cup = 0;
+		} else if (cursor_row == ROW_CUP) sel_cup = wrap(sel_cup + step, (int)Events.EventList[sel_event].cups.size());
+		else if (cursor_row == ROW_VERSUS) Opponents::enabled = !Opponents::enabled;
+		else if (Opponents::enabled) Opponents::count = 1 + wrap(Opponents::count - 1 + step, Opponents::MAX);
+		return;
 	}
+	if (key == sf::Keyboard::Escape)
+		State::manager.RequestEnterState(GameTypeSelect);
+	else if (key == sf::Keyboard::Return && cursor_row == ROW_VERSUS)
+		Opponents::enabled = !Opponents::enabled;
+	else if (key == sf::Keyboard::Return && Events.IsUnlocked(sel_event, sel_cup))
+		EnterEvent();
 }
 
-void CEventSelect::Mouse(int button, int state, int x, int y) {
-	if (state == 1) {
-		TWidget* clicked = ClickGUI(x, y);
-		if (textbuttons[0] == clicked) {
-			if (Events.IsUnlocked(event->GetValue(), cup->GetValue()))
-				EnterEvent();
-		} else if (textbuttons[1] == clicked)
-			State::manager.RequestEnterState(GameTypeSelect);
-	}
-}
-
-void CEventSelect::Motion(int x, int y) {
-	MouseMoveGUI(x, y);
-
-	if (param.ui_snow) push_ui_snow(cursor_pos);
-}
+void CEventSelect::Mouse(int button, int state, int x, int y) {}
+void CEventSelect::Motion(int x, int y) {}
 
 void CEventSelect::Enter() {
-	Winsys.ShowCursor(!param.ice_cursor);
-
-	int framewidth = 500 * Winsys.scale;
-	int frameheight = 50 * Winsys.scale;
-	TArea area = AutoAreaN(30, 80, framewidth);
-	int frametop1 = AutoYPosN(35);
-	int frametop2 = AutoYPosN(50);
+	Winsys.ShowCursor(false);
 
 	/* FIXME: We should support events that use course group other than "default",
 	 *        or what ever is set when we enter the event, but currently we won't.
@@ -106,24 +88,9 @@ void CEventSelect::Enter() {
 	g_game.course = nullptr;
 
 	ResetGUI();
-	event = AddUpDown(area.right+8, frametop1, 0, (int)Events.EventList.size() - 1, 0);
-	cup = AddUpDown(area.right + 8, frametop2, 0, (int)Events.EventList[0].cups.size() - 1, 0);
-
-	unsigned int siz = FT.AutoSizeN(5);
-
-	float len = FT.GetTextWidth(Trans.Text(9));
-	textbuttons[0] = AddTextButton(Trans.Text(9), area.right-len-50, AutoYPosN(70), siz);
-	textbuttons[1] = AddTextButton(Trans.Text(8), area.left+50, AutoYPosN(70), siz);
-	SetFocus(textbuttons[0]);
-
-	FT.AutoSizeN(3);
-	selectEvent = AddLabel(Trans.Text(6), area.left, AutoYPosN(30), colWhite);
-	selectCup = AddLabel(Trans.Text(7), area.left, AutoYPosN(45), colWhite);
-	cupLocked = AddLabel(Trans.Text(10), CENTER, AutoYPosN(58), colLGrey);
-
-	FT.AutoSizeN(4);
-	selectedEvent = AddFramedText(area.left, frametop1, framewidth, frameheight, 3, colMBackgr, "", FT.GetSize(), true);
-	selectedCup = AddFramedText(area.left, frametop2, framewidth, frameheight, 3, colMBackgr, "", FT.GetSize(), true);
+	cursor_row = ROW_EVENT;
+	sel_event = wrap(sel_event, (int)Events.EventList.size());
+	sel_cup = wrap(sel_cup, (int)Events.EventList[sel_event].cups.size());
 
 	Events.MakeUnlockList(g_game.player->funlocked);
 	Music.Play(param.menu_music, true);
@@ -140,17 +107,23 @@ void CEventSelect::Loop(float time_step) {
 
 	DrawGUIBackground(Winsys.scale);
 
-	cupLocked->SetVisible(Events.IsUnlocked(event->GetValue(), cup->GetValue()) == false);
+	const bool unlocked = Events.IsUnlocked(sel_event, sel_cup);
+	std::vector<PspUI::Row> rows(ROW_COUNT);
+	rows[ROW_EVENT] = {Trans.Text(TXT_EVENT), Events.EventList[sel_event].name, Events.EventList.size() > 1};
+	rows[ROW_CUP] = {Trans.Text(TXT_CUP), Events.GetCupTrivialName(sel_event, sel_cup), Events.EventList[sel_event].cups.size() > 1};
+	rows[ROW_VERSUS] = {Trans.Text(TXT_VS_PENGUINS), Trans.Text(Opponents::enabled ? TXT_ON : TXT_OFF), true};
+	rows[ROW_PENGUINS] = {Trans.Text(TXT_PENGUINS), Opponents::enabled ? sf::String(Int_StrN(Opponents::count)) : sf::String("-"), Opponents::enabled};
+	PspUI::OptionList(127, 130, 600, rows, cursor_row);
 
-	selectedEvent->Focussed(event->focussed());
-	selectedEvent->SetString(Events.EventList[event->GetValue()].name);
+	if (!unlocked) {
+		FT.SetSize(24);
+		FT.SetColor(colLGrey);
+		FT.DrawString(CENTER, 130 + ROW_COUNT * PspUI::RowHeight + 12, Trans.Text(10));
+	}
 
-	selectedCup->SetActive(Events.IsUnlocked(event->GetValue(), cup->GetValue()));
-	selectedCup->Focussed(cup->focussed());
-	selectedCup->SetString(Events.GetCupTrivialName(event->GetValue(), cup->GetValue()));
-
-	textbuttons[0]->SetActive(Events.IsUnlocked(event->GetValue(), cup->GetValue()));
-	DrawGUI();
+	if (unlocked) PspUI::Hint(44, 432, PspUI::Cross, Trans.Text(TXT_CONTINUE));
+	PspUI::Hint(320, 432, PspUI::Circle, Trans.Text(8));
+	PspUI::Hint(560, 432, PspUI::Dpad, Trans.Text(TXT_CHOOSE_CHANGE));
 
 	Winsys.SwapBuffers();
 }
