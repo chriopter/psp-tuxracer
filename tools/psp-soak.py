@@ -135,7 +135,8 @@ def run_race(frames, course, cond, finish):
                'heap': result['heap_peak_bytes'], 'free_user': result['min_free_user_bytes'], 'cpu_mhz': result['cpu_mhz']}
     if finish:
         record['reached_finish'] = measured['frames'] < frames - 10
-        if not (GAME / 'config/race-log.txt').exists():
+        # The race log is the penguins' (src/opponents.cpp): none without them.
+        if cond[4] and not (GAME / 'config/race-log.txt').exists():
             return record | {'ok': False, 'reason': 'no race log from the self-driven race'}
     elif measured['frames'] < frames - 5:
         return record | {'ok': False, 'reason': f"only {measured['frames']} of {frames} frames"}
