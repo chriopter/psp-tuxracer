@@ -21,8 +21,11 @@ GNU General Public License for more details.
 #include <etr_config.h>
 #endif
 
+void InvalidateObjectIndex();
+#include "psp_buffers.h"
 #include "bh.h"
 #include "course.h"
+#include <fstream>
 #include "textures.h"
 #include "ogl.h"
 #include "audio.h"
@@ -247,8 +250,10 @@ void CCourse::MakeCourseNormals() {
 // --------------------------------------------------------------------
 
 void CCourse::FillGlArrays() {
-	if (vnc_array == nullptr)
-		vnc_array = new GLubyte[STRIDE_GL_ARRAY * nx * ny];
+	if (vnc_array == nullptr) {
+		vnc_array = PspTerrainArrayAlloc((long)STRIDE_GL_ARRAY * nx * ny);
+		if (vnc_array == nullptr) vnc_array = new GLubyte[STRIDE_GL_ARRAY * nx * ny];
+	}
 
 	for (unsigned int x = 0; x < nx; x++) {
 		for (unsigned int y = 0; y < ny; y++) {
@@ -268,6 +273,7 @@ void CCourse::FillGlArrays() {
 			BYTEVAL(3) = 255;
 		}
 	}
+	PspTerrainArrayFilled(vnc_array, (long)STRIDE_GL_ARRAY * nx * ny);
 }
 
 void CCourse::MakeStandardPolyhedrons() {
@@ -641,6 +647,21 @@ bool CCourseList::Load(const std::string& dir) {
 
 	CSPList paramlist;
 
+	// PSP: staging gathers every course.dim of the group into one file --
+	// "@" and the course's directory, then its lines. Forty directories
+	// looked up and forty files opened on a Memory Stick were a second and
+	// a half of every start. Without the file, each is read as before.
+	std::unordered_map<std::string, std::vector<std::string>> gathered;
+	{
+		std::ifstream all(dir + SEP "course-dims.lst");
+		std::string line, current;
+		while (std::getline(all, line)) {
+			if (line.empty()) continue;
+			if (line[0] == '@') current = line.substr(1);
+			else if (!current.empty()) gathered[current].push_back(line);
+		}
+	}
+
 	courses.resize(list.size());
 	std::size_t i = 0;
 	for (CSPList::const_iterator line1 = list.cbegin(); line1 != list.cend(); ++line1, i++) {
@@ -648,19 +669,22 @@ bool CCourseList::Load(const std::string& dir) {
 		courses[i].dir = SPStrN(*line1, "dir", "nodir");
 
 		std::string coursepath = MakePathStr(dir, courses[i].dir);
-		if (DirExists(coursepath.c_str())) {
+		const auto known = gathered.find(courses[i].dir);
+		if (known != gathered.end() || DirExists(coursepath.c_str())) {
 			// preview
-			std::string previewfile = coursepath + SEP "preview.png";
-			courses[i].preview = new TTexture();
-			if (!courses[i].preview->Load(previewfile, false)) {
-				Message("couldn't load previewfile");
-			}
+			courses[i].preview = nullptr;
+			courses[i].preview_file = coursepath + SEP "preview.png";
 
 			// params
-			std::string paramfile = coursepath + SEP "course.dim";
-			if (!paramlist.Load(paramfile)) {
-				Message("could not load course.dim");
+			if (known != gathered.end()) {
+				for (const std::string& line : known->second) paramlist.Add(line);
+			} else {
+				std::string paramfile = coursepath + SEP "course.dim";
+				if (!paramlist.Load(paramfile)) {
+					Message("could not load course.dim");
+				}
 			}
+			if (paramlist.empty()) continue;
 
 			const std::string& line2 = paramlist.front();
 			courses[i].author = SPStrN(line2, "author", Trans.Text(109));
@@ -686,9 +710,7 @@ bool CCourseList::Load(const std::string& dir) {
 }
 
 void CCourseList::Free() {
-	for (std::size_t i = 0; i < courses.size(); i++) {
-		delete courses[i].preview;
-	}
+	Course.FreePreviews();
 	courses.clear();
 }
 
@@ -726,7 +748,7 @@ CCourseList* CCourse::getGroup(std::size_t index) {
 
 void CCourse::ResetCourse() {
 	Fields.clear();
-	delete[] vnc_array;
+	if (!PspTerrainArrayFree(vnc_array)) delete[] vnc_array;
 	vnc_array = nullptr;
 
 	FreeTerrainTextures();
@@ -736,7 +758,38 @@ void CCourse::ResetCourse() {
 	mirrored = false;
 }
 
+static std::vector<TCourse*> shown_previews;
+
+TTexture* CCourse::Preview(TCourse& course) {
+	if (course.preview || course.preview_missing || course.preview_file.empty()) return course.preview;
+	if (shown_previews.size() >= 6) {           // the oldest makes room
+		delete shown_previews.front()->preview;
+		shown_previews.front()->preview = nullptr;
+		shown_previews.erase(shown_previews.begin());
+	}
+	course.preview = new TTexture();
+	if (!course.preview->Load(course.preview_file, false)) {
+		Message("couldn't load previewfile");
+		delete course.preview;
+		course.preview = nullptr;
+		course.preview_missing = true;
+		return nullptr;
+	}
+	shown_previews.push_back(&course);
+	return course.preview;
+}
+
+void CCourse::FreePreviews() {
+	for (TCourse* course : shown_previews) {
+		delete course->preview;
+		course->preview = nullptr;
+	}
+	shown_previews.clear();
+}
+
+void PspTraceStep(const char *what);
 bool CCourse::LoadCourse(TCourse* course) {
+	FreePreviews();
 	if (course != curr_course || g_game.force_treemap) {
 		ResetCourse();
 		curr_course = course;
@@ -749,20 +802,24 @@ bool CCourse::LoadCourse(TCourse* course) {
 		g_game.use_keyframe = course->use_keyframe;
 		g_game.finish_brake = course->finish_brake;
 
+		PspTraceStep("course: elev map");
 		if (!LoadElevMap()) {
 			Message("could not load course elev map");
 			return false;
 		}
 
+		PspTraceStep("course: normals");
 		MakeCourseNormals();
+		PspTraceStep("course: gl arrays");
 		FillGlArrays();
+		PspTraceStep("course: terrain map");
 
 		if (!LoadTerrainMap()) {
 			Message("could not load course terrain map");
 			return false;
 		}
 
-		// ................................................................
+		PspTraceStep("course: items");
 		std::string itemfile = CourseDir + SEP "items.lst";
 		bool itemsexists = FileExists(itemfile);
 		const CControl *ctrl = g_game.player->ctrl;
@@ -774,7 +831,9 @@ bool CCourse::LoadCourse(TCourse* course) {
 		g_game.force_treemap = false;
 		// ................................................................
 
+		PspTraceStep("course: quadtree");
 		init_track_marks();
+	InvalidateObjectIndex();
 		InitQuadtree(
 		    &Fields[0], nx, ny,
 		    curr_course->size.x / (nx - 1.0),
@@ -783,6 +842,7 @@ bool CCourse::LoadCourse(TCourse* course) {
 		    param.course_detail_level);
 	}
 
+	PspTraceStep("course: loaded");
 	if (g_game.mirrorred != mirrored) {
 		MirrorCourse();
 		mirrored = g_game.mirrorred;
@@ -842,6 +902,7 @@ void CCourse::MirrorCourseData() {
 void CCourse::MirrorCourse() {
 	MirrorCourseData();
 	init_track_marks();
+	InvalidateObjectIndex();
 }
 
 // ********************************************************************

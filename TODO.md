@@ -1,27 +1,33 @@
 # Remaining work
 
-## Hardware performance
+State after the hardware round of 2026-10-01/02; measurements and method are
+in [hardware validation](docs/psp-hardware-validation.md).
 
-- [ ] Run longer, repeatable physical-PSP benchmarks on multiple courses with music enabled.
-- [ ] Record frame-time distributions and investigate frames exceeding the 16.7 ms budget, rather than relying on average FPS alone.
-- [ ] Measure the CPU and memory cost of snow-track history as a race progresses, including the full track-buffer case.
-- [ ] Profile terrain preparation, track rendering, texture access and GPU synchronization before selecting further optimizations.
-- [ ] Compare equivalent routes and elapsed gameplay time when evaluating performance changes.
+## Stability
 
-## Visual and functional validation
+- [ ] One unexplained freeze of the console in the soak (test 583); not
+      reproduced in five repeats. `config/trace` keeps the log unbuffered
+      for the next one.
+- [ ] Finish the 1020-test soak and record the final count.
 
-- [ ] Preserve the current terrain texture detail, view distance and classic snow trench during optimization.
-- [ ] Compare screenshots and moving gameplay on physical hardware; reject changes that introduce terrain artifacts or reduce visible detail.
-- [ ] Repeat multi-course and endurance checks with the final renderer, including pause/help, restart, course changes and native saves.
-- [ ] Document tested hardware and settings, frame-time results and remaining limitations for each release.
+## Performance
 
-## Current baseline
+- [ ] Heavy snow at 60 FPS. It is at about 42 on Bunny Hill; the flakes'
+      update and the two curtains' fill are what is left.
+- [ ] The sky's side faces in video memory. Only the front face fits beside
+      the terrain and the trees; a turn brings the others, read from ordinary
+      memory, into the picture.
+- [ ] Courses with long views over ice (Tux at Home, Path of Daggers) with
+      penguins and wind: 57–58 FPS, GE-bound.
 
-The short Bunny Hill hardware test with snow tracks measured 53.103 FPS over
-598 frame intervals at 333 MHz, with music enabled, forward distance 60 and
-course detail 20. The p95 frame interval was 33.374 ms. Longer manual play
-showed lower instantaneous frame rates. Stable 60 FPS on physical hardware
-has not been established.
+## Computer penguins
 
-See [hardware validation](docs/psp-hardware-validation.md) for measurements
-and the distinction between accepted rendering and rejected visual tradeoffs.
+- [ ] They follow the ground: no jumps, no flight over a drop.
+- [ ] They do not collect herring or leave tracks in the snow.
+- [ ] A cup takes no notice of the place among them; it is shown only.
+
+## Not yet tested on hardware
+
+- [ ] Saving with a full or missing Memory Stick.
+- [ ] Suspend and resume during a race.
+- [ ] PSP-2000, PSP-3000 and PSP Go.

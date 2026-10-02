@@ -43,6 +43,12 @@ clip_result_t clip_aabb_to_view_frustum(const TVector3d& min, const TVector3d& m
 
 const TPlane& get_far_clip_plane();
 const TPlane* get_view_clip_planes();
+// The same near and far planes, with the four side planes opened to
+// GUARD_BAND times the view's tangent. The GE cuts at the screen edge by
+// itself as long as a projected vertex stays inside its coordinate range,
+// so geometry needs clipping on the CPU only where it leaves this wider
+// frustum -- or crosses the near or far plane.
+const TPlane* get_guard_clip_planes();
 const TPlane& get_left_clip_plane();
 const TPlane& get_right_clip_plane();
 const TPlane& get_bottom_clip_plane();

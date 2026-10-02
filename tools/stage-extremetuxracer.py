@@ -39,6 +39,35 @@ for front in (target/'data/env').rglob('front.png'):
     back=front.parent/'back.png'
     if not (source/'data'/back.relative_to(target/'data')).exists():
         subprocess.run(convert+[str(front),'-flop',str(back)],check=True)
+# The three snow-curtain pictures are 512x512 and stand some 60 pixels wide
+# on the PSP's screen; the GE reads a texture that much larger than its
+# picture very slowly. 128x128 is still larger than they are shown. The game
+# drew every curtain twice a frame and now draws it once: alpha' =
+# 1-(1-alpha)^2 is what the two passes came to, so the look stays.
+for name in ('snow1.png', 'snow2.png', 'snow3.png'):
+    f=target/'data/textures'/name
+    if f.exists():
+        subprocess.run(convert+[str(source/'data/textures'/name),'-filter','Lanczos','-resize','128x128!',
+                                '-channel','A','-fx','1-(1-u)*(1-u)','+channel',str(f)],check=True)
+# The game's sounds as the PSP's mixer plays them, 22050 Hz: read as they
+# are, in half the bytes, instead of being resampled from 44100 Hz at every
+# start.
+for p in (target/'data/sounds').glob('*.wav'):
+    subprocess.run(['ffmpeg','-v','error','-y','-i',str(source/'data/sounds'/p.name),'-ar','22050','-ac','2','-c:a','pcm_s16le',str(p)],check=True)
+# Every course.dim of a group in one file, as CCourseList::Load reads it:
+# "@" and the directory, then the lines as the game's list reader joins them
+# (a line that does not begin with "*" continues the one before).
+for group in (target/'data/courses').iterdir():
+    if not (group/'courses.lst').exists(): continue
+    out=[]
+    for dim in sorted(group.glob('*/course.dim')):
+        entries=[]
+        for line in dim.read_text(encoding='utf-8',errors='surrogateescape').splitlines():
+            if not line or line.startswith('#'): continue
+            if line.startswith('*') or not entries: entries.append(line)
+            else: entries[-1]+=line
+        if entries: out+=['@'+dim.parent.name]+entries
+    (group/'course-dims.lst').write_text('\n'.join(out)+'\n',encoding='utf-8',errors='surrogateescape')
 for p in (target/'data/music').glob('*.ogg'):
     subprocess.run(['ffmpeg','-v','error','-y','-i',str(p),'-ar','22050','-ac','1',str(p.with_suffix('.wav'))],check=True)
     p.unlink()

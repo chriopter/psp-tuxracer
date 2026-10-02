@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // PSP platform layer for the official Extreme Tux Racer PC sources.
 #define GL_GLEXT_PROTOTYPES
+#include "psp_profile.h"
+#include <pspdisplay.h>
+#include <algorithm>
+#include <cstdlib>
+#include "opponents.h"
 #include "course.h"
 #include <cerrno>
 #include "savedata.hpp"
@@ -45,6 +50,8 @@ static bool gui = false;
 bool PspIsRunning() { return running; }
 static unsigned benchmark = 0, benchframe = 0, benchstateframe = 0;
 static std::string benchcourse = "frozen_river";
+static int bench_conditions[5] = {0, 0, 0, 0, 0};
+bool PspBenchmarkActive() { return benchmark != 0; }
 static State *benchstate = nullptr;
 static bool benchmark_recording = false;
 static std::vector<unsigned> benchmark_times, benchmark_steering;
@@ -55,6 +62,9 @@ static unsigned profile_count[8] = {};
 static bool profile_sync = false;
 static uint64_t terrain_vertices = 0;
 void PspProfileTerrain(unsigned count) { if (benchmark_recording) terrain_vertices += count; }
+// With config/profile-sync the scopes wait for the GE too, so a scope's
+// time is the CPU's and the GE's together.
+void PspProfileGpuSync() { if (benchmark_recording && profile_sync) glFinish(); }
 void PspProfileMark(unsigned section) {
   if (!benchmark_recording) return;
   if (profile_sync) glFinish();
@@ -65,17 +75,68 @@ void PspProfileMark(unsigned section) {
   }
   profile_last = now;
 }
+static uint64_t profile_sub[PSP_SUB_COUNT] = {};
+// config/benchmark-capture lists racing frames to write out as raw 565
+// pictures. With it the run uses a fixed 1/60 s step and a fixed random
+// seed, so two builds draw the same frames and can be compared pixel by
+// pixel. Such a run measures nothing: the writes stall it.
+static std::vector<unsigned> capture_frames;
+static unsigned capture_count = 0;
+bool PspFixedStep() { return !capture_frames.empty(); }
+static bool hud_hidden = false;
+bool PspHudHidden() { return hud_hidden; }
+// A filmed run has no sound of its own: the frames come over USB, the
+// sound does not. So it notes which sound started or stopped at which
+// frame, and the track is put together from the game's own files
+// afterwards. Written to config/sound-log.txt with the result.
+static std::vector<std::string> sound_log;
+void PspSoundLog(const char *what, unsigned id, int loop, int volume) {
+  if (capture_frames.empty() || sound_log.size() >= 4000) return;   // a film's worth, not a leak
+  char line[80];
+  // The frame on show when this pass is drawn: two after the last one shown.
+  snprintf(line, sizeof(line), "%u %s %u %d %d\n", capture_count + 2, what, id, loop, volume);
+  sound_log.push_back(line);
+}
+bool PspBenchmarkActive();
+static void capture_frame(unsigned frame) {
+  void *buffer = nullptr; int stride = 0, format = 0;
+  sceDisplayWaitVblankStart();
+  if (sceDisplayGetFrameBuf(&buffer, &stride, &format, PSP_DISPLAY_SETBUF_IMMEDIATE) < 0 || !buffer) return;
+  char name[64];
+  snprintf(name, sizeof(name), "config/capture-%u.raw", frame);
+  // Out of video memory first: the host file system does not take a write
+  // straight from there.
+  const size_t bytes = 512 * 272 * (format == PSP_DISPLAY_PIXEL_FORMAT_8888 ? 4 : 2);
+  static std::vector<unsigned char> copy;
+  copy.resize(bytes);
+  memcpy(copy.data(), (void*)((unsigned)buffer | 0x40000000u), bytes);
+  FILE *f = fopen(name, "wb");
+  if (!f) return;
+  fwrite(copy.data(), 1, bytes, f);
+  fclose(f);
+}
+bool PspProfileActive() { return benchmark_recording; }
+unsigned long long PspProfileNow() { return sceKernelGetSystemTimeWide(); }
+void PspProfileAdd(unsigned slot, unsigned long long us) {
+  if (slot < PSP_SUB_COUNT) profile_sub[slot] += us;
+}
 static unsigned heap_peak = 0, free_user_min = ~0u;
 extern "C" size_t __pspgl_vidmem_avail(void);
+// A mark in the log with the time since power-on in ms, for load times.
+void PspTraceStep(const char *what) {
+  fprintf(stderr, "%u STEP %s\n", (unsigned)(sceKernelGetSystemTimeWide() / 1000), what);
+}
 void PspTraceResource(const char *phase, const char *path) {
   const auto memory = mallinfo();
   fprintf(stderr,
-          "RESOURCE %s: %s heap_used=%u heap_free=%u free_user=%u largest_free=%u stack_check=%d free_vram=%u\n",
-          phase, path, (unsigned)memory.uordblks, (unsigned)memory.fordblks,
+          "%u RESOURCE %s: %s heap_used=%u heap_free=%u free_user=%u largest_free=%u stack_check=%d free_vram=%u\n",
+          (unsigned)(sceKernelGetSystemTimeWide() / 1000), phase, path, (unsigned)memory.uordblks, (unsigned)memory.fordblks,
           sceKernelTotalFreeMemSize(), sceKernelMaxFreeMemSize(),
           sceKernelCheckThreadStack(), (unsigned)__pspgl_vidmem_avail());
 }
 static void finish_benchmark() {
+  fflush(stdout);
+  fflush(stderr);
   if (!benchmark_recording || benchmark_times.empty())
     return;
   benchmark_recording = false;
@@ -85,6 +146,15 @@ static void finish_benchmark() {
     fputc('[', raw);
     for (std::size_t i=0;i<benchmark_times.size();++i)
       fprintf(raw,"%s%u",i?",":"",benchmark_times[i]);
+    fputs("]\n",raw); fclose(raw);
+  }
+  // CPU time before the buffer swap, frame by frame: with the intervals
+  // above it tells a frame the CPU made late from one the GE did.
+  raw = fopen("config/frame-work-us.json", "w");
+  if (raw) {
+    fputc('[', raw);
+    for (std::size_t i=0;i<benchmark_work.size();++i)
+      fprintf(raw,"%s%u",i?",":"",benchmark_work[i]);
     fputs("]\n",raw); fclose(raw);
   }
   auto statistics = [](std::vector<unsigned> &values, FILE *f) {
@@ -105,6 +175,11 @@ static void finish_benchmark() {
             values.empty() ? 0 : values[(values.size() - 1) * 95 / 100],
             values.empty() ? 0 : values.back(), slow);
   };
+  if (!sound_log.empty())
+    if (FILE *log = fopen("config/sound-log.txt", "w")) {
+      for (const auto &line : sound_log) fputs(line.c_str(), log);
+      fclose(log);
+    }
   FILE *f = fopen("config/benchmark-result.json", "w");
   if (!f)
     return;
@@ -129,6 +204,13 @@ static void finish_benchmark() {
     fprintf(f, "{\"synchronous_gpu\":%s,\"mean_us\":{",profile_sync?"true":"false");
     for (unsigned i=0;i<8;++i)
       fprintf(f, "%s\"%s\":%llu", i ? "," : "",sections[i], (unsigned long long)(profile_count[i] ? profile_sum[i]/profile_count[i] : 0));
+    const char* subs[PSP_SUB_COUNT]={"quad_update","quad_traverse","terrain_clip","terrain_draw",
+      "trackmarks","trees","items","hud_gauge","hud_text","physics_pos","view","sky","snow_update","flakes","curtains","opp_update","opp_draw",
+      "n_tri_inside","n_tri_boundary","n_tri_clipped","n_outcodes","n_track_seen","n_track_drawn",
+      "n_trees_drawn","n_quad_nodes"};
+    fprintf(f, "},\"sub_mean_us\":{");
+    for (unsigned i=0;i<PSP_SUB_COUNT;++i)
+      fprintf(f, "%s\"%s\":%llu", i ? "," : "",subs[i], (unsigned long long)(profile_count[2] ? profile_sub[i]/profile_count[2] : 0));
     fprintf(f, "},\"terrain_vertices_per_frame\":%llu}\n", (unsigned long long)(profile_count[2] ? terrain_vertices/profile_count[2] : 0));
     fclose(f);
   }
@@ -151,15 +233,24 @@ static int callbacks(SceSize, void *) {
 }
 extern int etr_main(int, char **);
 int main(int argc, char **argv) {
-  freopen("etr.log", "w", stdout);
-  freopen("etr-errors.log", "w", stderr);
-  setvbuf(stdout, nullptr, _IONBF, 0);
-  setvbuf(stderr, nullptr, _IONBF, 0);
+  // Nothing is written to the Memory Stick but saved data. The logs exist
+  // only for a run that asks for them: a file config/trace (unbuffered,
+  // for a crash whose last lines matter) or a benchmark (buffered -- every
+  // line a write of its own was seconds of each start).
+  static char out_buffer[2048], err_buffer[8192];
+  const bool trace = access("config/trace", F_OK) == 0;
+  if (trace || access("config/benchmark", F_OK) == 0) {
+    freopen("etr.log", "w", stdout);
+    freopen("etr-errors.log", "w", stderr);
+    setvbuf(stdout, trace ? nullptr : out_buffer, trace ? _IONBF : _IOFBF, sizeof(out_buffer));
+    setvbuf(stderr, trace ? nullptr : err_buffer, trace ? _IONBF : _IOFBF, sizeof(err_buffer));
+  }
   char working_directory[1024]{};
   getcwd(working_directory, sizeof(working_directory));
   fprintf(stderr, "ETR startup: firmware=0x%08x cwd=%s argv0=%s\n",
           sceKernelDevkitVersion(), working_directory,
           argc > 0 && argv && argv[0] ? argv[0] : "(none)");
+  PspTraceStep("main");
   mkdir("config", 0777);
   scePowerSetClockFrequency(333, 333, 166);
   int t = sceKernelCreateThread("ETR callbacks", callbacks, 0x11, 0x1000, 0,
@@ -181,11 +272,22 @@ int main(int argc, char **argv) {
           (unsigned)memory.arena, (unsigned)memory.uordblks,
           sceKernelTotalFreeMemSize(), sceKernelMaxFreeMemSize());
   FILE *bf = fopen("config/benchmark", "r");
+  if (FILE *cf = fopen("config/benchmark-capture", "r")) {
+    unsigned n;
+    while (fscanf(cf, "%u", &n) == 1) capture_frames.push_back(n);
+    fclose(cf);
+  }
+  // A film for the icon or a still for the background wants no numbers on it.
+  if (FILE *plain = fopen("config/benchmark-nohud", "r")) { hud_hidden = true; fclose(plain); }
   FILE *sync = fopen("config/profile-sync", "r");
   if (sync) { profile_sync = true; fclose(sync); }
   if (bf) {
     char course[128] = {};
-    int parsed = fscanf(bf, "%u %127s", &benchmark, course);
+    // After the frames and the course, optionally: light, snow, wind and
+    // mirror as the race selection numbers them, and how many penguins
+    // to race against.
+    int parsed = fscanf(bf, "%u %127s %d %d %d %d %d", &benchmark, course,
+                        &bench_conditions[0], &bench_conditions[1], &bench_conditions[2], &bench_conditions[3], &bench_conditions[4]);
     fclose(bf);
     if (parsed >= 1 && benchmark > 0) {
       if (course[0]) benchcourse = course;
@@ -205,6 +307,8 @@ int main(int argc, char **argv) {
   printf("ETR PSP: CPU %d MHz\n", scePowerGetCpuClockFrequencyInt());
   int result = etr_main(argc, argv);
   Mix_CloseAudio();
+  fflush(stdout);
+  fflush(stderr);
   SDL_Quit();
   sceKernelExitGame();
   return result;
@@ -249,8 +353,13 @@ static void quad(std::vector<V> &v, float x, float y, float w, float h, float u,
 void Image::create(unsigned w, unsigned h, Color c) {
   size = {w, h};
   pixels.resize(w * h * 4);
-  for (unsigned i = 0; i < w * h; i++)
-    memcpy(&pixels[i * 4], &c, 4);
+  // A row filled and copied down, not a call for every pixel.
+  if (w && h) {
+    for (unsigned i = 0; i < w; i++)
+      memcpy(&pixels[i * 4], &c, 4);
+    for (unsigned y = 1; y < h; y++)
+      memcpy(&pixels[y * w * 4], &pixels[0], w * 4);
+  }
 }
 static unsigned pot(unsigned n);
 bool Image::loadFromFile(const std::string &p) {
@@ -275,18 +384,37 @@ bool Image::loadTextureFromFile(const std::string &p, unsigned limit,
   create(limit ? std::min(limit, pot(original.x)) : original.x,
          limit ? std::min(limit, pot(original.y)) : original.y);
   SDL_LockSurface(s);
-  for (unsigned y = 0; y < size.y; y++)
-    for (unsigned x = 0; x < size.x; x++) {
-      Uint32 c = 0;
-      memcpy(&c,
-             (char *)s->pixels + (y * original.y / size.y) * s->pitch +
-                 (x * original.x / size.x) * s->format->BytesPerPixel,
-             s->format->BytesPerPixel);
-      SDL_GetRGBA(c, s->format, &pixels[(y * size.x + x) * 4],
-                  &pixels[(y * size.x + x) * 4 + 1],
-                  &pixels[(y * size.x + x) * 4 + 2],
-                  &pixels[(y * size.x + x) * 4 + 3]);
+  const SDL_PixelFormat &fmt = *s->format;
+  const unsigned bpp = fmt.BytesPerPixel;
+  // Where each column of the target is in a row of the source: worked out
+  // once, not by a division for every pixel.
+  std::vector<unsigned> column(size.x);
+  for (unsigned x = 0; x < size.x; x++)
+    column[x] = (x * original.x / size.x) * bpp;
+  // The decoder's own layouts of three and four whole bytes are read
+  // directly; a call into SDL for every pixel made the conversion cost
+  // as much as decoding the PNG.
+  const bool whole = (bpp == 3 || bpp == 4) && !fmt.Rloss && !fmt.Gloss && !fmt.Bloss &&
+                     !(fmt.Rshift % 8) && !(fmt.Gshift % 8) && !(fmt.Bshift % 8) &&
+                     (!fmt.Amask || (!fmt.Aloss && !(fmt.Ashift % 8)));
+  const unsigned r = fmt.Rshift / 8, g = fmt.Gshift / 8, b = fmt.Bshift / 8, a = fmt.Ashift / 8;
+  for (unsigned y = 0; y < size.y; y++) {
+    const Uint8 *row = (const Uint8 *)s->pixels + (y * original.y / size.y) * s->pitch;
+    Uint8 *out = &pixels[y * size.x * 4];
+    if (whole) {
+      for (unsigned x = 0; x < size.x; x++, out += 4) {
+        const Uint8 *in = row + column[x];
+        out[0] = in[r]; out[1] = in[g]; out[2] = in[b];
+        out[3] = fmt.Amask ? in[a] : 255;
+      }
+    } else {
+      for (unsigned x = 0; x < size.x; x++, out += 4) {
+        Uint32 c = 0;
+        memcpy(&c, row + column[x], bpp);
+        SDL_GetRGBA(c, s->format, out, out + 1, out + 2, out + 3);
+      }
     }
+  }
   SDL_UnlockSurface(s);
   SDL_FreeSurface(s);
   PspTraceResource("image ready", p.c_str());
@@ -325,7 +453,16 @@ bool Texture::loadFromFile(const std::string &p) {
                 p.find("/env/") != std::string::npos ||
                 p.find("/textures/snowstart.png") != std::string::npos ||
                 p.find("/textures/snowtrack.png") != std::string::npos ||
-                p.find("/textures/snowstop.png") != std::string::npos;
+                p.find("/textures/snowstop.png") != std::string::npos ||
+                // The falling snow: small textures the GE reads for every
+                // flake and three curtains across the whole picture. From
+                // ordinary memory that reading cost five times what it does
+                // from here, and heavy snow ran at 20 frames a second.
+                p.find("/textures/snowparticles.png") != std::string::npos ||
+                p.find("/textures/snow1.png") != std::string::npos ||
+                p.find("/textures/snow2.png") != std::string::npos ||
+                p.find("/textures/snow3.png") != std::string::npos;
+  objectTexture = p.find("/objects/") != std::string::npos;
   if (p.find("preview.png") != std::string::npos)
     maxSize = 128;
   printf("texture %s\n", p.c_str());
@@ -371,6 +508,16 @@ bool Texture::loadFromImage(const Image &i) {
       opaque = false;
       break;
     }
+  // An object of the course leaves room in video memory for one face of the
+  // sky, which is loaded after it and front face first. After the terrain
+  // and the trees there was never any left: the whole sky lay in ordinary
+  // memory, which the GE reads several times slower, and it is behind
+  // every picture. The finish banner, the flags and the herring, which go
+  // without instead, are small on the screen or seen for a moment.
+  // (DXT1 would fit all six faces, and was slower still: 58 FPS became 40.)
+  if (objectTexture && videoMemory &&
+      __pspgl_vidmem_avail() < w * h * 2 * (mipmaps ? 4 : 3) / 3 + 140 * 1024)
+    videoMemory = false;
   std::vector<uint16_t> packed(w * h);
   for (unsigned k = 0; k < w * h; k++)
     packed[k] =
@@ -500,6 +647,25 @@ struct Font::Impl {
   int ascent = 24;
 };
 bool Font::loadFromFile(const std::string &p) {
+  FILE *f = fopen(p.c_str(), "rb");
+  if (!f) {
+    fprintf(stderr, "font %s: missing\n", p.c_str());
+    return false;
+  }
+  fclose(f);
+  impl.reset();
+  pending = p;
+  return true;
+}
+bool Font::ready() const {
+  if (!impl && !pending.empty()) {
+    const std::string path = pending;
+    pending.clear();              // one attempt: a font that fails stays failed
+    build(path);
+  }
+  return bool(impl);
+}
+bool Font::build(const std::string &p) const {
   TTF_Font *f = TTF_OpenFont(p.c_str(), 24);
   if (!f) {
     fprintf(stderr, "font %s: %s\n", p.c_str(), TTF_GetError());
@@ -509,8 +675,10 @@ bool Font::loadFromFile(const std::string &p) {
   impl->ascent = TTF_FontAscent(f);
   // Transparent white gutters prevent neighboring glyphs and dark fringes
   // from leaking into text under bilinear filtering.
-  std::vector<Uint8> pixels(512 * 512 * 4, 255);
-  for (size_t i = 3; i < pixels.size(); i += 4) pixels[i] = 0;
+  // Written straight into the image the atlas is made of: white, clear.
+  Image image;
+  image.create(512, 512, Color(255, 255, 255, 0));
+  Uint8 *pixels = const_cast<Uint8 *>(image.getPixelsPtr());
   int atlasX = 1, atlasY = 1, rowHeight = 0;
   for (unsigned c = 32; c < 256; c++) {
     int minx, maxx, miny, maxy, advance;
@@ -542,25 +710,19 @@ bool Font::loadFromFile(const std::string &p) {
       for (int x = 0; x < g.w; x++) {
         Uint32 q;
         memcpy(&q, (char *)s->pixels + y * s->pitch + x * 4, 4);
-        Uint8 r, b, gr, a;
-        SDL_GetRGBA(q, s->format, &r, &gr, &b, &a);
-        auto d = &pixels[((g.y + y) * 512 + g.x + x) * 4];
-        d[0] = d[1] = d[2] = 255;
-        d[3] = a;
+        // The atlas is white throughout; only the glyph's alpha is taken.
+        pixels[((g.y + y) * 512 + g.x + x) * 4 + 3] =
+            (q & s->format->Amask) >> s->format->Ashift;
       }
     SDL_FreeSurface(s);
   }
   TTF_CloseFont(f);
-  Image image;
-  image.create(512, 512);
-  memcpy(const_cast<Uint8 *>(image.getPixelsPtr()), pixels.data(),
-         pixels.size());
   impl->atlas.setMaximumSize(512);
   impl->atlas.setSmooth(true);
   return impl->atlas.loadFromImage(image);
 }
 FloatRect Text::getLocalBounds() const {
-  if (!font || !font->impl)
+  if (!font || !font->ready())
     return {};
   float width = 0, line = 0, height = size;
   for (auto c : value) {
@@ -573,7 +735,7 @@ FloatRect Text::getLocalBounds() const {
 }
 Vector2f Text::findCharacterPos(std::size_t i) const {
   float x = 0, y = 0;
-  if (font && font->impl)
+  if (font && font->ready())
     for (size_t k = 0; k < std::min(i, value.getSize()); k++) {
       auto c = value[k];
       if (c == '\r') continue;
@@ -583,7 +745,7 @@ Vector2f Text::findCharacterPos(std::size_t i) const {
   return {position.x + x, position.y + y};
 }
 void Text::render(const RenderStates &) const {
-  if (!font || !font->impl)
+  if (!font || !font->ready())
     return;
   static std::vector<V> v;
   v.clear();
@@ -672,9 +834,16 @@ void RenderWindow::display() {
       // Stick profiling writes are allowed inside the measured frame window.
       FILE *f=fopen("config/timing.log","w");
       if (f) { fprintf(f,"ETR benchmark racing: %s\n",benchcourse.c_str()); fclose(f); }
+      if (PspFixedStep()) std::srand(1);
+      capture_count = 0;
       now=sceKernelGetSystemTimeWide();
       skip_interval=true;
     }
+  }
+  if (PspFixedStep() && state == &Racing) {
+    ++capture_count;
+    if (std::find(capture_frames.begin(), capture_frames.end(), capture_count) != capture_frames.end())
+      capture_frame(capture_count);
   }
   previous = state;
   last = now;
@@ -757,6 +926,12 @@ bool RenderWindow::pollEvent(Event &e) {
       }
       if (state == &RaceSelect) {
         g_game.course = Course.GetCourse("default", benchcourse);
+        g_game.light_id = bench_conditions[0] & 3;
+        g_game.snow_id = bench_conditions[1] & 3;
+        g_game.wind_id = bench_conditions[2] & 3;
+        g_game.mirrorred = bench_conditions[3] != 0;
+        Opponents::enabled = bench_conditions[4] > 0;
+        if (bench_conditions[4] > 0) Opponents::count = bench_conditions[4];
         state->Exit();
         state->Enter();
         e.type = Event::KeyPressed;
@@ -789,6 +964,17 @@ bool RenderWindow::pollEvent(Event &e) {
       b |= PSP_CTRL_LEFT;
     if (phase >= 150 && phase < 180)
       b |= PSP_CTRL_RIGHT;
+    if (PspFixedStep() && g_game.player) {
+      // A filmed run is driven down the course, see Opponents::Autopilot.
+      const int keys = Opponents::Autopilot(g_game.player->ctrl);
+      b = (keys & 4 ? PSP_CTRL_UP : 0) | (keys & 1 ? PSP_CTRL_LEFT : 0) | (keys & 2 ? PSP_CTRL_RIGHT : 0) |
+          (keys & 8 ? PSP_CTRL_TRIANGLE : 0);
+      if (benchframe == 1)
+        if (FILE *f = fopen("config/race-start-us", "w")) {
+          fprintf(f, "%llu\n", (unsigned long long)sceKernelGetSystemTimeWide());
+          fclose(f);
+        }
+    }
     if (benchframe >= benchmark) {
       benchmark = 0;
       State::manager.RequestEnterState(Paused);

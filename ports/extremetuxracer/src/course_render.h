@@ -22,7 +22,9 @@ GNU General Public License for more details.
 
 void setup_course_tex_gen();
 
-void RenderCourse();
+// quadtree_updated: the caller has brought the level of detail up to the
+// view already (the race does, before it shows the last frame).
+void RenderCourse(bool quadtree_updated = false);
 void DrawTrees();
 
 #endif

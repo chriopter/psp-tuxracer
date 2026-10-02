@@ -18,10 +18,14 @@ GNU General Public License for more details.
 
 
 #ifdef HAVE_CONFIG_H
+#include <cstdio>
 #include <etr_config.h>
 #endif
 
+#include "psp_profile.h"
 #include "particles.h"
+#include "psp_buffers.h"
+#include <psputils.h>
 #include "textures.h"
 #include "ogl.h"
 #include "course.h"
@@ -479,6 +483,9 @@ void generate_particles(const CControl *ctrl, float dtime, const TVector3d& pos,
 
 #define SNOW_WIND_DRIFT  0.1
 
+#ifndef GL_SPRITES_PSP
+#define GL_SPRITES_PSP (GL_POLYGON+1)
+#endif
 static CFlakes Flakes;
 
 
@@ -506,72 +513,86 @@ TFlakeArea::TFlakeArea(
 	left = right = bottom = top = front = back = 0.f;
 }
 
-void TFlakeArea::Draw(const CControl *ctrl) const {
-	if (g_game.snow_id < 1 || flakes.empty())
-		return;
+// A flake is a GE sprite: its two opposite corners, and the GE draws the
+// upright rectangle between them. Two vertices a flake instead of six, and
+// no colour of their own -- the volume of vertex data is what snow costs.
+struct SnowVertex { float u, v, x, y, z; };
 
-	const TPlane& lp = get_left_clip_plane();
-	const TPlane& rp = get_right_clip_plane();
-	float dir_angle = std::atan2(-ctrl->viewdir.x, -ctrl->viewdir.z);
-
-	ScopedRenderMode rm(PARTICLES);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	Tex.BindTex(SNOW_PART);
-	const sf::Color& particle_colour = Env.ParticleColor();
-	glColor(particle_colour);
-
-	// Batch an entire snow layer instead of changing the matrix and submitting
-	// a separate draw for every flake (up to 3000 draws per frame).
-	struct SnowVertex { float u, v; sf::Color color; float x, y, z; };
-	static std::vector<SnowVertex> batch;
-	batch.clear();
-	batch.reserve(flakes.size() * 6);
-	const TVector3d right(rotate_flake ? std::cos(dir_angle) : 1.f, 0.f,
-	                     rotate_flake ? -std::sin(dir_angle) : 0.f);
-	for (const TFlake& flake : flakes) {
-		if (DistanceToPlane(lp, flake.pt) >= 0 || DistanceToPlane(rp, flake.pt) >= 0) continue;
-		TVector3d points[4] = {flake.pt, flake.pt + flake.size * right,
-		                      flake.pt + flake.size * right + TVector3d(0, flake.size, 0),
-		                      flake.pt + TVector3d(0, flake.size, 0)};
-		for (int i : {0, 1, 2, 0, 2, 3})
-			batch.push_back({flake.tex[i*2], flake.tex[i*2+1], particle_colour,
-			                 points[i].x, points[i].y, points[i].z});
+// The flakes of this area moved on by one step, and those of them that are
+// in the picture written from out on. One pass over them, not one to move
+// and another to draw: three thousand flakes are 60 KB, four times the
+// CPU's cache, and reading them twice a frame was the dearer half.
+SnowVertex* TFlakeArea::Emit(const CControl *ctrl, SnowVertex* out, float timestep, float xcoeff, float ycoeff, float zcoeff) {
+	const float dir_angle = std::atan2(-ctrl->viewdir.x, -ctrl->viewdir.z);
+	const float rx = rotate_flake ? std::cos(dir_angle) : 1.f;
+	const float rz = rotate_flake ? -std::sin(dir_angle) : 0.f;
+	// A flake is at most maxSize across: one wholly outside any of the six
+	// view planes by that much is not in the picture.
+	const TPlane* planes = get_view_clip_planes();
+	const float reach = maxSize * 1.5f;
+	// Only the planes that cut the box the flakes fall in need asking, a
+	// flake at a time: of one the whole box is inside, no flake is outside.
+	TPlane cutting[6];
+	int cuts = 0;
+	for (int p = 0; p < 6; ++p) {
+		const TVector3d& n = planes[p].nml;
+		const float furthest = n.x * (n.x > 0 ? right : left) + n.y * (n.y > 0 ? top : bottom)
+		                     + n.z * (n.z > 0 ? back : front) + planes[p].d;
+		if (furthest > reach) cutting[cuts++] = planes[p];
 	}
-	if (batch.empty()) return;
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glTexCoordPointer(2, GL_FLOAT, sizeof(SnowVertex), &batch[0].u);
-	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(SnowVertex), &batch[0].color);
-	glVertexPointer(3, GL_FLOAT, sizeof(SnowVertex), &batch[0].x);
-	glDrawArrays(GL_TRIANGLES, 0, batch.size());
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	const float fall = speed * timestep;
+	for (TFlake& flake : flakes) {
+		float x = flake.pt.x + xcoeff;
+		float y = flake.pt.y - flake.size * fall + ycoeff;
+		float z = flake.pt.z + zcoeff;
+		// Out of its box on one side, in again on the other; one side a step, as ever.
+		if (y < bottom) y += yrange;
+		else if (x < left) x += xrange;
+		else if (x > right) x -= xrange;
+		else if (y > top) y -= yrange;
+		else if (z < front) z += zrange;
+		else if (z > back) z -= zrange;
+		flake.pt.x = x; flake.pt.y = y; flake.pt.z = z;
+		bool outside = false;
+		for (int p = 0; p < cuts && !outside; ++p)
+			outside = x*cutting[p].nml.x + y*cutting[p].nml.y + z*cutting[p].nml.z + cutting[p].d > reach;
+		if (outside) continue;
+		const float size = flake.size;
+		*out++ = {flake.tex[0], flake.tex[1], x, y, z};
+		*out++ = {flake.tex[4], flake.tex[5], x + size*rx, y + size, z + size*rz};
+	}
+	return out;
 }
 
-void TFlakeArea::Update(float timestep, float xcoeff, float ycoeff, float zcoeff) {
-	for (std::size_t i=0; i<flakes.size(); i++) {
-		flakes[i].pt.x += xcoeff;
-		flakes[i].pt.y += flakes[i].vel.y * timestep + ycoeff;
-		flakes[i].pt.z += zcoeff;
+// Every flake of every area in one draw, from a buffer object in the GE's
+// own layout that is filled where it lies. PSPGL copies arrays in ordinary
+// memory into its display list, into memory the cache does not cover: for
+// three thousand flakes that copy was seven milliseconds an area, more
+// than everything else in the frame together.
+static GLuint flakeBuffer = 0;
+static SnowVertex* flakeMemory = nullptr;
+static std::size_t flakeRoom = 0;      // in vertices
 
-		if (flakes[i].pt.y < bottom) {
-			flakes[i].pt.y += yrange;
-		} else if (flakes[i].pt.x < left) {
-			flakes[i].pt.x += xrange;
-		} else if (flakes[i].pt.x > right) {
-			flakes[i].pt.x -= xrange;
-		} else if (flakes[i].pt.y > top) {
-			flakes[i].pt.y -= yrange;
-		} else if (flakes[i].pt.z < front) {
-			flakes[i].pt.z += zrange;
-		} else if (flakes[i].pt.z > back) {
-			flakes[i].pt.z -= zrange;
-		}
-	}
+static SnowVertex* flake_memory(std::size_t vertices) {
+	if (vertices <= flakeRoom) return flakeMemory;
+	if (flakeBuffer) { glDeleteBuffers(1, &flakeBuffer); flakeBuffer = 0; }
+	flakeMemory = nullptr;
+	flakeRoom = 0;
+	glGenBuffers(1, &flakeBuffer);
+	if (!flakeBuffer) return nullptr;
+	while (glGetError() != GL_NO_ERROR) {}
+	glBindBuffer(GL_ARRAY_BUFFER, flakeBuffer);
+	glBufferData(GL_ARRAY_BUFFER, vertices * sizeof(SnowVertex), nullptr, GL_DYNAMIC_DRAW);
+	// In system memory a PSPGL buffer stays where it is, see quadtree.cpp.
+	void* memory = glGetError() == GL_NO_ERROR ? glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY) : nullptr;
+	if (memory) glUnmapBuffer(GL_ARRAY_BUFFER);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	if (!memory) { glDeleteBuffers(1, &flakeBuffer); flakeBuffer = 0; return nullptr; }
+	flakeMemory = reinterpret_cast<SnowVertex*>(reinterpret_cast<unsigned>(memory) & ~0x40000000u);
+	flakeRoom = vertices;
+	return flakeMemory;
 }
+
 
 void CFlakes::Reset() {
 	areas.clear();
@@ -583,9 +604,6 @@ void CFlakes::MakeSnowFlake(std::size_t ar, std::size_t i) {
 	areas[ar].flakes[i].pt.z = areas[ar].back - FRandom() * (areas[ar].back - areas[ar].front);
 
 	areas[ar].flakes[i].size = XRandom(areas[ar].minSize, areas[ar].maxSize);
-	areas[ar].flakes[i].vel.x = 0;
-	areas[ar].flakes[i].vel.z = 0;
-	areas[ar].flakes[i].vel.y = -areas[ar].flakes[i].size * areas[ar].speed;
 
 	int type = std::rand() % 4;
 
@@ -700,15 +718,53 @@ void CFlakes::Update(float timestep, const CControl *ctrl) {
 	float ycoeff = (ydiff * YDRIFT) + (winddrift.z * timestep);
 	float zcoeff = (zdiff * ZDRIFT) + (winddrift.z * timestep);
 
-	for (std::size_t ar=0; ar<areas.size(); ar++) {
-		areas[ar].Update(timestep, xcoeff, ycoeff, zcoeff);
-	}
+	// The flakes themselves are moved where they are drawn, in one pass.
+	pending_time += timestep;
+	pending.x += xcoeff;
+	pending.y += ycoeff;
+	pending.z += zcoeff;
 	snow_lastpos = ctrl->cpos;
 }
 
-void CFlakes::Draw(const CControl *ctrl) const {
+void CFlakes::Draw(const CControl *ctrl) {
+	if (g_game.snow_id < 1 || areas.empty()) return;
+	// The step Update left to be made; none where a picture is drawn again
+	// without one, as in the pause.
+	const float timestep = pending_time, xcoeff = pending.x, ycoeff = pending.y, zcoeff = pending.z;
+	pending_time = 0;
+	pending = TVector3d(0, 0, 0);
+	std::size_t flakes = 0;
+	for (const TFlakeArea& area : areas) flakes += area.flakes.size();
+	// Without the buffer, the copying way: the same vertices from ordinary memory.
+	static std::vector<SnowVertex> plain;
+	SnowVertex* base = flake_memory(flakes * 2);
+	const bool buffered = base != nullptr;
+	if (!buffered) { plain.resize(flakes * 2); base = plain.data(); }
+	SnowVertex* out = base;
 	for (std::size_t ar=0; ar<areas.size(); ar++)
-		areas[ar].Draw(ctrl);
+		out = areas[ar].Emit(ctrl, out, timestep, xcoeff, ycoeff, zcoeff);
+	if (out == base) return;
+
+	ScopedRenderMode rm(PARTICLES);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	Tex.BindTex(SNOW_PART);
+	glColor(Env.ParticleColor());
+	if (buffered) {
+		// The GE reads memory, not the CPU's cache.
+		sceKernelDcacheWritebackRange(base, (out - base) * sizeof(SnowVertex));
+		glBindBuffer(GL_ARRAY_BUFFER, flakeBuffer);
+	}
+	const GLubyte* at = buffered ? nullptr : reinterpret_cast<const GLubyte*>(base);
+	glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(SnowVertex), at);
+	glVertexPointer(3, GL_FLOAT, sizeof(SnowVertex), at + 2 * sizeof(float));
+	glDrawArrays(GL_SPRITES_PSP, 0, out - base);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	if (buffered) glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 // --------------------------------------------------------------------
@@ -800,33 +856,38 @@ void TCurtain::SetStartParams(const CControl* ctrl) {
 void TCurtain::Draw() const {
 	Tex.BindTex(texture);
 	float halfsize = size / 2.f;
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	// One draw for the whole curtain, of the squares that can be seen: each
+	// used to be a draw of its own with its own matrix, all round the
+	// player, in view or not.
+	struct CurtainVertex { float u, v, x, y, z; };
+	static std::vector<CurtainVertex> batch;
+	batch.clear();
 	for (unsigned int co=0; co<numCols; co++) {
 		for (unsigned int row=0; row<numRows; row++) {
 			const TVector3d& pt = curtains[co][row].pt;
-			glPushMatrix();
-			glTranslate(pt);
-			glRotatef(-curtains[co][row].angle, 0, 1, 0);
-
-			static const GLshort tex[] = {
-				0, 1,
-				1, 1,
-				1, 0,
-				0, 0
+			// The square stands upright, turned by its angle about the
+			// vertical through its middle, as glRotatef(-angle, 0, 1, 0) did.
+			const float a = -curtains[co][row].angle * (float)M_PI / 180.f;
+			const float dx = halfsize * std::cos(a), dz = -halfsize * std::sin(a);
+			const float reach = std::fabs(dx), depth = std::fabs(dz);
+			if (clip_aabb_to_view_frustum(TVector3d(pt.x - reach, pt.y - halfsize, pt.z - depth),
+			                              TVector3d(pt.x + reach, pt.y + halfsize, pt.z + depth)) == NotVisible)
+				continue;
+			const CurtainVertex quad[4] = {
+				{0, 1, (float)pt.x - dx, (float)pt.y - halfsize, (float)pt.z - dz},
+				{1, 1, (float)pt.x + dx, (float)pt.y - halfsize, (float)pt.z + dz},
+				{1, 0, (float)pt.x + dx, (float)pt.y + halfsize, (float)pt.z + dz},
+				{0, 0, (float)pt.x - dx, (float)pt.y + halfsize, (float)pt.z - dz},
 			};
-			const GLfloat vtx[] = {
-				-halfsize, -halfsize, 0,
-				    halfsize, -halfsize, 0,
-				    halfsize, halfsize, 0,
-				    -halfsize, halfsize, 0
-			    };
-			glVertexPointer(3, GL_FLOAT, 0, vtx);
-			glTexCoordPointer(2, GL_SHORT, 0, tex);
-			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-			glPopMatrix();
+			for (int k : {0, 1, 2, 0, 2, 3}) batch.push_back(quad[k]);
 		}
 	}
+	if (batch.empty()) return;
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(CurtainVertex), &batch[0].u);
+	glVertexPointer(3, GL_FLOAT, sizeof(CurtainVertex), &batch[0].x);
+	glDrawArrays(GL_TRIANGLES, 0, batch.size());
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
 }
@@ -882,7 +943,9 @@ void CCurtain::Update(float timestep, const CControl *ctrl) {
 	for (std::size_t i=0; i<curtains.size(); i++) {
 		curtains[i].Update(timestep, drift, ctrl);
 	}
-	Draw();
+	// The curtains used to be drawn here as well as by DrawSnow, twice a
+	// frame. They are drawn once now; the staged curtain textures carry the
+	// opacity the two passes added up to (tools/stage-extremetuxracer.py).
 }
 
 void CCurtain::Reset() {
@@ -904,7 +967,8 @@ void CCurtain::Init(const CControl *ctrl) {
 //			curtains.emplace_back(3, 60, 10,       3, -100, -10, 1);
 //			curtains.emplace_back(3, 50, 13,       3, -100, -10, 1);
 //			curtains.emplace_back(3, 40, 16,       3, -100, -10, 1);
-			curtains.emplace_back(3, 60.f, 15.f, 3.f, -100.f, -10.f, 1);
+			// PSP: two curtains, not three. The one at 60 m stood at the edge
+			// of the view, in the fog, and cost a third of the snow's time.
 			curtains.emplace_back(3, 50.f, 19.f, 3.f, -100.f, -10.f, 1);
 			curtains.emplace_back(3, 40.f, 23.f, 3.f, -100.f, -10.f, 1);
 //			curtains.emplace_back(3, 60, 20,       3, -100, -10, 1);
@@ -915,7 +979,6 @@ void CCurtain::Init(const CControl *ctrl) {
 //			curtains.emplace_back(3, 60, 15,       3, -100, -10, 2);
 //			curtains.emplace_back(3, 50, 17,       3, -100, -10, 2);
 //			curtains.emplace_back(3, 40, 20,       3, -100, -10, 2);
-			curtains.emplace_back(3, 60.f, 22.f, 3.f, -100.f, -10.f, 2);
 			curtains.emplace_back(3, 50.f, 25.f, 3.f, -100.f, -10.f, 2);
 			curtains.emplace_back(3, 40.f, 30.f, 3.f, -100.f, -10.f, 2);
 //			curtains.emplace_back(3, 60, 30,       3, -100, -10, 2);
@@ -926,8 +989,7 @@ void CCurtain::Init(const CControl *ctrl) {
 //			curtains.emplace_back(3, 60, 20,       3, -100, -10, 3);
 //			curtains.emplace_back(3, 50, 25,       3, -100, -10, 2);
 //			curtains.emplace_back(3, 40, 30,       3, -100, -10, 2);
-			curtains.emplace_back(3, 60.f, 22.f, 3.f, -100.f, -10.f, 3);
-			curtains.emplace_back(3, 50.f, 27.f, 3.f, -100.f, -10.f, 2);
+			curtains.emplace_back(3, 50.f, 27.f, 3.f, -100.f, -10.f, 3);    // the heavy pattern, which the far one had
 			curtains.emplace_back(3, 40.f, 32.f, 3.f, -100.f, -10.f, 2);
 //			curtains.emplace_back(3, 60, 25,       3, -100, -10, 3);
 //			curtains.emplace_back(3, 50, 30,       3, -100, -10, 2);
@@ -1145,14 +1207,22 @@ void InitSnow(const CControl *ctrl) {
 
 void UpdateSnow(float timestep, const CControl *ctrl) {
 	if (g_game.snow_id < 1 || g_game.snow_id > 3) return;
+	PspProfileScope profile(PSP_SUB_SNOW_UPDATE);
 	Flakes.Update(timestep, ctrl);
 	Curtain.Update(timestep, ctrl);
 }
 
 void DrawSnow(const CControl *ctrl) {
 	if (g_game.snow_id < 1 || g_game.snow_id > 3) return;
-	Flakes.Draw(ctrl);
+	extern void PspProfileGpuSync();
+	{
+		PspProfileScope profile(PSP_SUB_FLAKES);
+		Flakes.Draw(ctrl);
+		PspProfileGpuSync();
+	}
+	PspProfileScope profile(PSP_SUB_CURTAINS);
 	Curtain.Draw();
+	PspProfileGpuSync();
 }
 
 void InitWind() {

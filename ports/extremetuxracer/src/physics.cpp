@@ -21,6 +21,8 @@ GNU General Public License for more details.
 #include <etr_config.h>
 #endif
 
+#include <vector>
+const std::vector<unsigned>& ObjectsNear(bool trees, float z, float reach);
 #include "physics.h"
 #include "course.h"
 #include "tux.h"
@@ -122,7 +124,9 @@ bool CControl::CheckTreeCollisions(const TVector3d& pos, TVector3d *tree_loc) co
 	bool hit = false;
 	TMatrix<4, 4> mat;
 
-	for (std::size_t i = 0; i<Course.CollArr.size(); i++) {
+	// Only the trees whose z is within a trunk's reach of the player: the
+	// distance test below turns every other one away anyway.
+	for (unsigned i : ObjectsNear(true, pos.z, 0.6f)) {
 		float diam = Course.CollArr[i].diam;
 		float height = Course.CollArr[i].height;
 		loc = Course.CollArr[i].pt;
@@ -181,9 +185,7 @@ void CControl::AdjustTreeCollision(const TVector3d& pos, TVector3d *vel) const {
 }
 
 void CControl::CheckItemCollection(const TVector3d& pos) {
-	std::size_t num_items = Course.NocollArr.size();
-
-	for (std::size_t i=0; i<num_items; i++) {
+	for (unsigned i : ObjectsNear(false, pos.z, 0.7f)) {
 		if (Course.NocollArr[i].collectable != 1) continue;
 
 		float diam = Course.NocollArr[i].diam;

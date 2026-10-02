@@ -103,3 +103,15 @@ void __wrap_glDisable(GLenum cap) {
   if (!unsupported_cap(cap))
     __real_glDisable(cap);
 }
+
+/* PSPGL has no GL_COLOR_MATERIAL. The GE has: register 0x53 says which parts
+   of the material a lit vertex takes from its own colour (1 ambient,
+   2 diffuse, 4 specular). Written through PSPGL's register cache, so it
+   goes out in order with the draw that follows. */
+struct pspgl_context;
+extern struct pspgl_context *__pspgl_curctx;
+void __pspgl_context_writereg(struct pspgl_context *, unsigned long cmd, unsigned long arg);
+void PspColorMaterial(int on) {
+  if (__pspgl_curctx)
+    __pspgl_context_writereg(__pspgl_curctx, 0x53, on ? 3 : 0);
+}

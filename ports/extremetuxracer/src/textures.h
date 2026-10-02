@@ -100,6 +100,7 @@ public:
 	void DrawFrame(std::size_t idx, int x, int y, float w, float h, int frame, const sf::Color& col);
 
 	void DrawNumStr(const std::string& s, int x, int y, float size, const sf::Color& col);
+	void FlushNumStr();
 };
 
 extern CTexture Tex;

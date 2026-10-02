@@ -4,11 +4,14 @@
 #include <etr_config.h>
 #endif
 
+#include <psputils.h>
+#include "psp_profile.h"
 #include "quadtree.h"
 #include "textures.h"
 #include "course.h"
 #include "ogl.h"
 #include "clip_polygon.h"
+#include "psp_buffers.h"
 
 #include <climits>
 #include <cstring>
@@ -70,6 +73,8 @@ quadsquare::quadsquare(quadcornerdata* pcd) {
 	ForceEastVert = false;
 	ForceSouthVert = false;
 	Dirty = true;
+	FrameVis = 0;
+	FrameStamp = 0;
 
 	for (int i = 0; i < 4; i++) {
 		Child[i] = (quadsquare*) nullptr;
@@ -149,7 +154,7 @@ float quadsquare::GetHeight(const quadcornerdata &cd, float x, float z) {
 	if (lx > 1) lx = 1;
 
 	lz -= iz;
-	if (lx < 0) lz = 0;
+	if (lz < 0) lz = 0;
 	if (lz > 1) lz = 1;
 
 	float s00, s01, s10, s11;
@@ -610,8 +615,11 @@ bool quadsquare::BoxTest(int x, int z, float size, float miny, float maxy, float
 	return false;
 }
 
+static unsigned visStamp = 0;
+
 void quadsquare::Update(const quadcornerdata& cd, const TVector3d& ViewerLocation, float Detail) {
 	float Viewer[3];
+	++visStamp;
 
 	DetailThreshold = Detail;
 	Viewer[0] = ViewerLocation.x / ScaleX;
@@ -625,6 +633,8 @@ void quadsquare::UpdateAux(const quadcornerdata& cd,
                            const float ViewerLocation[3], float CenterError, clip_result_t vis) {
 	if (vis != NoClip) {
 		vis = ClipSquare(cd);
+		FrameVis = (unsigned char)vis;
+		FrameStamp = visStamp;
 
 		if (vis == NotVisible) {
 			return;
@@ -632,6 +642,7 @@ void quadsquare::UpdateAux(const quadcornerdata& cd,
 	}
 	if (Dirty) {
 		RecomputeError(cd);
+		FrameStamp = 0;     // the box may have changed: Render asks again
 	}
 
 	int	half = 1 << cd.Level;
@@ -714,6 +725,12 @@ void quadsquare::UpdateAux(const quadcornerdata& cd,
 GLuint VertexIndices[9];
 int VertexTerrains[9];
 static std::vector<std::vector<GLuint>> opaqueTerrainIndices;
+// Triangles of squares whose whole box lies inside the view frustum: nothing
+// of them can cross a clip plane, so they go to the GE as they are, without
+// the six plane tests a vertex of a boundary square needs.
+static std::vector<std::vector<GLuint>> insideTerrainIndices;
+static const std::vector<GLuint>* insideTriangles;
+static bool squareInside;
 
 void quadsquare::InitVert(int i, int x, int z) {
 	if (x >= RowSize) x = RowSize-1;
@@ -761,44 +778,151 @@ static void terrain_pointers(const void* vertices) {
 	glVertexPointer(3, GL_FLOAT, STRIDE_GL_ARRAY, p + 24);
 }
 
+// The course's vertices live in a buffer object in the GE's own layout (see
+// psp_buffers.h): a triangle that needs no cutting is then three 16-bit
+// indices into it, instead of three vertices copied here and copied again by
+// PSPGL. Held in system memory, so the textures keep the video memory.
+static GLuint terrainBuffer = 0;
+static GLubyte* terrainBufferMemory = nullptr;
+
+GLubyte* PspTerrainArrayAlloc(long bytes) {
+	if (terrainBuffer) { glDeleteBuffers(1, &terrainBuffer); terrainBuffer = 0; }
+	terrainBufferMemory = nullptr;
+	glGenBuffers(1, &terrainBuffer);
+	if (!terrainBuffer) return nullptr;
+	while (glGetError() != GL_NO_ERROR) {}
+	glBindBuffer(GL_ARRAY_BUFFER, terrainBuffer);
+	glBufferData(GL_ARRAY_BUFFER, bytes, nullptr, GL_DYNAMIC_DRAW);
+	// In system memory a PSPGL buffer stays where it is: the address from
+	// one mapping holds for as long as the buffer does.
+	void* memory = glGetError() == GL_NO_ERROR ? glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY) : nullptr;
+	if (memory) glUnmapBuffer(GL_ARRAY_BUFFER);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	if (!memory) { glDeleteBuffers(1, &terrainBuffer); terrainBuffer = 0; return nullptr; }
+	// Through the cached mirror of the address: the outcode pass reads
+	// vertices from here every frame, and uncached reads cost it dearly.
+	terrainBufferMemory = reinterpret_cast<GLubyte*>(reinterpret_cast<unsigned>(memory) & ~0x40000000u);
+	return terrainBufferMemory;
+}
+
+void PspTerrainArrayFilled(GLubyte* array, long bytes) {
+	// The GE reads memory, not the CPU's cache.
+	if (array && array == terrainBufferMemory) sceKernelDcacheWritebackRange(array, bytes);
+}
+
+bool PspTerrainArrayFree(GLubyte* array) {
+	if (!array || array != terrainBufferMemory) return false;
+	glDeleteBuffers(1, &terrainBuffer);
+	terrainBuffer = 0;
+	terrainBufferMemory = nullptr;
+	return true;
+}
+
+static bool terrain_buffer(const GLubyte* vnc_array, int count) {
+	return terrainBuffer && vnc_array == terrainBufferMemory && count > 0 && count <= 65535;
+}
+
 void quadsquare::DrawTris() {
 	static std::vector<TerrainVertex> clipped;
-	static std::vector<GLubyte> outcodes;
+	static std::vector<GLushort> direct;
+	direct.clear();
+	const bool buffered = param.perf_level == 1 && terrain_buffer(VNCArray, RowSize * NumRows);
+	// 0xff marks a vertex not yet looked at. The entries a bucket touched
+	// are put back after it, so the array is never filled as a whole: on
+	// the PSP that fill cost more than the plane tests it prepared.
+	static std::vector<GLubyte> outcodes, guardcodes;
+	static std::vector<GLuint> touched;
 	clipped.clear();
-	if (!VertexArrayCounter) return;
-	const auto highest = *std::max_element(VertexArrayIndices, VertexArrayIndices+VertexArrayCounter);
-	outcodes.assign(highest+1, 0xff);
-	const TPlane* planes = get_view_clip_planes();
+	const std::vector<GLuint>* inside = insideTriangles;
+	insideTriangles = nullptr;
+	if (!VertexArrayCounter && !(inside && !inside->empty())) return;
+	const unsigned long long clip_start = PspProfileActive() ? PspProfileNow() : 0;
 	const TerrainVertex* vertices = reinterpret_cast<const TerrainVertex*>(VNCArray);
+	if (inside && !inside->empty()) {
+		if (buffered) {
+			direct.resize(inside->size());
+			GLushort* out = direct.data();
+			for (GLuint index : *inside) *out++ = (GLushort)index;
+		} else {
+			clipped.resize(inside->size());
+			TerrainVertex* out = clipped.data();
+			for (GLuint index : *inside) *out++ = vertices[index];
+		}
+		if (clip_start) PspProfileAdd(PSP_N_TRI_INSIDE, inside->size() / 3);
+	}
+	unsigned n_outcodes = 0, n_clipped = 0;
+	const auto highest = VertexArrayCounter
+		? *std::max_element(VertexArrayIndices, VertexArrayIndices+VertexArrayCounter) : 0;
+	if (VertexArrayCounter && outcodes.size() < highest+1) {
+		outcodes.resize(highest+1, 0xff);
+		guardcodes.resize(highest+1);
+	}
+	touched.clear();
+	const TPlane* planes = get_view_clip_planes();
+	const TPlane* guards = get_guard_clip_planes();
 	for (GLuint i = 0; i < VertexArrayCounter; i += 3) {
 		unsigned codes[3] = {};
+		unsigned boundary = 0;
 		for (int j = 0; j < 3; ++j) {
 			const auto index = VertexArrayIndices[i+j];
 			auto& code = outcodes[index];
 			if (code == 0xff) {
+				++n_outcodes;
+				touched.push_back(index);
 				code = 0;
 				for (int p = 0; p < 6; ++p)
 					if (plane_distance(vertices[index], planes[p]) > 0)
 						code |= 1u << p;
+				// Outside a side of the view is not yet outside the guard
+				// band: only there does the triangle need cutting.
+				unsigned guard = code & 3u;
+				for (int p = 2; p < 6; ++p)
+					if ((code & (1u << p)) && plane_distance(vertices[index], guards[p]) > 0)
+						guard |= 1u << p;
+				guardcodes[index] = guard;
 			}
 			codes[j] = code;
+			boundary |= guardcodes[index];
 		}
 		if (codes[0] & codes[1] & codes[2]) continue;
-		unsigned boundary = codes[0] | codes[1] | codes[2];
 		if (!boundary) {
-			for (int j = 0; j < 3; ++j) clipped.push_back(vertices[VertexArrayIndices[i+j]]);
+			if (buffered)
+				for (int j = 0; j < 3; ++j) direct.push_back((GLushort)VertexArrayIndices[i+j]);
+			else
+				for (int j = 0; j < 3; ++j) clipped.push_back(vertices[VertexArrayIndices[i+j]]);
 			continue;
 		}
+		++n_clipped;
 		TerrainVertex polygon[12];
 		for (int j = 0; j < 3; ++j) polygon[j] = vertices[VertexArrayIndices[i+j]];
-		int count = clip_polygon(polygon, 3, planes, boundary, terrain_lerp);
+		int count = clip_polygon(polygon, 3, guards, boundary, terrain_lerp);
 		for (int j = 1; j+1 < count; ++j) {
 			clipped.push_back(polygon[0]);
 			clipped.push_back(polygon[j]);
 			clipped.push_back(polygon[j+1]);
 		}
 	}
+	for (GLuint index : touched) outcodes[index] = 0xff;
+	if (clip_start) {
+		PspProfileAdd(PSP_SUB_TERRAIN_CLIP, PspProfileNow() - clip_start);
+		PspProfileAdd(PSP_N_TRI_BOUNDARY, VertexArrayCounter / 3);
+		PspProfileAdd(PSP_N_TRI_CLIPPED, n_clipped);
+		PspProfileAdd(PSP_N_OUTCODES, n_outcodes);
+	}
+	if (!direct.empty()) {
+		PspProfileScope profile(PSP_SUB_TERRAIN_DRAW);
+		extern void PspProfileTerrain(unsigned count);
+		PspProfileTerrain(direct.size());
+		glBindBuffer(GL_ARRAY_BUFFER, terrainBuffer);
+		terrain_pointers(nullptr);
+		glDrawElements(GL_TRIANGLES, direct.size(), GL_UNSIGNED_SHORT, direct.data());
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		// Back to the arrays in memory: PSPGL lets go of the buffer with it.
+		terrain_pointers(VNCArray);
+		if (clipped.empty()) glFlush();
+	}
 	if (!clipped.empty()) {
+		PspProfileScope profile(PSP_SUB_TERRAIN_DRAW);
 		extern void PspProfileTerrain(unsigned count);
 		PspProfileTerrain(clipped.size());
 		terrain_pointers(clipped.data());
@@ -825,13 +949,19 @@ void quadsquare::Render(const quadcornerdata& cd, GLubyte *vnc_array) {
 		// identical quadtree traversal per terrain texture.
 		opaqueTerrainIndices.resize(numTerrains);
 		for (auto& indices : opaqueTerrainIndices) indices.clear();
-		RenderAux(cd, SomeClip, -2);
+		insideTerrainIndices.resize(numTerrains);
+		for (auto& indices : insideTerrainIndices) indices.clear();
+		{
+			PspProfileScope profile(PSP_SUB_QUAD_TRAVERSE);
+			RenderAux(cd, SomeClip, -2);
+		}
 		for (std::size_t j=0;j<numTerrains;++j) {
 			const auto& indices=opaqueTerrainIndices[j];
-			if (indices.empty() || !Course.TerrList[j].texture) continue;
+			if ((indices.empty() && insideTerrainIndices[j].empty()) || !Course.TerrList[j].texture) continue;
 			InitArrayCounters();
 			std::copy(indices.begin(),indices.end(),VertexArrayIndices);
 			VertexArrayCounter=indices.size();
+			insideTriangles=&insideTerrainIndices[j];
 			Course.TerrList[j].texture->Bind();
 			DrawTris();
 		}
@@ -963,7 +1093,7 @@ inline void quadsquare::MakeSpecialTri(int a, int b, int c, int terrain) {
 inline void quadsquare::MakeNoBlendTri(int a, int b, int c, int terrain) {
 	if (terrain == -2) {
 		const int material=std::min({VertexTerrains[a],VertexTerrains[b],VertexTerrains[c]});
-		auto& indices=opaqueTerrainIndices[material];
+		auto& indices=squareInside ? insideTerrainIndices[material] : opaqueTerrainIndices[material];
 		for (int v : {a,b,c}) {
 			indices.push_back(VertexIndices[v]);
 			colorval(VertexIndices[v],3)=255;
@@ -989,10 +1119,11 @@ inline void quadsquare::MakeNoBlendTri(int a, int b, int c, int terrain) {
 }
 
 void quadsquare::RenderAux(const quadcornerdata& cd, clip_result_t vis, int terrain) {
+	if (PspProfileActive()) PspProfileAdd(PSP_N_QUAD_NODES, 1);
 	int	half = 1 << cd.Level;
 	int	whole = 2 << cd.Level;
 	if (vis != NoClip) {
-		vis = ClipSquare(cd);
+		vis = FrameStamp == visStamp ? (clip_result_t)FrameVis : ClipSquare(cd);
 		if (vis == NotVisible) return;
 	}
 
@@ -1020,6 +1151,7 @@ void quadsquare::RenderAux(const quadcornerdata& cd, clip_result_t vis, int terr
 	InitVert(6, cd.xorg, cd.zorg + whole);
 	InitVert(7, cd.xorg + half, cd.zorg + whole);
 	InitVert(8, cd.xorg + whole, cd.zorg + whole);
+	squareInside = vis == NoClip;
 	if (terrain == -1) {
 		make_tri_list(MakeSpecialTri, EnabledFlags, flags, terrain);
 	} else if (param.perf_level > 1) {
@@ -1221,6 +1353,7 @@ void InitQuadtree(CourseFields* fields, int nx, int nz,
 }
 
 void UpdateQuadtree(const TVector3d& view_pos, float detail) {
+	PspProfileScope profile(PSP_SUB_QUAD_UPDATE);
 	root->Update(root_corner_data, view_pos, detail);
 }
 

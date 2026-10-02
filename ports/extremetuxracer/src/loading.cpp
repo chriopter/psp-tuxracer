@@ -40,6 +40,7 @@ void CLoading::Enter() {
 	Music.Play("loading", true);
 }
 
+void PspTraceStep(const char *what);
 void CLoading::Loop(float time_step) {
 	ScopedRenderMode rm(GUI);
 	Winsys.clear();
@@ -65,5 +66,6 @@ void CLoading::Loop(float time_step) {
 	Course.LoadCourse(g_game.course);
 	g_game.location_id = Course.GetEnv();
 	Env.LoadEnvironment(g_game.location_id, g_game.light_id);
+	PspTraceStep("environment loaded");
 	State::manager.RequestEnterState(Intro);
 }

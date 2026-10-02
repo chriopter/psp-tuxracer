@@ -64,15 +64,19 @@ void InitGame(int argc, char **argv) {
 	g_game.treevar = 3;
 }
 
+void PspTraceStep(const char *what);
 int etr_main(int argc, char **argv) {
 	std::cout << "\n----------- Extreme Tux Racer " ETR_VERSION_STRING " ----------------";
 	std::cout << "\n----------- (C) 2010-2024 Extreme Tux Racer Team  --------\n\n";
 
 	std::srand(std::time(nullptr));
+	PspTraceStep("etr_main");
 	InitConfig();
 	InitGame(argc, argv);
 	Winsys.Init();
+	PspTraceStep("window");
 	PspSave::LoadStartup();
+	PspTraceStep("save loaded");
 	InitOpenglExtensions();
 
 	// For checking the joystick and the OpgenGL version (the info is written on the console):
@@ -84,10 +88,13 @@ int etr_main(int argc, char **argv) {
 		Winsys.Quit();
 		return -1;
 	}
+	PspTraceStep("textures");
 	FT.LoadFontlist();
 	FT.SetFontFromSettings();
+	PspTraceStep("fonts");
 	Music.LoadMusicList();
 	Music.SetVolume(param.music_volume);
+	PspTraceStep("music");
 
 	switch (g_game.argument) {
 		case 0:

@@ -20,6 +20,6 @@ Tux Racer / Extreme Tux Racer und die ursprünglichen Autoren werden zur Kennzei
 
 ## PSP shell and savedata icon
 
-`ports/extremetuxracer/psp/icon0.png` is a resized, centered derivative of the upstream `data/textures/menu_title.png`, generated on 2026-09-07 for the PSP shell and savedata utility. It retains the upstream GPL-2.0-or-later license. Staging copies it to `data/psp-icon.png`; original upstream assets remain unchanged.
+`ports/extremetuxracer/psp/icon0.png`, `PIC1.PNG` and `ICON1.PMF` are made by `tools/make-eboot-art.sh` (2026-10-02) from a recording of the game itself on a PSP-1000: Bunny Hill against five computer penguins, dumped frame by frame without the HUD. `PIC1.PNG` is one frame of it, `ICON1.PMF` its first six seconds at 144×80, and `icon0.png` the same frame with the upstream title `data/textures/menu_title.png` laid over it. All three show only upstream artwork as the game renders it and retain the upstream GPL-2.0-or-later license. Staging copies `icon0.png` to `data/psp-icon.png` for the savedata utility; original upstream assets remain unchanged.
 
 Staging supplies missing skybox top/bottom faces by extending the edge rows of each upstream front image, and a rear face by mirroring that image. These are GPL-2.0-or-later derivatives of the same upstream artwork, not separately sourced assets.

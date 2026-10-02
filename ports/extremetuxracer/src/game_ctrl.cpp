@@ -252,18 +252,26 @@ bool CPlayers::LoadAvatars() {
 	avatars.reserve(list.size());
 	for (CSPList::const_iterator line = list.cbegin(); line != list.cend(); ++line) {
 		std::string filename = SPStrN(*line, "file", "unknown");
-		TTexture* texture = new TTexture();
-		if (texture && texture->Load(param.player_dir, filename)) {
-			avatars.emplace_back(filename, texture);
-		} else
-			delete texture;
+		avatars.emplace_back(filename, nullptr);
 	}
 	return true;
 }
 
+TTexture* TAvatar::Texture() const {
+	if (!texture && !missing) {
+		texture = new TTexture();
+		if (!texture->Load(param.player_dir, filename)) {
+			delete texture;
+			texture = nullptr;
+			missing = true;
+		}
+	}
+	return texture;
+}
+
 TTexture* CPlayers::GetAvatarTexture(std::size_t avatar) const {
 	if (avatar >= avatars.size()) return 0;
-	return avatars[avatar].texture;
+	return avatars[avatar].Texture();
 }
 
 const std::string& CPlayers::GetDirectAvatarName(std::size_t avatar) const {
@@ -308,38 +316,48 @@ bool CCharacter::LoadCharacterList() {
 		std::string typestr = SPStrN(*line, "type", "unknown");
 		CharList[i].type = SPIntN(char_type_index, typestr, -1);
 
-		std::string charpath = MakePathStr(param.char_dir, CharList[i].dir);
-		if (DirExists(charpath.c_str())) {
-			std::string previewfile = charpath + SEP "preview.png";
-
-			TCharacter* ch = &CharList[i];
-			ch->preview = new TTexture();
-			if (!ch->preview->Load(previewfile, false)) {
-				Message("could not load previewfile of character");
-//				texid = Tex.TexID (NO_PREVIEW);
-			}
-
-			PspTraceResource("shape begin", charpath.c_str());
-			ch->shape = new CCharShape;
-			if (ch->shape->Load(charpath, "shape.lst", false) == false) {
-				delete ch->shape;
-				ch->shape = nullptr;
-				Message("could not load character shape");
-			}
-			PspTraceResource(ch->shape ? "shape ready" : "shape failed", charpath.c_str());
-
-			ch->frames[0].Load(charpath, "start.lst");
-			ch->finishframesok = true;
-			ch->frames[1].Load(charpath, "finish.lst");
-			if (ch->frames[1].loaded == false) ch->finishframesok = false;
-			ch->frames[2].Load(charpath, "wonrace.lst");
-			if (ch->frames[2].loaded == false) ch->finishframesok = false;
-			ch->frames[3].Load(charpath, "lostrace.lst");
-			if (ch->frames[3].loaded == false) ch->finishframesok = false;
-			PspTraceResource("character ready", charpath.c_str());
-		}
+		CharList[i].preview = nullptr;
+		CharList[i].shape = nullptr;
+		CharList[i].finishframesok = false;
 	}
 	return !CharList.empty();
+}
+
+void CCharacter::Ensure(TCharacter& character) {
+	if (character.loaded) return;
+	character.loaded = true;
+	TCharacter* ch = &character;
+	const std::string charpath = MakePathStr(param.char_dir, ch->dir);
+	PspTraceResource("shape begin", charpath.c_str());
+	ch->shape = new CCharShape;
+	if (ch->shape->Load(charpath, "shape.lst", false) == false) {
+		delete ch->shape;
+		ch->shape = nullptr;
+		Message("could not load character shape");
+	}
+	PspTraceResource(ch->shape ? "shape ready" : "shape failed", charpath.c_str());
+
+	ch->frames[0].Load(charpath, "start.lst");
+	ch->finishframesok = true;
+	ch->frames[1].Load(charpath, "finish.lst");
+	if (ch->frames[1].loaded == false) ch->finishframesok = false;
+	ch->frames[2].Load(charpath, "wonrace.lst");
+	if (ch->frames[2].loaded == false) ch->finishframesok = false;
+	ch->frames[3].Load(charpath, "lostrace.lst");
+	if (ch->frames[3].loaded == false) ch->finishframesok = false;
+	PspTraceResource("character ready", charpath.c_str());
+}
+
+TTexture* TCharacter::Preview() {
+	if (!preview && !preview_missing) {
+		preview = new TTexture();
+		if (!preview->Load(MakePathStr(param.char_dir, dir) + SEP "preview.png", false)) {
+			delete preview;
+			preview = nullptr;
+			preview_missing = true;
+		}
+	}
+	return preview;
 }
 
 void CCharacter::LoadCharacterPreviews() {

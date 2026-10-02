@@ -21,16 +21,24 @@ GNU General Public License for more details.
 #include <etr_config.h>
 #endif
 
+#include "psp_profile.h"
 #include "track_marks.h"
+#include "game_ctrl.h"
+#include "winsys.h"
 #include "ogl.h"
 #include "textures.h"
 #include "course.h"
 #include "physics.h"
 #include "clip_polygon.h"
 #include <list>
+#include <vector>
+#include <iterator>
 
 #define TRACK_WIDTH 0.7
-#define MAX_TRACK_MARKS 10000
+// A ring of the newest marks. 4096 is over a minute of trench at 60 frames a
+// second, far more than the view distance ever shows behind the player, and
+// bounds what a long race takes from the PSP-1000's heap (10000 before).
+#define MAX_TRACK_MARKS 4096
 #define SPEED_TO_START_TRENCH 0.0
 #define TRACK_HEIGHT 0.08
 #define MAX_TRACK_DEPTH 0.7
@@ -59,6 +67,34 @@ struct track_marks_t {
 static track_marks_t track_marks;
 static bool continuing_track;
 
+// The marks in the order they were laid, in runs of TRACK_CHUNK with the box
+// each run lies in. Drawing asks the box first, so a long race does not walk
+// every mark it has ever laid to find the few in view. A box only grows: when
+// the ring starts over, a run's box also covers the marks it held before.
+#define TRACK_CHUNK 64
+// Longer than any mark: a frame's travel at top speed is under two metres.
+#define TRACK_REACH 4.f
+struct track_chunk_t {
+	std::list<track_quad_t>::iterator first;
+	int count;
+	float min[3], max[3];
+};
+static std::vector<track_chunk_t> track_chunks;
+static std::size_t track_index;
+// A mark's first corner and where the mark is, in the order laid and side by
+// side in memory: the walk that finds the marks in view reads these and
+// leaves the marks themselves, a list node each, alone until one is drawn.
+struct track_key_t { float x, y, z; const track_quad_t* quad; };
+static std::vector<track_key_t> track_keys;
+
+static void chunk_cover(track_chunk_t& c, const TVector3d& v) {
+	const float p[3] = {(float)v.x, (float)v.y, (float)v.z};
+	for (int k = 0; k < 3; ++k) {
+		if (p[k] < c.min[k]) c.min[k] = p[k];
+		if (p[k] > c.max[k]) c.max[k] = p[k];
+	}
+}
+
 static int trackid1 = 1;
 static int trackid2 = 2;
 static int trackid3 = 3;
@@ -71,6 +107,9 @@ void SetTrackIDs(int id1, int id2, int id3) {
 
 void init_track_marks() {
 	track_marks.quads.clear();
+	track_chunks.clear();
+	track_keys.clear();
+	track_index = 0;
 	track_marks.current_mark = track_marks.quads.begin();
 	continuing_track = false;
 }
@@ -94,6 +133,7 @@ static T decrementRingIterator(T q) {
 }
 
 void DrawTrackmarks() {
+	PspProfileScope profile(PSP_SUB_TRACKMARKS);
 	// The snow trench is core game feedback, including the PSP default profile.
 	if (track_marks.quads.empty())
 		return;
@@ -135,6 +175,7 @@ void DrawTrackmarks() {
 		batch.clear();
 	};
 	const TPlane* planes=get_view_clip_planes();
+	const TPlane* guards=get_guard_clip_planes();
 	auto interpolate=[](const TrackVertex& a,const TrackVertex& b,float t) {
 		TrackVertex v;
 		for(int k=0;k<2;++k)v.uv[k]=a.uv[k]+t*(b.uv[k]-a.uv[k]);
@@ -145,7 +186,39 @@ void DrawTrackmarks() {
 		}
 		return v;
 	};
-	for (const auto& q : track_marks.quads) {
+	// The view frustum lies inside a sphere around the eye: the far distance
+	// over the cosine of the half diagonal field of view. A quad wholly
+	// outside that sphere fails the plane tests below as well, so skipping
+	// it here changes nothing drawn and spares a long race the six plane
+	// tests for every mark it has ever laid.
+	const TVector3d eye = g_game.player->ctrl->viewpos;
+	const float half_v = std::tan(ANGLES_TO_RADIANS(param.fov * 0.5f));
+	const float half_h = half_v * Winsys.resolution.width / Winsys.resolution.height;
+	const float reach = param.forward_clip_distance * std::sqrt(1.f + half_v*half_v + half_h*half_h) + 4.f;
+	const float reach2 = reach * reach;
+	for (const auto& chunk : track_chunks) {
+		float away2 = 0;
+		const float e[3] = {(float)eye.x, (float)eye.y, (float)eye.z};
+		for (int k = 0; k < 3; ++k) {
+			const float d = e[k] < chunk.min[k] ? chunk.min[k] - e[k]
+			              : e[k] > chunk.max[k] ? e[k] - chunk.max[k] : 0.f;
+			away2 += d * d;
+		}
+		if (away2 > reach2) continue;
+		if (clip_aabb_to_view_frustum(TVector3d(chunk.min[0], chunk.min[1], chunk.min[2]),
+		                              TVector3d(chunk.max[0], chunk.max[1], chunk.max[2])) == NotVisible)
+			continue;
+		const track_key_t* key = &track_keys[(&chunk - &track_chunks[0]) * TRACK_CHUNK];
+		for (int n = 0; n < chunk.count; ++n, ++key) {
+		if (PspProfileActive()) PspProfileAdd(PSP_N_TRACK_SEEN, 1);
+		// A mark is far shorter than TRACK_REACH: with its first corner
+		// that far outside a plane, the other three are outside it too.
+		bool far_outside = false;
+		for (unsigned p = 0; p < 6 && !far_outside; ++p)
+			far_outside = key->x*planes[p].nml.x + key->y*planes[p].nml.y +
+			              key->z*planes[p].nml.z + planes[p].d > TRACK_REACH;
+		if (far_outside) continue;
+		const auto& q = *key->quad;
 		if (!q.alpha || !textures[q.track_type]) continue;
 		const TVector3d positions[]={q.v1,q.v2,q.v4,q.v3};
 		unsigned boundary=0;
@@ -156,7 +229,13 @@ void DrawTrackmarks() {
 				outside += v.x*planes[p].nml.x+v.y*planes[p].nml.y+
 				           v.z*planes[p].nml.z+planes[p].d > 0;
 			if(outside==4) { rejected=true; break; }
-			if(outside) boundary|=1u<<p;
+			if(!outside) continue;
+			// Near and far are cut here; a side only beyond the guard band.
+			if(p<2) { boundary|=1u<<p; continue; }
+			for(const auto& v:positions)
+				if(v.x*guards[p].nml.x+v.y*guards[p].nml.y+v.z*guards[p].nml.z+guards[p].d > 0) {
+					boundary|=1u<<p; break;
+				}
 		}
 		if(rejected) continue; // Reject only wholly invisible quads, not old visible tracks.
 		const TVector3d normals[]={q.n1,q.n2,q.n4,q.n3};
@@ -167,18 +246,20 @@ void DrawTrackmarks() {
 			             {normals[j].x,normals[j].y,normals[j].z},
 			             {positions[j].x,positions[j].y,positions[j].z}};
 		}
+		if (PspProfileActive()) PspProfileAdd(PSP_N_TRACK_DRAWN, 1);
 		if(bound_type!=q.track_type) {
 			flush(); textures[q.track_type]->Bind(); bound_type=q.track_type;
 		}
 		// Retain the original diagonal, UVs, normals and depth-dependent alpha.
 		for(unsigned j=1;j<3;++j) {
 			TrackVertex polygon[12]={vertices[0],vertices[j],vertices[j+1]};
-			int count=boundary ? clip_polygon(polygon,3,planes,boundary,interpolate) : 3;
+			int count=boundary ? clip_polygon(polygon,3,guards,boundary,interpolate) : 3;
 			for(int k=1;k+1<count;++k) {
 				batch.push_back(polygon[0]);batch.push_back(polygon[k]);batch.push_back(polygon[k+1]);
 			}
 		}
 		if(batch.size()>=1536) flush();
+		}
 	}
 	flush();
 }
@@ -248,13 +329,22 @@ void add_track_mark(const CControl *ctrl, int *id) {
 		return;
 	}
 
-	if (track_marks.quads.size() < MAX_TRACK_MARKS)
+	if (track_marks.quads.size() < MAX_TRACK_MARKS) {
 		track_marks.quads.emplace_back();
+		if (track_chunks.empty() || track_chunks.back().count == TRACK_CHUNK)
+			track_chunks.push_back({std::prev(track_marks.quads.end()), 0,
+			                        {1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}});
+		++track_chunks.back().count;
+		track_keys.push_back({0, 0, 0, &track_marks.quads.back()});
+	}
 	std::list<track_quad_t>::iterator qprev = track_marks.current_mark;
-	if (track_marks.current_mark == track_marks.quads.end())
+	if (track_marks.current_mark == track_marks.quads.end()) {
 		track_marks.current_mark = track_marks.quads.begin();
-	else
+		track_index = 0;
+	} else {
 		track_marks.current_mark = incrementRingIterator(track_marks.current_mark);
+		track_index = (track_index + 1) % track_marks.quads.size();
+	}
 	std::list<track_quad_t>::iterator q = track_marks.current_mark;
 
 	if (!continuing_track) {
@@ -290,6 +380,12 @@ void add_track_mark(const CControl *ctrl, int *id) {
 			qprev->track_type = TRACK_MARK;
 	}
 	q->alpha = std::min(static_cast<int>((2*comp_depth-dist_from_surface)/(4*comp_depth)*255), 255);
+	track_chunk_t& chunk = track_chunks[track_index / TRACK_CHUNK];
+	chunk_cover(chunk, q->v1); chunk_cover(chunk, q->v2);
+	chunk_cover(chunk, q->v3); chunk_cover(chunk, q->v4);
+	track_keys[track_index].x = q->v1.x;
+	track_keys[track_index].y = q->v1.y;
+	track_keys[track_index].z = q->v1.z;
 	continuing_track = true;
 }
 

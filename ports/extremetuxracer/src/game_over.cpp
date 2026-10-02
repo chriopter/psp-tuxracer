@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include <etr_config.h>
 #endif
 
+#include "opponents.h"
 #include "game_over.h"
 #include "audio.h"
 #include "ogl.h"
@@ -83,12 +84,18 @@ void GameOverMessage(const CControl *ctrl) {
 		FT.SetColor(colDBlue);
 		FT.DrawString(CENTER, topframe+30, Trans.Text(25));
 	} else {
-		int firstMarker = leftframe + 60;
+		int firstMarker = leftframe + 40;
 		int secondMarker = leftframe + 310;
 		DrawFrameX(leftframe, topframe, fwidth, 210, 4, backcol, framecol, 0.5f);
 
 		if (param.use_papercut_font > 0) FT.SetSize(20);
 		else FT.SetSize(14);
+		// The figures stand clear of the longest label: in German the one
+		// for the average speed ran into its own number.
+		for (int text : {84, 85, 86, 87, 88, (int)TXT_PLACE}) {
+			const int after = firstMarker + (int)FT.GetTextWidth(Trans.Text(text) + ":  ") + 8;
+			if (after > secondMarker) secondMarker = after;
+		}
 		if (g_game.race_result >= 0 || g_game.game_type != CUPRACING) FT.SetColor(colDBlue);
 		else FT.SetColor(colDRed);
 
@@ -131,16 +138,24 @@ void GameOverMessage(const CControl *ctrl) {
 		line += "  km/h";
 		FT.DrawString(secondMarker, topframe + 115, line);
 
+		// Against penguins: the place the player came in.
+		if (const int place = Opponents::Place(ctrl)) {
+			line = Trans.Text(TXT_PLACE) + ":  ";
+			FT.DrawString(firstMarker, topframe + 140, line);
+			line = Int_StrN(place) + " / " + Int_StrN(Opponents::Count() + 1);
+			FT.DrawString(secondMarker, topframe + 140, line);
+		}
+
 		if (param.use_papercut_font > 0) FT.SetSize(28);
 		else FT.SetSize(22);
 		if (g_game.game_type == CUPRACING) {
-			FT.DrawString(CENTER, topframe + 150, Trans.Text(22 + g_game.race_result)); // Text IDs 21 - 24; race_results is in [-1; 2]
+			FT.DrawString(CENTER, topframe + 170, Trans.Text(22 + g_game.race_result)); // Text IDs 21 - 24; race_results is in [-1; 2]
 		} else {
 			if (highscore_pos < MAX_SCORES) {
 				line = Trans.Text(89) + ' ';
 				line += Int_StrN(highscore_pos + 1);
 				line += ' ' + Trans.Text(90);
-				FT.DrawString(CENTER, topframe+150, line);
+				FT.DrawString(CENTER, topframe+170, line);
 			}
 		}
 	}

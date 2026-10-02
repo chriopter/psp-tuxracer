@@ -115,6 +115,8 @@ private:
 public:
 	CCharShape();
 	~CCharShape();
+	unsigned bakedBuffer = 0, bakedIndexBuffer = 0, bakedCount = 0;
+	bool bakedFailed = false;   // no memory for the mesh: the opponent is not drawn
 	bool useMaterials;
 	bool useHighlighting;
 	bool   highlighted;
@@ -134,6 +136,11 @@ public:
 	// global functions
 	void Reset();
 	void Draw();
+	// PSP: the shape at another place, for a computer penguin. Drawn from
+	// one mesh of all its spheres, made the first time in the pose the
+	// shape then has: one draw instead of one per sphere, which is what a
+	// character costs. It does not move its limbs and casts no shadow.
+	void DrawBaked(const TMatrix<4, 4>& root);
 	void DrawShadow() const;
 	bool Load(const std::string& dir, const std::string& filename, bool with_actions);
 

@@ -119,6 +119,8 @@ void State::Manager::CallLoopFunction() {
 	check_gl_error();
 
 	g_game.time_step = std::max(0.0001f, timer.getElapsedTime().asSeconds());
+	extern bool PspFixedStep();
+	if (PspFixedStep()) g_game.time_step = 1.f / 60.f;
 	timer.restart();
 	current->Loop(g_game.time_step);
 }

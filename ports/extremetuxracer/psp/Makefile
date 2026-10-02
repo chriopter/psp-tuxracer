@@ -14,6 +14,9 @@ PSP_EBOOT_PIC1 = PIC1.PNG
 PSP_EBOOT_ICON1 = ICON1.PMF
 PSP_EBOOT_SND0 = SND0.AT3
 PSP_EBOOT_TITLE = Extreme Tux Racer 0.8.4
+# The game's own ID, the one its saved data is filed under (psp/savedata.cpp),
+# instead of the SDK's default UCJS10041 that every homebrew without one shares.
+SFOFLAGS = -s DISC_ID=ETRX00001
 PSPSDK = $(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build.mak
 -include $(OBJS:.o=.d)

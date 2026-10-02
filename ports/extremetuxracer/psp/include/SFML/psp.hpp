@@ -133,6 +133,7 @@ class Texture {
   Vector2u size;
   bool smooth = false, repeated = false, mipmaps = false;
   bool videoMemory = false;
+  bool objectTexture = false;
   unsigned maxSize = 256;
 
 public:
@@ -216,8 +217,15 @@ public:
 class Font {
 public:
   struct Impl;
-  std::shared_ptr<Impl> impl;
+  mutable std::shared_ptr<Impl> impl;
+  // The file is only noted here; the glyphs are drawn into their atlas the
+  // first time the font is used (ready()). The game lists three fonts and
+  // writes with one: drawing all three took 3.8 s of every start and half
+  // a megabyte of memory each.
+  mutable std::string pending;
   bool loadFromFile(const std::string &);
+  bool ready() const;
+  bool build(const std::string &) const;
 };
 class Text : public Drawable, public Transformable {
   String value;

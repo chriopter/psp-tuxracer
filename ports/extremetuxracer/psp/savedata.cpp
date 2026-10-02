@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Native PSP savedata, 2026-09-07. One profile contains all players and scores.
+// The savedata utility of current firmware takes the parameter block of
+// firmware 2.00 and later, with the key that seals the save. The SDK gives
+// the short 1.50 block unless told otherwise, and the console answers that
+// one with 0x80110388, a parameter error, where the emulator let it pass.
+#undef _PSP_FW_VERSION
+#define _PSP_FW_VERSION 600
 #include "savedata.hpp"
 #include "audio.h"
 #include "font.h"
@@ -9,6 +15,8 @@
 #include "gui.h"
 #include "ogl.h"
 #include "regist.h"
+#include "psp_ui.h"
+#include "translation.h"
 #include "save_format.hpp"
 #include "score.h"
 #include "states.h"
@@ -18,6 +26,8 @@
 #include <fstream>
 #include <iterator>
 #include <psputility.h>
+#include <pspge.h>
+#include <psputils.h>
 #include <pspctrl.h>
 #include <sys/stat.h>
 
@@ -35,6 +45,52 @@ static bool exists(const char *path) {
   return stat(path, &s) == 0;
 }
 
+// The firmware's dialogs draw with the GE as the game left it. After the
+// clear that precedes a dialog's frame, PSPGL leaves the GE in clear mode
+// (register 0xD3) until its next draw -- and in clear mode the GE writes
+// plain vertex colour, no texture: on the console the save dialog came up
+// as white boxes without a letter in them. The texture matrix, scale, blend
+// and test settings PSPGL keeps are not what a dialog expects either. Around every update of a
+// dialog the registers below are put to what a dialog expects and back to
+// what PSPGL believes they hold.
+static unsigned __attribute__((aligned(16))) geList[64];
+// Register and the value a dialog is given: tests and effects off, texturing
+// and plain alpha blending on, texture coordinates taken as they come, the
+// colour table read whole, every colour bit written.
+static const unsigned geWanted[][2] = {
+    {0x17, 0}, {0x1D, 0}, {0x1E, 1}, {0x1F, 0}, {0x20, 0}, {0x21, 1}, {0x22, 0},
+    {0x23, 0}, {0x24, 0}, {0x25, 0}, {0x26, 0}, {0x27, 0}, {0x28, 0},
+    {0x48, 0x3F8000}, {0x49, 0x3F8000}, {0x4A, 0}, {0x4B, 0},   // scale 1.0, offset 0
+    {0x50, 1}, {0xC0, 0}, {0xC1, 0}, {0xC2, 0},
+    {0xC5, 0x00FF03}, {0xC6, 0x000101}, {0xC7, 0x000101}, {0xC8, 0},
+    {0xC9, 0x000100},               // modulate, with the texture's alpha
+    {0xCA, 0}, {0xD3, 0}, {0xD6, 0}, {0xD7, 0xFFFF},
+    {0xDF, 0x000032},               // source alpha over one minus source alpha
+    {0xE7, 0}, {0xE8, 0}, {0xE9, 0},
+};
+enum { geCount = sizeof(geWanted) / sizeof(geWanted[0]) };
+static unsigned geSaved[geCount];
+
+static void geRun(const unsigned *commands, int count) {
+  for (int i = 0; i < count; ++i) geList[i] = commands[i];
+  geList[count] = 0x0F000000u;      // FINISH
+  geList[count + 1] = 0x0C000000u;  // END
+  sceKernelDcacheWritebackRange(geList, sizeof(geList));
+  const int id = sceGeListEnQueue(geList, geList + count + 2, -1, nullptr);
+  if (id >= 0) sceGeListSync(id, 0);
+}
+static void dialogStateEnter() {
+  unsigned wanted[geCount];
+  for (int i = 0; i < geCount; ++i) {
+    geSaved[i] = (geWanted[i][0] << 24) | (sceGeGetCmd(geWanted[i][0]) & 0x00FFFFFFu);
+    // Clear mode is not put back: PSPGL has already asked for it to end.
+    if (geWanted[i][0] == 0xD3) geSaved[i] = 0xD3000000u;
+    wanted[i] = (geWanted[i][0] << 24) | geWanted[i][1];
+  }
+  geRun(wanted, geCount);
+}
+static void dialogStateLeave() { geRun(geSaved, geCount); }
+
 static bool releaseButtons() {
   // The Cross press opening a utility must not type/confirm inside that utility.
   SceCtrlData pad{};
@@ -45,6 +101,10 @@ static bool releaseButtons() {
   }
   return false;
 }
+// Sixteen bytes that seal this game's saves; any save written with them is
+// read back only with them.
+static const char saveKey[17] = "ETRX00001-PSP-01";
+
 static int dialog(SceUtilitySavedataParam &p) {
   if (!releaseButtons()) return -1;
   p.base.size = sizeof(p);
@@ -60,6 +120,9 @@ static int dialog(SceUtilitySavedataParam &p) {
   std::strcpy(p.saveName, "PROFILE");
   std::strcpy(p.fileName, "PROFILE.DAT");
   p.overwrite = 1;
+  p.focus = PSP_UTILITY_SAVEDATA_FOCUS_LATEST;
+  std::memcpy(p.key, saveKey, 16);
+  p.sfoParam.parentalLevel = 1;
   std::strcpy(p.sfoParam.title, "Extreme Tux Racer PSP");
   std::strcpy(p.sfoParam.savedataTitle, "Players and progress");
   std::strcpy(p.sfoParam.detail,
@@ -79,8 +142,11 @@ static int dialog(SceUtilitySavedataParam &p) {
     Winsys.clear();
     glFinish();
     int state = sceUtilitySavedataGetStatus();
-    if (state == PSP_UTILITY_DIALOG_VISIBLE)
+    if (state == PSP_UTILITY_DIALOG_VISIBLE) {
+      dialogStateEnter();
       sceUtilitySavedataUpdate(1);
+      dialogStateLeave();
+    }
     else if (state == PSP_UTILITY_DIALOG_QUIT && !shuttingDown) {
       sceUtilitySavedataShutdownStart();
       shuttingDown = true;
@@ -156,8 +222,13 @@ bool Save(bool interactive) {
   SceUtilitySavedataParam p{};
   p.mode =
       interactive ? PSP_UTILITY_SAVEDATA_SAVE : PSP_UTILITY_SAVEDATA_AUTOSAVE;
+  // A sealed save is written in blocks of sixteen bytes: the buffer has
+  // room for the last block filled up and for the seal after it.
+  const std::size_t bytes = data.size();
+  data.resize(((bytes + 15) & ~std::size_t(15)) + 16);
   p.dataBuf = data.data();
-  p.dataBufSize = p.dataSize = data.size();
+  p.dataBufSize = data.size();
+  p.dataSize = bytes;
   int result = dialog(p);
   if (result == 0) {
     allowAuto = true;
@@ -172,7 +243,8 @@ bool Save(bool interactive) {
 bool Load(bool interactive) {
   if (benchmark)
     return false;
-  std::vector<uint8_t> data(PspSaveFormat::Capacity);
+  // Room for the padding and the seal a save of full size is written with.
+  std::vector<uint8_t> data(PspSaveFormat::Capacity + 32);
   SceUtilitySavedataParam p{};
   p.mode =
       interactive ? PSP_UTILITY_SAVEDATA_LOAD : PSP_UTILITY_SAVEDATA_AUTOLOAD;
@@ -250,8 +322,11 @@ bool EditPlayerName(std::string &name) {
     Winsys.clear();
     glFinish();
     int state = sceUtilityOskGetStatus();
-    if (state == PSP_UTILITY_DIALOG_VISIBLE)
+    if (state == PSP_UTILITY_DIALOG_VISIBLE) {
+      dialogStateEnter();
       sceUtilityOskUpdate(1);
+      dialogStateLeave();
+    }
     else if (state == PSP_UTILITY_DIALOG_QUIT && !shuttingDown) {
       sceUtilityOskShutdownStart();
       shuttingDown = true;
@@ -279,24 +354,25 @@ bool EditPlayerName(std::string &name) {
 }
 
 class SaveMenu final : public State {
-  TTextButton *save = nullptr, *load = nullptr, *back = nullptr;
+  // Two rows, as every other menu: up and down choose, Cross does it with
+  // the console's own save or load dialog, Circle goes back.
+  int cursor = 0;
 
 public:
   void Enter() override {
     ResetGUI();
-    save = AddTextButton("Save progress", CENTER, 205, 28);
-    load = AddTextButton("Load progress", CENTER, 260, 28);
-    back = AddTextButton("Back", CENTER, 315, 28);
+    cursor = 0;
   }
   void Keyb(sf::Keyboard::Key key, bool release, int, int) override {
     if (release)
       return;
+    PspUI::ListKey(key, cursor, 2);
     if (key == sf::Keyboard::Escape)
       State::manager.RequestEnterState(GameTypeSelect);
     else if (key == sf::Keyboard::Return) {
-      if (save->focussed())
+      if (cursor == 0)
         Save(true);
-      else if (load->focussed() && Load(true)) {
+      else if (Load(true)) {
         Players.ResetControls();
         g_game.player = nullptr;
         Players.LoadPlayers();
@@ -304,24 +380,26 @@ public:
         InitConfig();
         Music.SetVolume(param.music_volume);
         State::manager.RequestEnterState(Regist);
-      } else if (back->focussed())
-        State::manager.RequestEnterState(GameTypeSelect);
-    } else
-      KeyGUI(key, release);
+      }
+    }
   }
   void Loop(float) override {
     ScopedRenderMode rm(GUI);
     Winsys.clear();
-    DrawGUIFrame();
+    DrawGUIBackground(Winsys.scale);
     FT.SetColor(colWhite);
-    FT.SetSize(30);
-    FT.DrawString(CENTER, 65, "Saved data");
+    FT.SetSize(24);
+    FT.DrawString(CENTER, 96, Trans.Text(TXT_SAVED_DATA));
+    std::vector<PspUI::Row> rows(2);
+    rows[0] = {Trans.Text(TXT_SAVE_PROGRESS), "", false};
+    rows[1] = {Trans.Text(TXT_LOAD_PROGRESS), "", false};
+    PspUI::OptionList(227, 150, 400, rows, cursor);
+    FT.SetColor(colWhite);
     FT.SetSize(20);
-    FT.DrawString(CENTER, 130, "Players, unlocked cups, scores and settings");
-    FT.SetSize(18);
-    FT.DrawString(CENTER, 390, status);
-    FT.DrawString(CENTER, 435, "Cross: select    Circle: back");
-    DrawGUI();
+    FT.DrawString(CENTER, 270, Trans.Text(TXT_SAVE_CONTENTS));
+    FT.DrawString(CENTER, 310, status);
+    PspUI::Hint(44, 432, PspUI::Cross, cursor == 0 ? Trans.Text(TXT_SAVE) : Trans.Text(TXT_LOAD));
+    PspUI::Hint(320, 432, PspUI::Circle, Trans.Text(8));
     Winsys.SwapBuffers();
   }
 };

@@ -71,6 +71,11 @@ struct quadsquare {
 
 	bool ForceEastVert;
 	bool ForceSouthVert;
+	// What Update found this square to be against the view frustum, and the
+	// frame it found it in: Render walks the same squares against the same
+	// frustum and takes the answer instead of working it out again.
+	unsigned char FrameVis;
+	unsigned FrameStamp;
 
 	static float ScaleX, ScaleZ;
 	static int RowSize, NumRows;

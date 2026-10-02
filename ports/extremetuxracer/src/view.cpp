@@ -319,6 +319,10 @@ void update_view(CControl *ctrl, float dt) {
 // --------------------------------------------------------------------
 
 static TPlane frustum_planes[6];
+static TPlane guard_planes[6];
+// The screen is 480x272 in the middle of the GE's 4096x4096 coordinate
+// range: 8.5 half-widths and 15 half-heights of room. Three is well inside.
+#define GUARD_BAND 3.f
 static char p_vertex_code[6];
 
 
@@ -340,6 +344,21 @@ void SetupViewFrustum(const CControl *ctrl) {
 	    = TPlane(0, std::cos(half_fov), std::sin(half_fov), 0);
 	frustum_planes[5]
 	    = TPlane(0, -std::cos(half_fov), std::sin(half_fov), 0);
+
+	const float guard_horiz = std::atan(std::tan(half_fov_horiz) * GUARD_BAND);
+	const float guard_vert = std::atan(std::tan(half_fov) * GUARD_BAND);
+	guard_planes[0] = frustum_planes[0];
+	guard_planes[1] = frustum_planes[1];
+	guard_planes[2] = TPlane(-std::cos(guard_horiz), 0, std::sin(guard_horiz), 0);
+	guard_planes[3] = TPlane(std::cos(guard_horiz), 0, std::sin(guard_horiz), 0);
+	guard_planes[4] = TPlane(0, std::cos(guard_vert), std::sin(guard_vert), 0);
+	guard_planes[5] = TPlane(0, -std::cos(guard_vert), std::sin(guard_vert), 0);
+	for (int i=0; i<6; i++) {
+		TVector3d pt = TransformPoint(ctrl->view_mat,
+		                              -guard_planes[i].d * guard_planes[i].nml);
+		guard_planes[i].nml = TransformVector(ctrl->view_mat, guard_planes[i].nml);
+		guard_planes[i].d = -DotProduct(guard_planes[i].nml, pt);
+	}
 
 	for (int i=0; i<6; i++) {
 		TVector3d pt = TransformPoint(ctrl->view_mat,
@@ -396,6 +415,7 @@ clip_result_t clip_aabb_to_view_frustum(const TVector3d& min, const TVector3d& m
 
 const TPlane& get_far_clip_plane() { return frustum_planes[1]; }
 const TPlane* get_view_clip_planes() { return frustum_planes; }
+const TPlane* get_guard_clip_planes() { return guard_planes; }
 const TPlane& get_left_clip_plane() { return frustum_planes[2]; }
 const TPlane& get_right_clip_plane() { return frustum_planes[3]; }
 const TPlane& get_bottom_clip_plane() { return frustum_planes[5]; }

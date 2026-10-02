@@ -201,9 +201,12 @@ bool DirExists(const char *dirname) {
 // --------------------------------------------------------------------
 
 void GetTimeComponents(float time, int *min, int *sec, int *hundr) {
-	*min = (int)(time / 60);
-	*sec = ((int) time) % 60;
-	*hundr = ((int)(time * 100 + 0.5)) % 100;
+	// From the rounded hundredths, all three: rounded apart, 0.996 s read
+	// 00:00.00 and a time of 59.999 s showed a second less than it was.
+	const int total = (int)(time * 100 + 0.5);
+	*min = total / 6000;
+	*sec = total / 100 % 60;
+	*hundr = total % 100;
 }
 
 std::string GetTimeString() {

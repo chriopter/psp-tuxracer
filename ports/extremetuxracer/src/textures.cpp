@@ -283,22 +283,17 @@ void CTexture::DrawNumChr(char c, int x, int y, int w, int h) {
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
-void CTexture::DrawNumStr(const std::string& s, int x, int y, float size, const sf::Color& col) {
-	if (!BindTex(NUMERIC_FONT)) {
-		Message("DrawNumStr: missing texture");
-		return;
-	}
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_TEXTURE_2D);
-	int qw = (int)(22 * size);
-	int qh = (int)(32 * size);
+// PSP: the digits of a frame are collected and drawn together by
+// FlushNumStr. A draw of its own for each number cost more than a
+// millisecond of the frame; the colour travels with the vertices instead.
+namespace {
+struct DigitVertex { float u, v; GLubyte colour[4]; float x, y, z; };
+std::vector<DigitVertex> digits;
+}
 
-	glColor(col);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	struct DigitVertex { float u,v,x,y; float z=0; };
-	static std::vector<DigitVertex> digits;
-	digits.clear();
+void CTexture::DrawNumStr(const std::string& s, int x, int y, float size, const sf::Color& col) {
+	const int qw = (int)(22 * size);
+	const int qh = (int)(32 * size);
 	for (std::size_t i=0; i < s.size(); i++) {
 		const char c = s[i];
 		const int idx = c >= '0' && c <= '9' ? c-'0' : c == ':' ? 10 : c == ' ' ? 11 : -1;
@@ -306,14 +301,29 @@ void CTexture::DrawNumStr(const std::string& s, int x, int y, float size, const 
 		const float left = x + int(i)*qw, right = left + qw*0.9f;
 		const float top = Winsys.resolution.height-y, bottom = top-qh;
 		const float u = idx*22.f/256.f, v = (idx+1)*22.f/256.f;
-		const DigitVertex quad[] = {{u,1,left,bottom},{v,1,right,bottom},{v,0,right,top},{u,0,left,top}};
+		const DigitVertex quad[] = {
+			{u,1,{col.r,col.g,col.b,col.a},left,bottom,0}, {v,1,{col.r,col.g,col.b,col.a},right,bottom,0},
+			{v,0,{col.r,col.g,col.b,col.a},right,top,0}, {u,0,{col.r,col.g,col.b,col.a},left,top,0}};
 		for (int j : {0,1,2,0,2,3}) digits.push_back(quad[j]);
 	}
-	if (!digits.empty()) {
+}
+
+void CTexture::FlushNumStr() {
+	if (digits.empty()) return;
+	if (BindTex(NUMERIC_FONT)) {
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_TEXTURE_2D);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glEnableClientState(GL_COLOR_ARRAY);
 		glTexCoordPointer(2, GL_FLOAT, sizeof(DigitVertex), &digits[0].u);
+		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(DigitVertex), digits[0].colour);
 		glVertexPointer(3, GL_FLOAT, sizeof(DigitVertex), &digits[0].x);
 		glDrawArrays(GL_TRIANGLES, 0, digits.size());
+		glDisableClientState(GL_COLOR_ARRAY);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glColor4f(1, 1, 1, 1);
 	}
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
+	digits.clear();
 }

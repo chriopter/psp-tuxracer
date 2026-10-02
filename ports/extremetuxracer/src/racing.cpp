@@ -21,6 +21,9 @@ GNU General Public License for more details.
 #include <etr_config.h>
 #endif
 
+#include "opponents.h"
+#include "quadtree.h"
+#include "psp_profile.h"
 #include "racing.h"
 #include "audio.h"
 #include "course_render.h"
@@ -211,7 +214,9 @@ static void SetSoundVolumes() {
 }
 
 // ---------------------------- init ----------------------------------
+void PspTraceStep(const char *what);
 void CRacing::Enter() {
+	PspTraceStep("racing");
 	CControl *ctrl = g_game.player->ctrl;
 
 	if (param.view_mode < 0 || param.view_mode >= NUM_VIEW_MODES) {
@@ -240,7 +245,12 @@ void CRacing::Enter() {
 	lastsound = -1;
 	newsound = -1;
 
-	if (State::manager.PreviousState() != &Paused) ctrl->Init();
+	if (State::manager.PreviousState() != &Paused) {
+		ctrl->Init();
+		// The penguins line up at the start of a race only: not when the
+		// player has been put back on the course.
+		if (State::manager.PreviousState() != &Reset) Opponents::Start(ctrl);
+	}
 	g_game.raceaborted = false;
 
 	SetSoundVolumes();
@@ -372,14 +382,13 @@ static void CalcTrickControls(CControl *ctrl, float time_step, bool airborne) {
 // ====================================================================
 
 extern void PspProfileMark(unsigned section);
+static bool frame_pending = false;
 void CRacing::Loop(float time_step) {
 	PspProfileMark(8);
 	CControl *ctrl = g_game.player->ctrl;
 	float ycoord = Course.FindYCoord(ctrl->cpos.x, ctrl->cpos.z);
 	bool airborne = (bool)(ctrl->cpos.y > (ycoord + JUMP_MAX_START_HEIGHT));
 
-	ClearRenderContext();
-	Env.SetupFog();
 	CalcTrickControls(ctrl, time_step, airborne);
 
 	if (!g_game.finish) CalcSteeringControls(ctrl, time_step);
@@ -387,47 +396,76 @@ void CRacing::Loop(float time_step) {
 	PlayTerrainSound(ctrl, airborne);
 
 //  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-	ctrl->UpdatePlayerPos(time_step);
+	{
+		PspProfileScope profile(PSP_SUB_PHYSICS_POS);
+		ctrl->UpdatePlayerPos(time_step);
+	}
+	{
+		PspProfileScope profile(PSP_SUB_OPP_UPDATE);
+		Opponents::Update(time_step, ctrl);
+	}
+	// PSP: everything that only computes comes first -- the view, the
+	// level of detail of the terrain, wind and snow -- and the frame drawn
+	// in the last pass is shown after it. The GE was still at work on that
+	// frame meanwhile; shown at the end of its own pass, the wait for the
+	// GE came on top of the frame's work and a frame of fourteen
+	// milliseconds missed its vertical blank.
+	if (g_game.finish) IncCameraDistance(time_step);
+	{
+		PspProfileScope profile(PSP_SUB_VIEW);
+		update_view(ctrl, time_step);
+		UpdateTrackmarks(ctrl);
+		SetupViewFrustum(ctrl);
+	}
+	if (terr) UpdateQuadtree(ctrl->viewpos, param.course_detail_level);
+	UpdateWind(time_step);
+	UpdateSnow(time_step, ctrl);
+	if (param.perf_level > 2) update_particles(time_step);
 	PspProfileMark(0);
+	if (frame_pending) {
+		Winsys.SwapBuffers();
+		frame_pending = false;
+	}
+	PspProfileMark(7);
+	ClearRenderContext();
+	Env.SetupFog();
 //  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-	if (g_game.finish) IncCameraDistance(time_step);
-	update_view(ctrl, time_step);
-	UpdateTrackmarks(ctrl);
-
-	SetupViewFrustum(ctrl);
-	if (sky) Env.DrawSkybox(ctrl->viewpos);
+	{
+		PspProfileScope profile(PSP_SUB_SKY);
+		if (sky) Env.DrawSkybox(ctrl->viewpos);
+	}
 	if (fog) Env.DrawFog();
 	Env.SetupLight();
 	// Submit early so the GE renders the sky while the CPU prepares terrain.
 	glFlush();
 	PspProfileMark(1);
-	if (terr) RenderCourse();
+	if (terr) RenderCourse(true);
 	glFlush();
 	PspProfileMark(2);
 	DrawTrackmarks();
 	if (trees) DrawTrees();
 	PspProfileMark(3);
-	if (param.perf_level > 2) {
-		update_particles(time_step);
-		draw_particles(ctrl);
-	}
+	if (param.perf_level > 2) draw_particles(ctrl);
 	g_game.character->shape->Draw();
+	{
+		PspProfileScope profile(PSP_SUB_OPP_DRAW);
+		Opponents::Draw();
+	}
 	PspProfileMark(4);
-	UpdateWind(time_step);
-	UpdateSnow(time_step, ctrl);
 	DrawSnow(ctrl);
 	PspProfileMark(5);
 	DrawHud(ctrl);
 	PspProfileMark(6);
 
 	Reshape(Winsys.resolution.width, Winsys.resolution.height);
-	Winsys.SwapBuffers();
-	PspProfileMark(7);
+	glFlush();
+	frame_pending = true;
 	if (g_game.finish == false) g_game.time += time_step;
 }
 
 void CRacing::Exit() {
+	frame_pending = false;      // the state that follows draws its own
 	Winsys.KeyRepeat(true);
 	Sound.HaltAll();
 	break_track_marks();

@@ -21,6 +21,8 @@ GNU General Public License for more details.
 #include <etr_config.h>
 #endif
 
+#include "opponents.h"
+#include "psp_profile.h"
 #include "hud.h"
 #include "ogl.h"
 #include "textures.h"
@@ -40,6 +42,9 @@ GNU General Public License for more details.
 #define ENERGY_GAUGE_CENTER_X 71.0
 #define ENERGY_GAUGE_CENTER_Y 55.0
 #define GAUGE_WIDTH 128.0
+// PSP: the gauges stand this far in from the edges of the screen. They were
+// flush with them, and the frame of the console cut their outlines.
+#define HUD_EDGE 14
 #define SPEEDBAR_OUTER_RADIUS  (ENERGY_GAUGE_CENTER_X)
 #define SPEEDBAR_BASE_ANGLE 225
 #define SPEEDBAR_MAX_ANGLE 45
@@ -57,7 +62,7 @@ static const GLubyte speedbar_background_color[] = { 51,  51,  51, 0 };
 static const GLubyte hud_white[]                 = { 255, 255, 255, 255 };
 
 static void draw_time(float time, sf::Color color) {
-	Tex.Draw(T_TIME, 10, 10, 1);
+	Tex.Draw(T_TIME, 16, 12, 1);
 
 	int min, sec, hundr;
 	GetTimeComponents(time, &min, &sec, &hundr);
@@ -69,8 +74,8 @@ static void draw_time(float time, sf::Color color) {
 	timestr += secstr;
 
 	if (param.use_papercut_font < 2) {
-		Tex.DrawNumStr(timestr, 50, 12, 1, color);
-		Tex.DrawNumStr(hundrstr, 170, 12, 0.7f, color);
+		Tex.DrawNumStr(timestr, 56, 14, 1, color);
+		Tex.DrawNumStr(hundrstr, 176, 14, 0.7f, color);
 	} else {
 		Winsys.beginSFML();
 		FT.SetColor(color);
@@ -83,11 +88,11 @@ static void draw_time(float time, sf::Color color) {
 }
 
 static void draw_herring_count(int herring_count, sf::Color color) {
-	Tex.Draw(HERRING_ICON, Winsys.resolution.width - 59, 12, 1);
+	Tex.Draw(HERRING_ICON, Winsys.resolution.width - 65, 14, 1);
 
 	std::string hcountstr = Int_StrN(herring_count, 3);
 	if (param.use_papercut_font < 2) {
-		Tex.DrawNumStr(hcountstr, Winsys.resolution.width - 130, 12, 1, color);
+		Tex.DrawNumStr(hcountstr, Winsys.resolution.width - 136, 14, 1, color);
 	} else {
 		Winsys.beginSFML();
 		FT.SetColor(color);
@@ -155,7 +160,7 @@ void draw_gauge(float speed, float energy) {
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
 	glPushMatrix();
-	glTranslatef(Winsys.resolution.width - GAUGE_WIDTH, 0, 0);
+	glTranslatef(Winsys.resolution.width - GAUGE_WIDTH - HUD_EDGE, HUD_EDGE, 0);
 	Tex.BindTex(GAUGE_ENERGY);
 	float y = ENERGY_GAUGE_BOTTOM + energy * ENERGY_GAUGE_HEIGHT;
 
@@ -202,7 +207,7 @@ void DrawSpeed(float speed) {
 	std::string speedstr = Int_StrN((int)speed, 3);
 	if (param.use_papercut_font < 2) {
 		Tex.DrawNumStr(speedstr,
-		               Winsys.resolution.width - 87, Winsys.resolution.height-73, 1, colWhite);
+		               Winsys.resolution.width - 87 - HUD_EDGE, Winsys.resolution.height - 73 - HUD_EDGE, 1, colWhite);
 	} else {
 		Winsys.beginSFML();
 		FT.SetColor(colDDYell);
@@ -217,7 +222,7 @@ void DrawWind(float dir, float speed, const CControl *ctrl) {
 	static const int texHeight = Tex.GetSFTexture(SPEEDMETER).getSize().y;
 	static const int texWidth = Tex.GetSFTexture(SPEEDMETER).getSize().x;
 
-	Tex.Draw(SPEEDMETER, 5, Winsys.resolution.height-5-texHeight, 1.0);
+	Tex.Draw(SPEEDMETER, HUD_EDGE, Winsys.resolution.height-HUD_EDGE-texHeight, 1.0);
 	glDisable(GL_TEXTURE_2D);
 
 
@@ -233,7 +238,7 @@ void DrawWind(float dir, float speed, const CControl *ctrl) {
 
 	glPushMatrix();
 	glColor4f(red, 0, blue, alpha);
-	glTranslatef(5 + texWidth / 2, 5 + texHeight / 2, 0);
+	glTranslatef(HUD_EDGE + texWidth / 2, HUD_EDGE + texHeight / 2, 0);
 	glRotatef(dir, 0, 0, 1);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	static const int len = 45;
@@ -264,10 +269,10 @@ void DrawWind(float dir, float speed, const CControl *ctrl) {
 
 	glEnable(GL_TEXTURE_2D);
 
-	Tex.Draw(SPEED_KNOB, 5 + texWidth / 2 - 8, Winsys.resolution.height - 5 - texWidth / 2 - 8, 1.0);
+	Tex.Draw(SPEED_KNOB, HUD_EDGE + texWidth / 2 - 8, Winsys.resolution.height - HUD_EDGE - texWidth / 2 - 8, 1.0);
 	std::string windstr = Int_StrN((int)speed, 3);
 	if (param.use_papercut_font < 2) {
-		Tex.DrawNumStr(windstr, 120, Winsys.resolution.height - 45, 1, colWhite);
+		Tex.DrawNumStr(windstr, 115 + HUD_EDGE, Winsys.resolution.height - 40 - HUD_EDGE, 1, colWhite);
 	} else {
 		Winsys.beginSFML();
 		FT.SetColor(colDDYell);
@@ -295,8 +300,10 @@ void DrawFps() {
 
 	std::string fpsstr = Int_StrN((int)std::lround(averagefps));
 	if (param.use_papercut_font < 2) {
-		Tex.DrawNumStr(fpsstr, 13, Winsys.resolution.height - 37, 0.8f, colBlack);
-		Tex.DrawNumStr(fpsstr, 11, Winsys.resolution.height - 39, 0.8f, colWhite);
+		// With wind the gauge stands in this corner: the rate goes above it.
+		const int lift = g_game.wind_id < 1 ? 0 : (int)Tex.GetSFTexture(SPEEDMETER).getSize().y + 3 + HUD_EDGE;
+		Tex.DrawNumStr(fpsstr, 4 + HUD_EDGE, Winsys.resolution.height - 28 - HUD_EDGE - lift, 0.8f, colBlack);
+		Tex.DrawNumStr(fpsstr, 2 + HUD_EDGE, Winsys.resolution.height - 30 - HUD_EDGE - lift, 0.8f, colWhite);
 	} else {
 		Winsys.beginSFML();
 		if (averagefps >= 35)
@@ -347,13 +354,18 @@ void DrawCoursePosition(const CControl *ctrl) {
 
 // -------------------------------------------------------
 void DrawHud(const CControl *ctrl) {
-	if (!param.show_hud)
+	extern bool PspHudHidden();
+	if (!param.show_hud || PspHudHidden())
 		return;
 
 	float speed = ctrl->cvel.Length();
 	Setup2dScene();
 
-	draw_gauge(speed * 3.6, ctrl->jump_amt);
+	{
+		PspProfileScope profile(PSP_SUB_HUD_GAUGE);
+		draw_gauge(speed * 3.6, ctrl->jump_amt);
+	}
+	PspProfileScope profile(PSP_SUB_HUD_TEXT);
 	ScopedRenderMode rm(TEXFONT);
 
 	if (g_game.game_type == CUPRACING) {
@@ -379,8 +391,13 @@ void DrawHud(const CControl *ctrl) {
 		draw_herring_count(g_game.herring, param.use_papercut_font < 2 ? colWhite : colDYell);
 	}
 
+	// PSP: the player's place among the racers, "2:4" for
+	// second of four, under the clock.
+	if (const int place = Opponents::Place(ctrl))
+		Tex.DrawNumStr(Int_StrN(place) + ":" + Int_StrN(Opponents::Count() + 1), 18, 80, 0.9f, colWhite);
 	DrawSpeed(speed * 3.6);
 	DrawFps();
 	DrawCoursePosition(ctrl);
 	DrawWind(Wind.Angle(), Wind.Speed(), ctrl);
+	Tex.FlushNumStr();
 }

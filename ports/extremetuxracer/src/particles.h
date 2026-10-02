@@ -48,8 +48,7 @@ void generate_particles(const CControl *ctrl, float dtime, const TVector3d& pos,
 
 struct TFlake {
 	TVector3d pt;
-	TVector3d vel;
-	float size;
+	float size;         // it falls at its size times the area's speed
 	const GLfloat* tex;
 
 };
@@ -85,8 +84,7 @@ struct TFlakeArea {
 	    float maxSize_,
 	    float speed_,
 	    bool  rotate);
-	void Draw(const CControl* ctrl) const;
-	void Update(float timestep, float xcoeff, float ycoeff, float zcoeff);
+	struct SnowVertex* Emit(const CControl* ctrl, struct SnowVertex* out, float timestep, float xcoeff, float ycoeff, float zcoeff);
 };
 
 class CFlakes {
@@ -100,7 +98,10 @@ public:
 	void Init(int grade, const CControl *ctrl);
 	void Reset();
 	void Update(float timestep, const CControl *ctrl);
-	void Draw(const CControl *ctrl) const;
+	void Draw(const CControl *ctrl);
+private:
+	float pending_time = 0;
+	TVector3d pending;
 };
 
 // --------------------------------------------------------------------

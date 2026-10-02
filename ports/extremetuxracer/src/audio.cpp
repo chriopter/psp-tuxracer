@@ -25,6 +25,8 @@ GNU General Public License for more details.
 #include "audio.h"
 #include "spx.h"
 
+void PspSoundLog(const char *what, unsigned id, int loop, int volume);
+
 // the global instances of the 2 audio classes
 CSound Sound;
 CMusic Music;
@@ -97,6 +99,7 @@ void CSound::SetVolume(std::size_t soundid, int volume) {
 	if (soundid >= sounds.size()) return;
 
 	volume = clamp(0, volume, MIX_MAX_VOLUME);
+	PspSoundLog("volume", soundid, 0, volume);
 	sounds[soundid]->setVolume(volume);
 }
 
@@ -109,6 +112,8 @@ void CSound::SetVolume(const std::string& name, int volume) {
 void CSound::Play(std::size_t soundid, bool loop) {
 	if (soundid >= sounds.size()) return;
 
+	// Only a sound that starts: one still sounding is left alone below.
+	if (sounds[soundid]->player.getStatus() != sf::Sound::Playing) PspSoundLog("play", soundid, loop, -1);
 	sounds[soundid]->Play(loop);
 }
 
@@ -121,6 +126,7 @@ void CSound::Play(std::size_t soundid, bool loop, int volume) {
 
 	volume = clamp(0, volume, MIX_MAX_VOLUME);
 	sounds[soundid]->setVolume(volume);
+	if (sounds[soundid]->player.getStatus() != sf::Sound::Playing) PspSoundLog("play", soundid, loop, volume);
 	sounds[soundid]->Play(loop);
 }
 
@@ -132,8 +138,10 @@ void CSound::Halt(std::size_t soundid) {
 	if (soundid >= sounds.size()) return;
 
 	// loop_count must be -1 (endless loop) for halt
-	if (sounds[soundid]->player.getLoop())
+	if (sounds[soundid]->player.getLoop()) {
+		PspSoundLog("halt", soundid, 0, 0);
 		sounds[soundid]->player.stop();
+	}
 }
 
 void CSound::Halt(const std::string& name) {
@@ -141,6 +149,7 @@ void CSound::Halt(const std::string& name) {
 }
 
 void CSound::HaltAll() {
+	PspSoundLog("haltall", 0, 0, 0);
 	for (std::size_t i = 0; i < sounds.size(); i++) {
 		sounds[i]->player.stop();
 	}
@@ -257,6 +266,8 @@ bool CMusic::Play(sf::Music* music, bool loop, int volume) {
 		if (curr_music)
 			curr_music->stop();
 		curr_music = music;
+		for (std::size_t i = 0; i < musics.size(); ++i)
+			if (musics[i] == music) PspSoundLog("music", i, loop, volume);
 		music->play();
 	}
 	return true;

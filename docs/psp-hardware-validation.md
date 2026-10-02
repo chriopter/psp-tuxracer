@@ -1,4 +1,143 @@
-# Physical PSP validation — 2026-09-17
+# Physical PSP validation
+
+Two rounds: the first on 2026-09-17 (below, unchanged), the second on
+2026-10-01/02 on a PSP-1000, firmware 6.61 with ARK, 333 MHz, through PSPLink
+3.2.1 with the game in an isolated `host0:/etr-psp-test` directory, music and
+sound on, default detail. Neither is a certification of every PSP model,
+firmware or course.
+
+## Second round — 2026-10-01/02
+
+### What changed, and what each change bought
+
+Bunny Hill, clear weather, 3600 measured frames, was 44 FPS at the start of
+the round. All figures are frame intervals measured on the console, not
+emulator numbers.
+
+- **Snow tracks** in chunks of 64 marks with a box each; a chunk outside the
+  view is skipped whole, the others are clipped once. Ring of 4096 marks.
+- **Terrain** drawn by 16-bit index from a PSPGL buffer object that is also the
+  course's own vertex array (one copy of the course, no per-frame copy);
+  triangles wholly inside a guard band skip the clipper; visibility of
+  quadtree squares is cached within the frame.
+- **Trees and items** found through an index by their z instead of walking
+  every object of the course each frame; the same index serves collisions.
+  Tree vertices live in a buffer object, a tree in view is twelve indices.
+- **The frame is shown after the next frame's computing.** The race used to
+  present at the end of its pass and so waited for the GE on top of its own
+  work. Now controls, physics, view, quadtree update, wind and snow run first,
+  then the previous frame is presented, then the new one is drawn. A frame of
+  14 ms no longer misses its vertical blank. Bunny Hill 56 → 59.6 FPS.
+- **Character**: its spheres are triangle strips (4n+2 vertices a ring, not
+  12n), the buffer is bound and the material set only when they change.
+  1.5 → 1.1 ms a frame.
+- **HUD digits** of a frame are one draw with the colour in the vertices.
+- **Video memory**: PSPGL puts a texture into the GE's own memory while there
+  is room and into ordinary memory after, and the GE reads the latter several
+  times slower. The snow textures (flakes and curtains, 104 KB) are now among
+  the ones placed first. Objects leave room for one face of the sky, which is
+  loaded front face first; the finish banner, flags and herring go without.
+  Tux at Home with wind and four penguins 54 → 58 FPS, Bunny Hill with five
+  penguins 55 → 59. The sky as DXT1, which would fit all six faces, was tried
+  and was slower (58 → 40 FPS): rejected.
+- **Falling snow**: besides the textures, all flakes are one draw of GE
+  sprites from a buffer filled in place (two vertices a flake, no colour of
+  their own); each flake is tested only against the view planes that cut its
+  area; the curtains are drawn once a frame instead of twice (their staged
+  textures carry the alpha of both passes); and there are two curtains
+  instead of three — the one at 60 m stood at the edge of the view in the
+  fog. Bunny Hill light / medium / heavy snow: 30 / 30 / 20 → 58 / 55 / 42 FPS.
+  The two-curtain change is the only one in this round that removes something
+  that was drawn; before and after were compared on the console.
+- **Fog** is full at the view distance, so terrain and trees come out of the
+  haze instead of appearing at the clip plane.
+- **Memory**: the preview pictures of the courses are read when the race
+  selection shows them and freed when a course loads. Heap peak on Bunny Hill
+  13.7 → 11.9 MB of 15.3; the largest course measured (Explore Mountains with
+  five penguins) peaks at 14.3 MB.
+
+- **Loading**, measured from the Memory Stick with time-stamped steps
+  (`STEP` lines in `etr-errors.log` of a benchmark run): from the program's
+  start to the first menu 15.4 → 6.1 s, to the start of a race on Bunny Hill
+  through the menus 24.7 → 12.6 s.
+  - Both logs were unbuffered files on the Memory Stick, five hundred lines
+    and as many writes before a race began. A normal start now writes no
+    log at all; `config/trace` or a benchmark turns them on.
+  - Every pixel of every texture went through a call into SDL and two
+    divisions; the conversion took as long as decoding the PNG. Now a table
+    of columns and direct byte reads.
+  - Three fonts of 224 glyphs each were drawn at the start, one is used:
+    a font is drawn when first written with.
+  - Player pictures, character shapes, keyframes and previews are read when
+    first needed; every `course.dim` of a group is gathered into one file at
+    staging; the sounds are staged in the mixer's own 22050 Hz.
+
+Tried and removed: drawing the sky behind the terrain by depth (PSPGL's depth
+range made it flicker), and DXT1 for the sky (above).
+
+### Computer penguins
+
+A race can be run against one to five computer penguins (race and event
+selection). They cost 0.2 ms of CPU a frame for five (each is one draw of a
+mesh made once) and the GE's time for about 2500 vertices each. See
+`src/opponents.h` for how they drive; `tools/test-psp-opponents.py` runs their
+logic on the host.
+
+### Results
+
+Soak on the console, 669 tests so far of a planned 1020 (it was still
+running when this was written): each a fresh start of the game and an
+action — 373 measured races with a random course, light, snow, wind,
+mirror and zero to five penguins; 101 self-driven races towards the finish
+line; 195 walks through the menus by key presses (player, race and event
+selection into a race, configuration, scores, help, credits, pause, end
+race, reset). Eight were counted as failed. Six were the test harness (a
+pause or result screen that stands still by design, a wait too short for a
+snow race); one was a leak in the test-only sound log, fixed. One is
+unexplained: test 583, a self-driven race on Path of Daggers at night with
+medium snow, strong wind, mirrored, no penguins — the console stopped
+answering, PSPLink included. The same configuration then ran five times
+without fault.
+
+Measured races since the last change to the renderer (173 of them):
+
+| Weather | Races | Slowest | Mean |
+|---|---|---|---|
+| clear | 79 | 58.2 FPS | 59.8 FPS |
+| light snow | 29 | 43.2 | 56.3 |
+| medium snow | 32 | 38.3 | 54.1 |
+| heavy snow | 33 | 31.3 | 41.1 |
+
+Largest heap peak in any of them: 12.5 MB of 15.3.
+
+### Found and fixed in this round
+
+- The native save did not work on the console at all: the dialog needs the
+  parameter block of firmware 2.00 and later and a key (error `0x80110388`).
+  After a `glClear` the GE was still in clear mode, and the system dialogs
+  drew white boxes. Save and load verified through the PSP's own dialogs.
+- The clock read `00:00.00` at 0.996 s and a second too little at 59.999 s:
+  minutes, seconds and hundredths were rounded apart.
+- `GetHeight` clamped the wrong variable at the far edge of a course.
+- Pressing Triangle (back onto the course) would have lined the penguins up
+  beside the player again; they start with the race only.
+- The result screen's German label for the average speed ran into its number.
+- Race selection, controls picture, pause menu and the questions before
+  leaving were partly English in every language; all text on screen is now in
+  the twelve translation files.
+
+### Limits
+
+- One freeze in the soak is unexplained (see Results).
+- Heavy snow does not reach 60 FPS (42 on Bunny Hill); with penguins and wind
+  on top it is lower. Courses with long views over ice (Tux at Home, Path of
+  Daggers) are the slowest in clear weather.
+- The penguins are not simulated as the player is: they follow the ground,
+  do not jump and take their pace from the player's.
+- Not tested: a full or missing Memory Stick during a save, suspend and
+  resume during a race, PSP-2000/3000/Go.
+
+# First round — 2026-09-17
 
 Tests run on the user's USB-connected physical PSP via PSPLink 3.2.1,
 firmware reported as `0x06060010`, CPU 333 MHz. The game runs from an isolated

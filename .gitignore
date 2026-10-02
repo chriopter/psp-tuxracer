@@ -29,7 +29,10 @@
 !/tools/test-psp-controls.py
 !/tools/test-psp-ui.py
 !/tools/test-psp-textures.py
+!/tools/test-psp-opponents.py
 !/tools/fetch-upstream.sh
+!/tools/make-psp-guide.py
+!/tools/make-eboot-art.sh
 !/tools/upstream/
 
 # Local runtime files from directly launching the build EBOOT.

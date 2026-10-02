@@ -100,7 +100,11 @@ struct TCourse {
 	std::string author;
 	sf::String desc[MAX_DESCRIPTION_LINES];
 	std::size_t num_lines;
+	// PSP: the picture of the course is read when the selection shows it,
+	// see CCourse::Preview, not for every course at the start.
 	TTexture* preview;
+	std::string preview_file;
+	bool preview_missing = false;
 	TVector2d size;
 	TVector2d play_size;
 	float angle;
@@ -180,6 +184,11 @@ public:
 	TCourse* GetCourse(const std::string& group, const std::string& dir);
 	std::size_t GetCourseIdx(const TCourse* course) const;
 	void FreeCourseList();
+	// The preview picture of a course, read on first use; a few are kept.
+	// They all go when a course is loaded: forty of them were 1.3 MB of
+	// the heap that a race needs.
+	TTexture* Preview(TCourse& course);
+	void FreePreviews();
 	bool LoadCourseList();
 	bool LoadCourse(TCourse* course);
 	bool LoadTerrainTypes();

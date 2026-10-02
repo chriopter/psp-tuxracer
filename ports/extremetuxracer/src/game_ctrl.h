@@ -99,11 +99,15 @@ extern CEvents Events;
 
 struct TAvatar {
 	std::string filename;
-	TTexture* texture;
+	// PSP: the picture is read when it is first shown (Texture()), not all
+	// seventeen at every start for the one or two that are looked at.
+	mutable TTexture* texture;
+	mutable bool missing = false;
 
 	TAvatar(const std::string& filename_, TTexture* texture_)
 		: filename(filename_), texture(texture_)
 	{}
+	TTexture* Texture() const;
 };
 
 struct TPlayer {
@@ -154,6 +158,12 @@ struct TCharacter {
 	CKeyframe frames[NUM_FRAME_TYPES];
 	int type;
 	bool finishframesok;
+	// PSP: shape and keyframes are read when the character is first needed
+	// (CCharacter::Ensure), the picture when it is first shown (Preview):
+	// five characters of seven files each were over a second of every start.
+	bool loaded = false;
+	bool preview_missing = false;
+	TTexture* Preview();
 
 	CKeyframe* GetKeyframe(TFrameType frametype);
 };
@@ -165,6 +175,7 @@ public:
 	~CCharacter();
 
 	bool LoadCharacterList();
+	void Ensure(TCharacter& character);
 	void FreeCharacterPreviews();
 	void LoadCharacterPreviews();
 };

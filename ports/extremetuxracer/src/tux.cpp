@@ -28,6 +28,10 @@ still shaped with spheres.
 #endif
 
 #include "tux.h"
+#include <new>
+#ifndef GL_DYNAMIC_DRAW
+#define GL_DYNAMIC_DRAW 0x88E8
+#endif
 #include "ogl.h"
 #include "spx.h"
 #include "textures.h"
@@ -77,6 +81,8 @@ CCharShape::~CCharShape() {
 			delete Nodes[i];
 		}
 	}
+	if (bakedBuffer) glDeleteBuffers(1, &bakedBuffer);
+	if (bakedIndexBuffer) glDeleteBuffers(1, &bakedIndexBuffer);
 }
 
 // --------------------------------------------------------------------
@@ -257,8 +263,12 @@ bool CCharShape::VisibleNode(std::size_t node_name, float level) {
 	node->visible = (level > 0);
 
 	if (node->visible) {
+		// On the PSP's 480x272 a sphere of four divisions shows its corners
+		// along the whole outline of the penguin. Eight at least: the
+		// spheres come from a vertex buffer, so the cost is the GE's alone.
+		const int wanted = std::max(8, param.tux_sphere_divisions);
 		node->divisions =
-		    clamp(MIN_SPHERE_DIV, (int)std::lround(param.tux_sphere_divisions * level / 10), MAX_SPHERE_DIV);
+		    clamp(MIN_SPHERE_DIV, (int)std::lround(wanted * level / 10), MAX_SPHERE_DIV);
 		node->radius = 1.0;
 	}
 	if (newActions && useActions) AddAction(node_name, 5, NullVec3, level);
@@ -373,6 +383,19 @@ void CCharShape::CreateMaterial(const std::string& line) {
 //				drawing
 // --------------------------------------------------------------------
 
+// The sphere buffer the vertex pointers stand on, while a character is
+// drawn: its thirty-odd spheres are mostly of one size, and binding and
+// pointing anew for each cost more than drawing them.
+static int sphere_bound = 0;
+static const TCharMaterial* material_set = nullptr;
+
+static void release_sphere() {
+    if (!sphere_bound) return;
+    glDisableClientState(GL_NORMAL_ARRAY);glDisableClientState(GL_VERTEX_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    sphere_bound = 0;
+}
+
 void CCharShape::DrawCharSphere(int num_divisions) const {
     // Cache smooth unit spheres; PSPGL has no GLU quadric implementation.
     struct Vertex { float nx,ny,nz,x,y,z; };
@@ -382,23 +405,32 @@ void CCharShape::DrawCharSphere(int num_divisions) const {
     auto& mesh=meshes[n];
     if(mesh.empty()) {
         auto point=[](float lat,float lon) { float c=std::cos(lat),x=c*std::cos(lon),y=c*std::sin(lon),z=std::sin(lat);return Vertex{x,y,z,x,y,z};};
-        for(int y=0;y<n;y++)for(int x=0;x<2*n;x++) {
+        // One strip for the whole sphere, ring upon ring, joined by two
+        // repeated vertices: the GE works through 4n+2 vertices a ring
+        // where separate triangles were 12n.
+        for(int y=0;y<n;y++) {
             float a=-1.57079632679f+y*3.14159265359f/n,b=a+3.14159265359f/n;
-            float c=x*3.14159265359f/n,d=c+3.14159265359f/n;
-            Vertex p=point(a,c),q=point(a,d),r=point(b,c),t=point(b,d);
-            mesh.insert(mesh.end(),{p,q,r,q,t,r});
+            if(y) mesh.push_back(point(b,0));
+            for(int x=0;x<=2*n;x++) {
+                float c=x*3.14159265359f/n;
+                mesh.push_back(point(b,c));mesh.push_back(point(a,c));
+            }
+            if(y<n-1) mesh.push_back(mesh.back());
         }
     }
     if (!buffers[n]) {
         glGenBuffers(1, &buffers[n]);
         glBindBuffer(GL_ARRAY_BUFFER, buffers[n]);
         glBufferData(GL_ARRAY_BUFFER, mesh.size()*sizeof(Vertex), mesh.data(), GL_STATIC_DRAW);
-    } else glBindBuffer(GL_ARRAY_BUFFER, buffers[n]);
-    glEnableClientState(GL_NORMAL_ARRAY);glEnableClientState(GL_VERTEX_ARRAY);
-    glNormalPointer(GL_FLOAT,sizeof(Vertex),nullptr);glVertexPointer(3,GL_FLOAT,sizeof(Vertex),reinterpret_cast<const void*>(3*sizeof(float)));
-    glDrawArrays(GL_TRIANGLES,0,mesh.size());
-    glDisableClientState(GL_NORMAL_ARRAY);glDisableClientState(GL_VERTEX_ARRAY);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+        sphere_bound = 0;
+    }
+    if (sphere_bound != n) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffers[n]);
+        glEnableClientState(GL_NORMAL_ARRAY);glEnableClientState(GL_VERTEX_ARRAY);
+        glNormalPointer(GL_FLOAT,sizeof(Vertex),nullptr);glVertexPointer(3,GL_FLOAT,sizeof(Vertex),reinterpret_cast<const void*>(3*sizeof(float)));
+        sphere_bound = n;
+    }
+    glDrawArrays(GL_TRIANGLE_STRIP,0,mesh.size());
 }
 
 void CCharShape::DrawNodes(const TCharNode *node) {
@@ -415,7 +447,10 @@ void CCharShape::DrawNodes(const TCharNode *node) {
 	}
 
 	if (node->visible == true) {
-		set_material(mat->diffuse, mat->specular, mat->exp);
+		if (mat != material_set) {
+			set_material(mat->diffuse, mat->specular, mat->exp);
+			material_set = mat;
+		}
 
 		DrawCharSphere(node->divisions);
 	}
@@ -430,6 +465,105 @@ void CCharShape::DrawNodes(const TCharNode *node) {
 	glPopMatrix();
 }
 
+// Lit vertices take ambient and diffuse from their own colour: the GE's
+// colour material, which PSPGL does not offer. See psp/gl_missing.c.
+extern "C" void PspColorMaterial(int on);
+
+void CCharShape::DrawBaked(const TMatrix<4, 4>& root) {
+	// The GE's own vertex order, so PSPGL draws from the buffer as it is.
+	struct Vertex { GLubyte colour[4]; float nx, ny, nz, x, y, z; };
+	if (bakedFailed) return;
+	if (!bakedBuffer) {
+		std::vector<Vertex> mesh;
+		std::vector<GLushort> indices;
+		// Memory is short in a race. Rather a penguin that is not drawn
+		// than a game that ends: every allocation here may fail.
+		try {
+		for (std::size_t k = 0; k < MAX_CHAR_NODES; ++k) {
+			const TCharNode* node = Nodes[k];
+			if (node == nullptr || !node->visible || node->parent == nullptr) continue;
+			const TCharMaterial* mat = node->mat != nullptr ? node->mat : &TuxDefMat;
+			// A penguin some metres off: half the player's divisions, the
+			// small parts fewer still.
+			const int n = clamp(3, node->divisions / 2, 4);
+			const int ring = 2 * n + 1;
+			const GLushort base = (GLushort)mesh.size();
+			for (int i = 0; i <= n; ++i) for (int j = 0; j < ring; ++j) {
+				const float lat = -1.57079632679f + i * 3.14159265359f / n, lon = j * 3.14159265359f / n;
+				const float c = std::cos(lat);
+				TVector3d p(c * std::cos(lon), c * std::sin(lon), std::sin(lat));
+				TVector3d normal = p;
+				// Up through the joints to the root, which is left out:
+				// it is where the penguin is put.
+				for (const TCharNode* up = node; up->parent != nullptr; up = up->parent) {
+					p = TransformPoint(up->trans, p);
+					normal = TransformNormal(normal, up->invtrans);
+				}
+				normal.Norm();
+				mesh.push_back({{mat->diffuse.r, mat->diffuse.g, mat->diffuse.b, 255},
+				                (float)normal.x, (float)normal.y, (float)normal.z, (float)p.x, (float)p.y, (float)p.z});
+			}
+			// A strip, as the player's spheres are; the next ring and the
+			// next sphere are joined on by two repeated indices.
+			for (int i = 0; i < n; ++i) {
+				if (!indices.empty()) indices.push_back(base + (i + 1) * ring);
+				for (int j = 0; j < ring; ++j) {
+					indices.push_back(base + (i + 1) * ring + j);
+					indices.push_back(base + i * ring + j);
+				}
+				indices.push_back(indices.back());
+			}
+		}
+		} catch (const std::bad_alloc&) {
+			bakedFailed = true;
+			return;
+		}
+		if (mesh.empty()) { bakedFailed = true; return; }
+		// In ordinary memory (GL_DYNAMIC_DRAW): the video memory is for
+		// the textures of the course that is loaded next.
+		while (glGetError() != GL_NO_ERROR) {}
+		glGenBuffers(1, &bakedBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, bakedBuffer);
+		glBufferData(GL_ARRAY_BUFFER, mesh.size() * sizeof(Vertex), mesh.data(), GL_DYNAMIC_DRAW);
+		glGenBuffers(1, &bakedIndexBuffer);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedIndexBuffer);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLushort), indices.data(), GL_DYNAMIC_DRAW);
+		if (glGetError() != GL_NO_ERROR || !bakedBuffer || !bakedIndexBuffer) {
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			if (bakedBuffer) glDeleteBuffers(1, &bakedBuffer);
+			if (bakedIndexBuffer) glDeleteBuffers(1, &bakedIndexBuffer);
+			bakedBuffer = bakedIndexBuffer = 0;
+			bakedFailed = true;
+			return;
+		}
+		bakedCount = indices.size();
+	} else {
+		glBindBuffer(GL_ARRAY_BUFFER, bakedBuffer);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedIndexBuffer);
+	}
+
+	ScopedRenderMode rm(TUX);
+	// One material for the whole penguin, its colours from the vertices.
+	static const GLfloat gloss[] = {0.35f, 0.35f, 0.35f, 1.f};
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, gloss);
+	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 20.f);
+	PspColorMaterial(1);
+	glPushMatrix();
+	glMultMatrix(root);
+	glEnableClientState(GL_COLOR_ARRAY); glEnableClientState(GL_NORMAL_ARRAY); glEnableClientState(GL_VERTEX_ARRAY);
+	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex), nullptr);
+	glNormalPointer(GL_FLOAT, sizeof(Vertex), reinterpret_cast<const void*>(4));
+	glVertexPointer(3, GL_FLOAT, sizeof(Vertex), reinterpret_cast<const void*>(16));
+	glDrawElements(GL_TRIANGLE_STRIP, bakedCount, GL_UNSIGNED_SHORT, nullptr);
+	glDisableClientState(GL_COLOR_ARRAY); glDisableClientState(GL_NORMAL_ARRAY); glDisableClientState(GL_VERTEX_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glPopMatrix();
+	PspColorMaterial(0);
+	glDisable(GL_NORMALIZE);
+}
+
 void CCharShape::Draw() {
 	static const float dummy_color[] = {0.0, 0.0, 0.0, 1.0};
 
@@ -440,7 +574,9 @@ void CCharShape::Draw() {
 	const TCharNode *node = GetNode(0);
 	if (node == nullptr) return;
 
+	material_set = nullptr;
 	DrawNodes(node);
+	release_sphere();
 	glDisable(GL_NORMALIZE);
 	if (param.perf_level > 2 && g_game.argument == 0) DrawShadow();
 	highlighted = false;

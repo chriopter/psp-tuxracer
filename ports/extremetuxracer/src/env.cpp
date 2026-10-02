@@ -95,8 +95,12 @@ void CEnvironment::SetupFog() {
 	glFogi(GL_FOG_MODE, fog.mode);
 	// PSPGL starts with a zero far plane; setting a zero start first divides
 	// by zero internally and raises GL_INVALID_VALUE. Set the far plane first.
-	glFogf(GL_FOG_END, fog.end);
-	glFogf(GL_FOG_START, fog.start);
+	// The fog is whole where the view ends. The environments say 75 or 80,
+	// the PSP draws 60 far: with the fog still thin there, the course and
+	// the trees came into view at a stroke instead of out of the haze.
+	const float fog_end = std::min(fog.end, (float)param.forward_clip_distance);
+	glFogf(GL_FOG_END, fog_end);
+	glFogf(GL_FOG_START, std::min(fog.start, fog_end * 0.5f));
 	glFogfv(GL_FOG_COLOR, fog.color);
 
 	if (param.perf_level > 1) {
