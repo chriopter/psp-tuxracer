@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #endif
 
 #include "vectors.h"
+#include <limits>
 
 
 const TVector2d NullVec2;
@@ -36,7 +37,11 @@ const TVector4i NullVec4i;
 template<>
 float TVector3<float>::Norm() {
 	float square = x*x + y*y + z*z;
-	if (square == 0.0) return 0.0;
+	// No direction to speak of: zero, or so small that the square is
+	// subnormal. The PSP's FPU takes the root of a subnormal as zero, and
+	// 1/0 then raises an exception (a degenerate triangle of the course,
+	// found by the soak on the console, 2026-10-03). Left as it is.
+	if (!(square >= std::numeric_limits<float>::min())) return 0.0;
 	float denom = std::sqrt(square);
 	*this *= 1.0 / denom;
 	return denom;

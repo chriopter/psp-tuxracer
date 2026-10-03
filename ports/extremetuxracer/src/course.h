@@ -197,6 +197,7 @@ public:
 	GLubyte* GetGLArrays() const { return vnc_array; }
 	void FillGlArrays();
 
+	bool HasCourse() const { return curr_course != nullptr; }
 	const TVector2d& GetDimensions() const { return curr_course->size; }
 	const TVector2d& GetPlayDimensions() const { return curr_course->play_size; }
 	float GetCourseAngle() const { return curr_course->angle; }

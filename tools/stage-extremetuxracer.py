@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Stage official ETR data for PSP; originals remain untouched."""
 from pathlib import Path
-import argparse, shutil, subprocess, math
+import argparse, shutil, subprocess, math, re
 root=Path(__file__).resolve().parent.parent
 source=root/'ports/extremetuxracer'
 parser=argparse.ArgumentParser(description=__doc__)
@@ -22,6 +22,20 @@ for p in (target/'data').rglob('elev.png'):
         for name in ('elev.png','terrain.png'):
             f=p.parent/name
             subprocess.run(convert+[str(f),'-filter','point','-resize',size,str(f)],check=True)
+        # The trees and herring of items.lst stand on the grid of the full
+        # map. Put them on the smaller one at the same place in metres
+        # (CCourse::LoadItemList: x metres = (nx - x) / (nx - 1) * width),
+        # as fractions; trees.png keeps its size and is read in its own
+        # pixels.
+        items=p.parent/'items.lst'
+        if items.exists():
+            sw,sh=map(int,subprocess.check_output(identify+['-format','%w %h',str(p)],text=True).split())
+            def place(match, full, small):
+                return f'[{match.group(1)}]{small-(full-float(match.group(2)))*(small-1)/(full-1):.4f}'
+            text=items.read_text()
+            text=re.sub(r'\[(x)\]\s*(-?[0-9.]+)',lambda m:place(m,w,sw),text)
+            text=re.sub(r'\[(z)\]\s*(-?[0-9.]+)',lambda m:place(m,h,sh),text)
+            items.write_text(text)
 # Match the runtime's 256-pixel skybox cap before decoding on the PSP.
 # This avoids keeping two full 512x512 RGBA images during texture upload.
 for p in (target/'data/env').rglob('*.png'):

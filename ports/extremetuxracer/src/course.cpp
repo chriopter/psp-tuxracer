@@ -371,12 +371,16 @@ void CCourse::LoadItemList() {
 	CollArr.clear();
 	NocollArr.clear();
 	for (CSPList::const_iterator line = list.cbegin(); line != list.cend(); ++line) {
-		int x = SPIntN(*line, "x", 0);
-		int z = SPIntN(*line, "z", 0);
+		// PSP: the staging puts the places on the smaller grid it makes of
+		// the elevation map, so they are fractions; and nx - x, unsigned,
+		// once ran over for a place beyond it (2026-10-03: every course
+		// had its trees and herring misplaced, the far ones out of it).
+		float x = SPFloatN(*line, "x", 0);
+		float z = SPFloatN(*line, "z", 0);
 		float height = SPFloatN(*line, "height", 1);
 		float diam = SPFloatN(*line, "diam", 1);
-		float xx = (nx - x) / (float)((float)nx - 1.0) * curr_course->size.x;
-		float zz = -(int)(ny - z) / (float)((float)ny - 1.0) * curr_course->size.y;
+		float xx = ((float)nx - x) / ((float)nx - 1.f) * curr_course->size.x;
+		float zz = -((float)ny - z) / ((float)ny - 1.f) * curr_course->size.y;
 
 		std::string name = SPStrN(*line, "name");
 		std::size_t type = ObjectIndex[name];
@@ -451,14 +455,17 @@ bool CCourse::LoadAndConvertObjectMap() {
 
 	CollArr.clear();
 	NocollArr.clear();
-	for (unsigned int y = 0; y < ny; y++) {
-		for (unsigned int x = 0; x < nx; x++) {
-			int imgidx = (x + nx * y) * depth + pad;
+	// PSP: the map of the trees keeps its size when the staging makes the
+	// elevation map smaller: its own pixels, not the grid's.
+	const unsigned w = treeImg.getSize().x, h = treeImg.getSize().y;
+	for (unsigned int y = 0; y < h; y++) {
+		for (unsigned int x = 0; x < w; x++) {
+			int imgidx = (x + w * y) * depth + pad;
 			int type = GetObject(&data[imgidx]);
 			if (type >= 0) {
 				cnt++;
-				float xx = (nx - x) / (float)((float)nx - 1.0) * curr_course->size.x;
-				float zz = -(int)(ny - y) / (float)((float)ny - 1.0) * curr_course->size.y;
+				float xx = ((float)w - x) / ((float)w - 1.f) * curr_course->size.x;
+				float zz = -((float)h - y) / ((float)h - 1.f) * curr_course->size.y;
 				if (ObjTypes[type].texture == nullptr && ObjTypes[type].drawable) {
 					ObjTypes[type].texture = new TTexture();
 					ObjTypes[type].texture->Load(MakePathStr(param.obj_dir, ObjTypes[type].textureFile), false);
@@ -1001,13 +1008,15 @@ TVector3d CCourse::FindCourseNormal(float x, float z) const {
 	                       (1.-u-v) * n2;
 
 	TVector3d tri_nml = CrossProduct(p1 - p0, p2 - p0);
-	tri_nml.Norm();
+	// A triangle squeezed to a line at the edge of the course has no
+	// normal of its own: the corners' smooth one stands for it.
+	const bool flat = tri_nml.Norm() == 0;
 
 	float min_bary = std::min(u, std::min(v, 1. - u - v));
-	float interp_factor = std::min(min_bary / NORM_INTERPOL, 1.0);
+	float interp_factor = flat ? 0.f : std::min(min_bary / NORM_INTERPOL, 1.0);
 
 	TVector3d interp_nml = interp_factor * tri_nml + (1.-interp_factor) * smooth_nml;
-	interp_nml.Norm();
+	if (interp_nml.Norm() == 0) interp_nml = TVector3d(0, 1, 0);
 
 	return interp_nml;
 }

@@ -123,6 +123,7 @@ void PspProfileAdd(unsigned slot, unsigned long long us) {
   if (slot < PSP_SUB_COUNT) profile_sub[slot] += us;
 }
 static unsigned heap_peak = 0, free_user_min = ~0u;
+static bool trace_on = false;
 extern "C" size_t __pspgl_vidmem_avail(void);
 // A mark in the log with the time since power-on in ms, for load times.
 void PspTraceStep(const char *what) {
@@ -249,6 +250,7 @@ int main(int argc, char **argv) {
   // line a write of its own was seconds of each start).
   static char out_buffer[2048], err_buffer[8192];
   const bool trace = access("config/trace", F_OK) == 0;
+  trace_on = trace;
   if (trace || access("config/benchmark", F_OK) == 0) {
     freopen("etr.log", "w", stdout);
     freopen("etr-errors.log", "w", stderr);
@@ -807,7 +809,29 @@ void RenderWindow::create(VideoMode, const char *, unsigned, ContextSettings) {
   printf("PSP graphics: %s\n", glGetString(GL_RENDERER));
 }
 void RenderWindow::close() { running = false; }
+// Debug (config/trace runs): the first frame in which a tree or an item of
+// the course stands outside the course, with the state the game is in.
+static void check_course_objects() {
+  static bool reported = false;
+  if (reported || !trace_on || !Course.HasCourse()) return;
+  const float width = Course.GetDimensions().x, length = Course.GetDimensions().y;
+  auto bad = [&](const TVector3d& p) { return !(p.x >= -1 && p.x <= width + 1 && p.z <= 1 && p.z >= -length - 1); };
+  const TVector3d* where = nullptr;
+  if (!Course.CollArr.empty() && bad(Course.CollArr.front().pt)) where = &Course.CollArr.front().pt;
+  else if (!Course.CollArr.empty() && bad(Course.CollArr.back().pt)) where = &Course.CollArr.back().pt;
+  else if (!Course.NocollArr.empty() && bad(Course.NocollArr.front().pt)) where = &Course.NocollArr.front().pt;
+  if (!where) return;
+  reported = true;
+  State* s = State::manager.CurrentState();
+  fprintf(stderr, "%u STEP OBJECTS DAMAGED x=%g y=%g z=%g width=%g state=%s previous=%s finish=%d time=%.2f\n",
+          (unsigned)(sceKernelGetSystemTimeWide() / 1000), where->x, where->y, where->z, width,
+          s == &Racing ? "racing" : s == &Paused ? "paused" : s == &Reset ? "reset" : s == &GameOver ? "game over" : s == &RaceSelect ? "race select" : s == &Intro ? "intro" : "other",
+          State::manager.PreviousState() == &Racing ? "racing" : State::manager.PreviousState() == &Reset ? "reset" : "other",
+          g_game.finish ? 1 : 0, g_game.time);
+}
+
 void RenderWindow::display() {
+  check_course_objects();
   ResetRenderMode();
   auto before_present = benchmark_recording ? sceKernelGetSystemTimeWide() : 0;
   eglSwapBuffers(egl_display, surface);

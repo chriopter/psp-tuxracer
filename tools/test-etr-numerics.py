@@ -69,6 +69,11 @@ int main(){
  assert(std::fabs(p.x-10)<1e-5f&&std::fabs(p.y+3)<1e-5f&&std::fabs(p.z-2)<1e-5f);
  auto q=MakeRotationQuaternion(TVector3d(1,0,0),TVector3d(0,1,0));p=RotateVector(q,TVector3d(1,0,0));
  assert(std::fabs(p.x)<1e-5f&&std::fabs(p.y-1)<1e-5f&&std::fabs(p.z)<1e-5f);
+ // A vector too short to have a direction is left alone, also when its
+ // square is subnormal: the PSP takes the root of that as zero.
+ for(float tiny : {0.f, 1e-25f, 1e-20f, 1e-30f}) { TVector3d v(tiny, -tiny, tiny); assert(v.Norm()==0 && v.x==tiny); }
+ { TVector3d v(3,0,4); assert(std::fabs(v.Norm()-5)<1e-6f && std::fabs(v.z-.8f)<1e-6f); }
+ { TVector3d v(1e-18f,0,0); assert(v.Norm()>0 && std::fabs(v.x-1)<1e-6f); }
  puts("PASS: ETR ODE integration, pivoted/singular systems, plane intersections, transforms and quaternions");
 }
 '''

@@ -22,6 +22,9 @@ $BENCH/host0/etr-psp-test, remotejoy.prx in $BENCH/host0, and a relay in
 ~/.config/pspkit-autoboot.env (RELAY=shelly, SHELLY_URL=...) for a console
 that stops answering. Stop between two tests with: touch $BENCH/runs/soak/STOP
 
+Before it ends (total reached or STOP) it copies the owner's save back from
+$BENCH/host0/$SAVE_BACKUP: the tests play into it as a player would.
+
 Exits 0 when the total is reached or STOP was found, 1 when the console
 cannot be brought back.
 """
@@ -447,6 +450,20 @@ def one_test(n, seed):
     return run_walk(rng.choice(sorted(WALKS)), rng)
 
 
+SAVE = 'ms0:/PSP/SAVEDATA/ETRX00001PROFILE'
+SAVE_BACKUP = os.environ.get('SAVE_BACKUP', 'save-backup-2026-10-03')     # in host0
+
+
+def restore_save():
+    """The menu walks and the races of the chaos test save as a player
+    would, into the owner's own save. Put back the copy taken before."""
+    backup = HOST0 / SAVE_BACKUP
+    if not backup.is_dir() or not fresh_psplink():
+        return
+    for f in sorted(backup.iterdir()):
+        print(pspsh(f'cp host0:/{SAVE_BACKUP}/{f.name} {SAVE}/{f.name}', 30).strip(), flush=True)
+
+
 def build_id():
     return hashlib.md5((GAME / 'extremetuxracer.prx').read_bytes()).hexdigest()[:8]
 
@@ -465,7 +482,10 @@ def main():
             sys.exit('console does not come back')
         kind = sys.argv[2]
         if kind == 'chaos':
-            print(run_walk('chaos', random.Random(int(sys.argv[3]) if len(sys.argv) > 3 else 1), steps=chaos))
+            record = run_walk('chaos', random.Random(int(sys.argv[3]) if len(sys.argv) > 3 else 1), steps=chaos)
+            print(record)
+            if not record['ok']:
+                print(pspsh('exprint', 10)); print(pspsh('thlist', 15))
         elif kind == 'abort':
             print(aborted_start(0, random.Random(int(sys.argv[3]) if len(sys.argv) > 3 else 1)))
         elif kind in WALKS:
@@ -480,6 +500,7 @@ def main():
     while done < total:
         if (RUNS / 'STOP').exists():
             print('STOP found', flush=True)
+            restore_save()
             return
         if not fresh_psplink():
             sys.exit('console does not come back')
@@ -490,6 +511,7 @@ def main():
         record['seconds'] = round(time.time() - started, 1)
         if not record['ok']:
             record['exception'] = pspsh('exprint', 10)[-600:]
+            record['threads'] = pspsh('thlist', 15)[-1500:]
             for name in ('etr-errors.log', 'etr.log'):
                 if (GAME / name).exists():
                     shutil.copy(GAME / name, RUNS / f'fail-{n}-{name}')
@@ -499,7 +521,7 @@ def main():
             out.write(json.dumps(record) + '\n')
         print(json.dumps(record), flush=True)
         done = n
-    fresh_psplink()
+    restore_save()
 
 
 if __name__ == '__main__':
