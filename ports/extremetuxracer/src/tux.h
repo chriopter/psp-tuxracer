@@ -117,6 +117,12 @@ public:
 	~CCharShape();
 	unsigned bakedBuffer = 0, bakedIndexBuffer = 0, bakedCount = 0;
 	bool bakedFailed = false;   // no memory for the mesh: the opponent is not drawn
+	// PSP: how far the body reaches from where it is put, lying on its
+	// belly: to either side, ahead and behind. Measured once from the
+	// spheres it is made of; what the racers collide by.
+	float extHalfWidth = 0.3f, extFront = 0.55f, extBack = 0.5f;
+	bool measured = false;
+	void Measure();
 	bool useMaterials;
 	bool useHighlighting;
 	bool   highlighted;

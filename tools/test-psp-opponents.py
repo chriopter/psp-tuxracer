@@ -23,7 +23,7 @@ template<int A,int B> struct TMatrix { TMatrix(){} TMatrix(TVector3d,TVector3d,T
 template<int A,int B> TMatrix<A,B> operator*(const TMatrix<A,B>& l,const TMatrix<A,B>&){return l;}
 inline TVector3d ProjectToPlane(TVector3d,TVector3d v){return v;}
 inline TVector3d CrossProduct(TVector3d a,TVector3d b){return {a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x};}
-struct CCharShape { int drawn=0; void DrawBaked(const TMatrix<4,4>&){++drawn;} };
+struct CCharShape { int drawn=0; float extHalfWidth=0.3f, extFront=0.55f, extBack=0.5f; int measured=0; void Measure(){++measured;} void DrawBaked(const TMatrix<4,4>&){++drawn;} };
 struct TCharacter { CCharShape* shape=nullptr; std::string name="Penguin"; };
 struct CCharacter { std::vector<TCharacter> CharList; int ensured=0; void Ensure(TCharacter&){++ensured;} };
 extern CCharacter Char;
@@ -97,7 +97,7 @@ assert(first>2&&last<-5); int place=Place(&player); assert(place>=2&&place<=5);
  begin(3); level=0.7f; run(60,even); assert(level>0.9f&&level<1.05f); run(60,even*3); assert(level<=1.2f); run(200,1); assert(level>=0.3f);
  begin(5); level=1; run(40,even);
  // Solid to each other: no two in the same place.
- for(int i=0;i<5;++i)for(int j=0;j<i;++j) assert(std::fabs(racers[i].x-racers[j].x)>=WIDE*0.9f||std::fabs(racers[i].z-racers[j].z)>=LONG*0.9f);
+ for(int i=0;i<5;++i)for(int j=0;j<i;++j){ float across,along; const bool in=into({racers[i].x,racers[i].z,racers[i].half,racers[i].front,racers[i].back},{racers[j].x,racers[j].z,racers[j].half,racers[j].front,racers[j].back},&across,&along); assert(!in||std::fmin(across,along)<0.05f); }
  // The player stands still for twenty seconds: they get away, but wait; then are caught again.
  level=1; run(20,0); float furthest=0, before_chase[5]; for(int i=0;i<5;++i){assert(lead(i)>5); furthest=std::fmax(furthest,lead(i)); before_chase[i]=lead(i); assert(racers[i].speed<even*0.85f);}
  assert(furthest<even*20&&Place(&player)==6);
@@ -110,9 +110,17 @@ assert(first>2&&last<-5); int place=Place(&player); assert(place>=2&&place<=5);
  begin(1); run(3,15); Course.rock_from=racers[0].x-2.5f; Course.rock_to=racers[0].x+2.5f; const float rf=Course.rock_from,rt=Course.rock_to; run(6,15);
  assert(racers[0].x<rf||racers[0].x>rt);
  // The player runs into one from behind: braked, it is pushed on, both shoved apart, and it is heard once.
- begin(1); run(2,12); racers[0].x=player.cpos.x+0.2f; racers[0].z=player.cpos.z-0.6f; racers[0].speed=8; Sound.hits=0;
+ begin(1); assert(shapes[0].measured+shapes[1].measured+shapes[2].measured+shapes[3].measured+shapes[4].measured>=2);   // the penguin's body and the player's own
+ run(2,12); racers[0].x=player.cpos.x+0.05f; racers[0].z=player.cpos.z-0.6f; racers[0].speed=8; Sound.hits=0;
  player.cvel=TVector3d(0,0,-20); const float before=racers[0].speed; Update(1.f/60,&player);
- assert(player.cvel.z>-20&&racers[0].speed>before&&player.cvel.x<0&&Sound.hits==1);
+ assert(player.cvel.z>-20&&racers[0].speed>before&&Sound.hits==1);
+ // ... and after it the two bodies touch: neither a gap nor one in the other.
+ { float across,along; const Body me={player.cpos.x,player.cpos.z,0.3f,0.55f,0.5f};
+   const bool in=into(me,{racers[0].x,racers[0].z,racers[0].half,racers[0].front,racers[0].back},&across,&along);
+   assert(!in||along<1e-3f); assert(std::fabs((player.cpos.z-racers[0].z)-(0.55f+0.5f)*FIT_LONG)<0.25f); }
+ // Brought up beside the player, it is put where the two bodies touch, and the player is shoved the other way.
+ begin(1); run(2,12); racers[0].x=player.cpos.x+0.2f; racers[0].z=player.cpos.z; player.cvel=TVector3d(0,0,-12); Update(1.f/60,&player);
+ assert(player.cvel.x<0); assert(std::fabs((racers[0].x-player.cpos.x)-0.6f*FIT_SIDE)<0.12f);
  player.cvel.z=-20; Update(1.f/60,&player); assert(Sound.hits==1);
  // Not while the player flies over it.
  begin(1); run(2,12); racers[0].x=player.cpos.x; racers[0].z=player.cpos.z-0.5f; player.cpos.y+=3; player.cvel=TVector3d(0,0,-20); Update(1.f/60,&player); assert(player.cvel.z==-20);

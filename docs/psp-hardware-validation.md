@@ -89,6 +89,16 @@ Changed on 2026-10-03:
   0.95 × 1.5 m against a body of about 0.6 × 1.0 m: one ran into nothing that
   could be seen. Now 0.6 × 1.05 m, and running into one brakes over a few
   frames instead of in one.
+- **Collision by the body's own size** (2026-10-04): one box for all was
+  the fault behind both complaints, penguins driving into each other and a
+  gap one could see. The bodies are measured from the spheres they are made
+  of (Tux 0.78 m wide, 0.67 m ahead and 0.53 m behind where he is put; another
+  character 0.77, 0.72, 0.70), and two racers stop where those meet, 82 % of
+  the widths across and 90 % of the lengths along, a body being round. Side
+  by side they are put apart at once; in line the one behind stays behind.
+  Checked on the console with `config/debug-collision-test`, which brings a
+  penguin up to the player by 0.2 m every three quarters of a second from
+  the right, the left and ahead: at rest the flipper tips meet.
 - **Pace**: they took their speed from the player's, so a clean run always
   won. Now each drives by the slope, the ground's friction and the air, as the
   player does, scaled by what the player makes of a slope (learned over the

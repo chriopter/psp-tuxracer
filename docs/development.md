@@ -42,6 +42,8 @@ The line takes up to five more numbers after the course: light, snow, wind and m
 | `profile-sync` | every profile section waits for the GE, so its time is CPU and GE together; not a frame-rate measurement |
 | `benchmark-capture` | a list of race frame numbers to dump as raw 512×272 RGB565 (`capture-N.raw`); the run then uses a fixed 1/60 s step, a fixed random seed and a player that drives itself, and writes `sound-log.txt` (which sound started at which frame) and `race-log.txt` (speed, pace, each penguin's lead, twice a second). A list of one frame that never comes (`999999`) gives the fixed-step self-driven race without dumps |
 | `benchmark-nohud` | no HUD, for pictures and films of the game |
+| `debug-collision` | the racers' collision boxes drawn on the snow |
+| `debug-collision-test` | the first penguin brought up to the player step by step (right, left, ahead), its distance in the log (`APPROACH`) |
 
 `profile.json` holds the section means and, under `sub_mean_us`, the finer scopes (`src/psp_profile.h`); `frame-work-us.json` the CPU work of each frame beside its interval in `frame-times-us.json`.
 

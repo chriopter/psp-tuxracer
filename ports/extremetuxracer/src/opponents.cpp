@@ -44,6 +44,7 @@ struct Racer {
 	float drive;        // the speed the slope gives it, before skill and level
 	float cosine;       // of the slope under it, as last looked at
 	float waited;       // time since its drive was last worked out
+	float half, front, back;    // how far its body reaches: to a side, ahead, behind
 	float heading;      // sideways speed, eased, for the line and the lean
 	float goal;         // the x it is making for
 	CCharShape* shape;  // one of the game's characters
@@ -68,7 +69,10 @@ static bool touching = false, bumped = false;   // the player against a penguin:
 static unsigned tick = 0;           // the line is looked for every eighth frame, in turn
 static float race_clock = 0;        // runs on when the player's own has stopped at the line
 static float player_time = 0;       // the player's time, once through
+static float me_half = 0.3f, me_front = 0.55f, me_back = 0.5f;     // the player's own body
 static bool show_boxes = false;     // config/debug-collision: the boxes that collide, drawn
+static bool trace_boxes = false;    // config/trace: the bodies' sizes in the log
+static bool approach_test = false;  // config/debug-collision-test: a penguin brought up to the player step by step
 
 int Count() { return racing; }
 int Chosen() { return enabled ? (count < 1 ? 1 : count > MAX ? MAX : count) : 0; }
@@ -86,6 +90,14 @@ void Start(const CControl* player) {
 	player_time = 0;
 	shadow = std::max(3.f, (float)TVector3d(player->cvel).Length());
 	show_boxes = access("config/debug-collision", F_OK) == 0;
+	trace_boxes = access("config/trace", F_OK) == 0;
+	approach_test = access("config/debug-collision-test", F_OK) == 0;
+	if (g_game.character && g_game.character->shape) {
+		CCharShape* own = g_game.character->shape;
+		own->Measure();
+		me_half = own->extHalfWidth; me_front = own->extFront; me_back = own->extBack;
+		if (trace_boxes) std::fprintf(stderr, "BOX player half %.3f front %.3f back %.3f\n", me_half, me_front, me_back);
+	}
 	racing = enabled ? (count < 1 ? 1 : count > MAX ? MAX : count) : 0;
 	final_place = 0;
 	if (!racing) return;
@@ -116,7 +128,11 @@ void Start(const CControl* player) {
 		const float side = (i % 2 ? 1.f : -1.f) * 1.5f * (i / 2 + 1);
 		const float x = clampf((float)player->cpos.x + side, 2.f, width - 2.f);
 		const TCharacter* who = shapes.empty() ? nullptr : shapes[i % shapes.size()];
-		racers[i] = {x, (float)player->cpos.z, shadow, skills[i], shadow, 1.f, 0.f, 0.f, x,
+		if (who && who->shape) who->shape->Measure();
+		const float half = who && who->shape ? who->shape->extHalfWidth : 0.3f;
+		const float front = who && who->shape ? who->shape->extFront : 0.55f, back = who && who->shape ? who->shape->extBack : 0.5f;
+		if (trace_boxes) std::fprintf(stderr, "BOX racer %d half %.3f front %.3f back %.3f\n", i, half, front, back);
+		racers[i] = {x, (float)player->cpos.z, shadow, skills[i], shadow, 1.f, 0.f, half, front, back, 0.f, x,
 		             who ? who->shape : nullptr, false, 0.f, who, 0.f};
 	}
 }
@@ -215,53 +231,84 @@ static float drive_step(float x, float z, float speed, float dt, float* cosine) 
 	return clampf(speed + push * dt, 3.f, 45.f);
 }
 
-// Racers are solid to each other. A penguin is taken as a box on the snow,
-// WIDE across and LONG down the course. Two that overlap are pushed apart
-// sideways; of two in line, the one behind cannot go faster than the one
-// ahead, and passes some of its speed on.
-// The box is the body as it is drawn (2026-10-03: it was half as wide
-// again and half as long again, and one ran into nothing one could see).
-static const float WIDE = 0.6f, LONG = 1.05f;
+// Racers are solid to each other. Each is taken as a box on the snow as
+// large as its own body is drawn (CCharShape::Measure; the characters
+// differ), a little smaller for a body being round: so that two stop where
+// they are seen to touch, with neither a gap nor one inside the other
+// (2026-10-04; one box of 0.6 x 1.05 m for all had both). Two side by side
+// are put apart at once; of two in line the one behind cannot go faster
+// than the one ahead and passes some of its speed on.
+static const float WIDE = 0.6f, LONG = 1.05f;     // the box of a body not measured
+static const float FIT_SIDE = 0.82f, FIT_LONG = 0.9f;
+struct Body { float x, z, half, front, back; };
+
+// How far two bodies are into each other, across and along the course; false if not at all.
+static bool into(const Body& a, const Body& b, float* across, float* along) {
+	*across = (a.half + b.half) * FIT_SIDE - std::fabs(b.x - a.x);
+	if (*across <= 0) return false;
+	// z falls down the course: a body reaches from z - front to z + back
+	const float ahead = std::max(a.z - a.front * FIT_LONG, b.z - b.front * FIT_LONG);
+	const float behind = std::min(a.z + a.back * FIT_LONG, b.z + b.back * FIT_LONG);
+	*along = behind - ahead;
+	return *along > 0;
+}
 
 static void collide(float dt, CControl* player, float width) {
+	const Body me = {(float)player->cpos.x, (float)player->cpos.z, me_half, me_front, me_back};
 	for (int i = 0; i < racing; ++i) {
 		Racer& a = racers[i];
 		for (int j = i + 1; j < racing; ++j) {
 			Racer& b = racers[j];
-			const float dx = b.x - a.x, dz = b.z - a.z;
-			if (std::fabs(dx) >= WIDE || std::fabs(dz) >= LONG) continue;
+			float across, along;
+			if (!into({a.x, a.z, a.half, a.front, a.back}, {b.x, b.z, b.half, b.front, b.back}, &across, &along)) continue;
+			const float dx = b.x - a.x;
 			const float side = dx > 0 || (dx == 0 && ((i + j) & 1)) ? 1.f : -1.f;
-			const float push = std::min(WIDE - std::fabs(dx), 6.f * dt) * 0.5f;
-			a.x -= side * push;
-			b.x += side * push;
-			Racer& rear = dz < 0 ? a : b;       // z falls down the course
-			Racer& front = dz < 0 ? b : a;
-			if (rear.speed > front.speed) {
-				const float closing = rear.speed - front.speed;
-				rear.speed -= closing * 0.7f;
-				front.speed += closing * 0.2f;
+			Racer& rear = b.z > a.z ? b : a;        // z falls down the course
+			Racer& front = b.z > a.z ? a : b;
+			if (across <= along) {                  // side by side: apart, at once
+				a.x -= side * across * 0.5f;
+				b.x += side * across * 0.5f;
+			} else {                                // in line: the one behind stays behind
+				rear.z += along;
+				a.x -= side * std::min(across, 2.f * dt) * 0.5f;
+				b.x += side * std::min(across, 2.f * dt) * 0.5f;
+				if (rear.speed > front.speed) {
+					const float closing = rear.speed - front.speed;
+					rear.speed -= closing * 0.7f;
+					front.speed += closing * 0.2f;
+				}
 			}
 		}
 
 		// And to the player, who feels it: shoved aside, braked when
 		// running into one, pushed on when run into. Not in the air above.
-		const float dx = a.x - (float)player->cpos.x, dz = a.z - (float)player->cpos.z;
-		if (std::fabs(dx) < WIDE && std::fabs(dz) < LONG &&
+		float across, along;
+		if (into(me, {a.x, a.z, a.half, a.front, a.back}, &across, &along) &&
 		        player->cpos.y - Course.FindYCoord(a.x, a.z) < 1.2) {
+			const float dx = a.x - me.x;
 			const float side = dx > 0 || (dx == 0 && (i & 1)) ? 1.f : -1.f;
-			a.x += side * std::min(WIDE - std::fabs(dx), 6.f * dt) * 0.6f;
-			a.heading += side * 10.f * dt;
-			player->cvel.x -= side * 10.f * dt;
 			const float player_down = -(float)player->cvel.z;       // speed down the course
-			if (dz < 0 && player_down > a.speed) {          // the player runs into it
-				const float closing = player_down - a.speed;
-				player->cvel.z += closing * std::min(0.5f, 15.f * dt);
-				a.speed += closing * std::min(0.3f, 9.f * dt);
-				if (closing > 3.f && !bumped) Sound.Play("tree_hit", 0);
-			} else if (dz >= 0 && a.speed > player_down) {  // it runs into the player
-				const float closing = a.speed - player_down;
-				a.speed -= closing * 0.7f;
-				player->cvel.z -= closing * 0.2f;
+			if (across <= along) {                  // side by side: it gives way at once, the player is shoved
+				a.x += side * across;
+				a.heading += side * 10.f * dt;
+				player->cvel.x -= side * 10.f * dt;
+			} else if (a.z < me.z) {                // the player runs into it from behind
+				a.z -= along;
+				a.x += side * std::min(across, 2.f * dt);
+				if (player_down > a.speed) {
+					const float closing = player_down - a.speed;
+					player->cvel.z += closing * std::min(0.5f, 15.f * dt);
+					a.speed += closing * std::min(0.3f, 9.f * dt);
+					if (closing > 3.f && !bumped) Sound.Play("tree_hit", 0);
+				}
+			} else {                                // it runs into the player from behind
+				a.z += along;
+				a.x += side * std::min(across, 2.f * dt);
+				if (a.speed > player_down) {
+					const float closing = a.speed - player_down;
+					a.speed -= closing * 0.7f;
+					player->cvel.z -= closing * 0.2f;
+				}
 			}
 			touching = true;
 		}
@@ -365,7 +412,23 @@ void Update(float dt, CControl* player) {
 	}
 	bumped = touching;
 	touching = false;
+	// Debug: the first penguin is put beside the player, nearer by a step
+	// every three quarters of a second, then ahead of them likewise; the
+	// collision is left to stop it. What the pictures then show is how
+	// close two bodies come.
+	if (approach_test && racing) {
+		Racer& r = racers[0];
+		const int step = (int)(race_clock / 0.75f);
+		for (int k = 1; k < racing; ++k) racers[k].x = 2.f, racers[k].z = player_z + 30.f + 3.f * k;   // the others out of the way
+		// from the right down to 0.3 m, from the left likewise, then from ahead down to 0.6 m
+		if (step < 8) { r.x = player_x + std::max(0.3f, 1.6f - 0.2f * step); r.z = player_z; }
+		else if (step < 16) { r.x = player_x - std::max(0.3f, 1.6f - 0.2f * (step - 8)); r.z = player_z; }
+		else { r.x = player_x; r.z = player_z - std::max(0.6f, 3.f - 0.3f * (step - 16)); }
+		r.speed = r.shown = player_speed; r.heading = 0;
+	}
 	if (!g_game.finish) collide(dt, player, width);
+	if (approach_test && racing && tick % 15 == 0)
+		std::fprintf(stderr, "APPROACH %.2f dx %.3f dz %.3f\n", race_clock, racers[0].x - player_x, racers[0].z - player_z);
 }
 
 int Autopilot(const CControl* player) {
@@ -431,12 +494,11 @@ int Results(const CControl* player, Result* out) {
 	return n;
 }
 
-static void draw_box(float x, float z) {
+static void draw_box(float x, float z, float half, float front, float back) {
+	const float xs[5] = {-half * FIT_SIDE, half * FIT_SIDE, half * FIT_SIDE, -half * FIT_SIDE, -half * FIT_SIDE};
+	const float zs[5] = {-front * FIT_LONG, -front * FIT_LONG, back * FIT_LONG, back * FIT_LONG, -front * FIT_LONG};
 	glBegin(GL_LINE_STRIP);
-	for (int k = 0; k < 5; ++k) {
-		const float px = x + ((k + 1) / 2 % 2 ? WIDE : -WIDE) * 0.5f, pz = z + (k / 2 % 2 ? LONG : -LONG) * 0.5f;
-		glVertex3f(px, Course.FindYCoord(px, pz) + 0.25f, pz);
-	}
+	for (int k = 0; k < 5; ++k) glVertex3f(x + xs[k], Course.FindYCoord(x + xs[k], z + zs[k]) + 0.25f, z + zs[k]);
 	glEnd();
 }
 
@@ -445,9 +507,9 @@ void Draw() {
 		glDisable(GL_TEXTURE_2D);
 		glDisable(GL_LIGHTING);
 		glColor4f(1.f, 0.f, 0.f, 1.f);
-		for (int i = 0; i < racing; ++i) draw_box(racers[i].x, racers[i].z);
+		for (int i = 0; i < racing; ++i) draw_box(racers[i].x, racers[i].z, racers[i].half, racers[i].front, racers[i].back);
 		glColor4f(1.f, 1.f, 0.f, 1.f);
-		draw_box(player_x, player_z);
+		draw_box(player_x, player_z, me_half, me_front, me_back);
 		glEnable(GL_LIGHTING);
 		glEnable(GL_TEXTURE_2D);
 	}

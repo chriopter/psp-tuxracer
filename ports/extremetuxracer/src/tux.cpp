@@ -469,6 +469,29 @@ void CCharShape::DrawNodes(const TCharNode *node) {
 // colour material, which PSPGL does not offer. See psp/gl_missing.c.
 extern "C" void PspColorMaterial(int on);
 
+void CCharShape::Measure() {
+	if (measured) return;
+	measured = true;
+	float side = 0, front = -1e9f, back = 1e9f;
+	for (std::size_t k = 0; k < MAX_CHAR_NODES; ++k) {
+		const TCharNode* node = Nodes[k];
+		if (node == nullptr || !node->visible || node->parent == nullptr) continue;
+		// The same points of the same spheres the baked mesh is made of.
+		const int n = 4, ring = 2 * n + 1;
+		for (int i = 0; i <= n; ++i) for (int j = 0; j < ring; ++j) {
+			const float lat = -1.57079632679f + i * 3.14159265359f / n, lon = j * 3.14159265359f / n;
+			const float c = std::cos(lat);
+			TVector3d p(c * std::cos(lon), c * std::sin(lon), std::sin(lat));
+			for (const TCharNode* up = node; up->parent != nullptr; up = up->parent) p = TransformPoint(up->trans, p);
+			side = std::max(side, std::fabs((float)p.x));
+			front = std::max(front, (float)p.y);
+			back = std::min(back, (float)p.y);
+		}
+	}
+	if (front < back) return;       // nothing to measure: the defaults stand
+	extHalfWidth = side; extFront = front; extBack = -back;
+}
+
 void CCharShape::DrawBaked(const TMatrix<4, 4>& root) {
 	// The GE's own vertex order, so PSPGL draws from the buffer as it is.
 	struct Vertex { GLubyte colour[4]; float nx, ny, nz, x, y, z; };
