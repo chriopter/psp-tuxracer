@@ -124,7 +124,9 @@ def race(n, rng, finish, worst=False):
     course = rng.choice(COURSES)
     cond = [3, 3, 3, 1, 5] if worst else \
         [rng.randrange(4), rng.randrange(4), rng.randrange(4), rng.randrange(2), rng.randrange(6)]
-    frames = 36000 if finish else rng.randrange(600, 1801, 300)
+    # Nearly six minutes of race: those that reach the line took up to 260 s;
+    # an autopilot caught in a hollow is not waited for longer.
+    frames = 21000 if finish else rng.randrange(600, 1801, 300)
     record = run_race(frames, course, cond, finish)
     if worst:
         record['kind'] = 'marathon'
