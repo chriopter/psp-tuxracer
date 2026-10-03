@@ -215,6 +215,9 @@ public:
 	float FindYCoord(float x, float z) const;
 	void GetSurfaceType(float x, float z, float weights[]) const;
 	int GetTerrainIdx(float x, float z, float level) const;
+	// PSP: the ground as it is drawn at a place: the lowest id of the
+	// corners of its triangle, which is the texture the triangle gets.
+	int GetDrawnTerrainIdx(float x, float z) const;
 	TPlane GetLocalCoursePlane(TVector3d pt) const;
 };
 

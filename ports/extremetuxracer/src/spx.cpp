@@ -86,9 +86,12 @@ std::string Int_StrN(const int val) {
 }
 
 std::string Int_StrN(const int val, const std::streamsize count) {
-	std::ostringstream os;
-	os << std::setw(count) << std::setfill('0') << val;
-	return os.str();
+	// PSP: filled by hand, with what a stream of that width and fill
+	// gives. The HUD asks for six of these a frame, and a string stream
+	// each was most of a millisecond of every frame.
+	std::string s = std::to_string(val);
+	if ((std::streamsize)s.size() < count) s.insert(0, (std::size_t)count - s.size(), '0');
+	return s;
 }
 
 std::string Float_StrN(const float val, const std::streamsize count) {

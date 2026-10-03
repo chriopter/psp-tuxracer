@@ -42,6 +42,8 @@ struct Racer {
 	float x, z, speed;
 	float skill;        // how well this one drives: 1 is the player's own usual run
 	float drive;        // the speed the slope gives it, before skill and level
+	float cosine;       // of the slope under it, as last looked at
+	float waited;       // time since its drive was last worked out
 	float heading;      // sideways speed, eased, for the line and the lean
 	float goal;         // the x it is making for
 	CCharShape* shape;  // one of the game's characters
@@ -51,6 +53,9 @@ struct Racer {
 	float time;         // on the race's clock when it crossed the line
 };
 static Racer racers[MAX];
+// Each penguin's own, kept from one look for its line to the next: the
+// trees it could run into until then are among them.
+static std::vector<unsigned> trees_of[MAX];
 static int racing = 0;
 // What the player makes of a slope, as a share of what the forces alone
 // would give: learned from every race of this session, slowly, and the
@@ -60,7 +65,7 @@ static float shadow = 0;            // the forces' speed along the player's own 
 static int final_place = 0;
 static float player_x = 0, player_z = 0;
 static bool touching = false, bumped = false;   // the player against a penguin: now, and last frame
-static unsigned tick = 0;           // the line is looked for every fourth frame, in turn
+static unsigned tick = 0;           // the line is looked for every eighth frame, in turn
 static float race_clock = 0;        // runs on when the player's own has stopped at the line
 static float player_time = 0;       // the player's time, once through
 static bool show_boxes = false;     // config/debug-collision: the boxes that collide, drawn
@@ -76,6 +81,7 @@ static float clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ?
 
 void Start(const CControl* player) {
 	tick = 0;
+	for (auto& list : trees_of) list.clear();
 	race_clock = 0;
 	player_time = 0;
 	shadow = std::max(3.f, (float)TVector3d(player->cvel).Length());
@@ -110,15 +116,27 @@ void Start(const CControl* player) {
 		const float side = (i % 2 ? 1.f : -1.f) * 1.5f * (i / 2 + 1);
 		const float x = clampf((float)player->cpos.x + side, 2.f, width - 2.f);
 		const TCharacter* who = shapes.empty() ? nullptr : shapes[i % shapes.size()];
-		racers[i] = {x, (float)player->cpos.z, shadow, skills[i], shadow, 0.f, x,
+		racers[i] = {x, (float)player->cpos.z, shadow, skills[i], shadow, 1.f, 0.f, 0.f, x,
 		             who ? who->shape : nullptr, false, 0.f, who, 0.f};
 	}
 }
 
+// The trees between two places down the course, asked for once before a
+// line is looked for: with the trees where the course has them, asking for
+// every point of every line was two milliseconds of each frame.
+static std::vector<unsigned> ahead;
+static void gather_trees(float z_from, float z_to) {
+	const std::vector<unsigned>& found = ObjectsNear(true, (z_from + z_to) * 0.5f, std::fabs(z_from - z_to) * 0.5f + 2.5f);
+	ahead.assign(found.begin(), found.end());
+}
+
 static bool tree_at(float x, float z) {
-	for (unsigned i : ObjectsNear(true, z, 2.5f)) {
-		const float dx = Course.CollArr[i].pt.x - x;
-		const float reach = Course.CollArr[i].diam * 0.5f + 1.2f;
+	for (unsigned i : ahead) {
+		const TCollidable& tree = Course.CollArr[i];
+		const float dz = tree.pt.z - z, deep = 2.5f + tree.diam * 0.5f;
+		if (dz < -deep || dz > deep) continue;
+		const float dx = tree.pt.x - x;
+		const float reach = tree.diam * 0.5f + 1.2f;
 		if (dx > -reach && dx < reach) return true;
 	}
 	return false;
@@ -157,7 +175,7 @@ static float line_cost(const Racer& self, float x, float z, float width) {
 
 // The air's braking as the player's physics has it (CControl::CalcAirForce),
 // as a deceleration of a penguin's twenty kilograms.
-static float air_drag(float speed) {
+static float air_drag_exact(float speed) {
 	static const float log_re[] = {-1, 0, 1, 2, 3, 4, 5, 6};
 	static const float log_drag[] = {2.25f, 1.35f, 0.6f, 0, -0.35f, -0.45f, -0.33f, -0.9f};
 	const float re = clampf(std::log10(34600.f * std::max(speed, 0.01f)), -1.f, 6.f);
@@ -165,6 +183,20 @@ static float air_drag(float speed) {
 	if (k > 6) k = 6;
 	const float coefficient = std::pow(10.f, log_drag[k] + (log_drag[k + 1] - log_drag[k]) * (re - log_re[k]));
 	return 0.104f * coefficient * speed * speed / 20.f;
+}
+// From a table by half metres a second: a logarithm and a power for every
+// penguin in every frame were two milliseconds of each frame on the PSP.
+static float air_drag(float speed) {
+	enum { STEPS = 96 };
+	static float table[STEPS + 1];
+	static bool made = false;
+	if (!made) {
+		for (int i = 0; i <= STEPS; ++i) table[i] = air_drag_exact(i * 0.5f);
+		made = true;
+	}
+	const float at = clampf(speed * 2.f, 0.f, STEPS - 0.001f);
+	const int i = (int)at;
+	return table[i] + (table[i + 1] - table[i]) * (at - i);
 }
 
 // A second of driving by the forces the player drives by, along the slope
@@ -247,8 +279,12 @@ void Update(float dt, CControl* player) {
 	// Down the course, as the penguins are moved: not along the slope.
 	const float player_speed = std::max(0.f, -(float)player->cvel.z);
 	// The player against the forces alone, on their own way down.
-	float player_cosine;
-	shadow = drive_step(player_x, player_z, shadow, dt, &player_cosine);
+	static float player_cosine = 1.f, shadow_waited = 0;
+	shadow_waited += dt;
+	if (tick % 8 == 7) {
+		shadow = drive_step(player_x, player_z, shadow, shadow_waited, &player_cosine);
+		shadow_waited = 0;
+	}
 	if (!g_game.finish)
 		if (shadow > 12.f)
 			level += (clampf(player_speed / (shadow * player_cosine), 0.3f, 1.2f) - level) * clampf(dt / 25.f, 0.f, 1.f);
@@ -265,8 +301,14 @@ void Update(float dt, CControl* player) {
 		}
 		// What it ran into since the last frame slowed its drive too.
 		if (r.shown > 0.1f && r.speed < r.shown) r.drive *= std::max(r.speed, 0.f) / r.shown;
-		float cosine;
-		r.drive = drive_step(r.x, r.z, r.drive, dt, &cosine);
+		// The slope is looked at every eighth frame, each penguin in its
+		// turn, for the time since: the ground under it changes slowly.
+		r.waited += dt;
+		if ((tick + i) % 8 == 1) {
+			r.drive = drive_step(r.x, r.z, r.drive, r.waited, &r.cosine);
+			r.waited = 0;
+		}
+		const float cosine = r.cosine;
 		// The band, far from the player only: well ahead it eases off, so
 		// that a fall is not the end of the race; well behind it presses
 		// on. Within fifteen metres the better drive wins.
@@ -281,7 +323,9 @@ void Update(float dt, CControl* player) {
 
 		// The line: of five places across, the cheapest about a second on.
 		const float look = r.z - (6.f + r.speed * 0.7f);
-		if ((tick + i) % 4 == 0) {
+		if ((tick + i) % 8 == 5) {
+			gather_trees(r.z + 3.f, look);
+			trees_of[i] = ahead;
 			float best = r.x, best_cost = line_cost(r, r.x, look, width) - 0.3f;   // staying put is worth a little
 			for (float step : {-3.f, -1.5f, 1.5f, 3.f}) {
 				const float c = line_cost(r, r.x + step, look, width);
@@ -295,7 +339,7 @@ void Update(float dt, CControl* player) {
 		r.z -= advance * dt;
 		// A tree it did not get round stops it as it stops the player:
 		// most of its speed is gone, and it is put beside the trunk.
-		for (unsigned t : ObjectsNear(true, r.z, 0.5f)) {
+		for (unsigned t : trees_of[i]) {
 			const float dx = r.x - Course.CollArr[t].pt.x;
 			const float trunk = Course.CollArr[t].diam * 0.5f + 0.3f;
 			if (std::fabs(dx) < trunk && std::fabs(r.z - Course.CollArr[t].pt.z) < 0.5f) {
@@ -336,6 +380,7 @@ int Autopilot(const CControl* player) {
 	const float look = self.z - (8.f + speed * 0.8f);
 	const float save_x = player_x, save_z = player_z;
 	player_z = 1e9f;                    // not in its own way
+	gather_trees(self.z, look);
 	float best = self.x, best_cost = line_cost(self, self.x, look, width) - 0.3f;
 	for (float step : {-4.f, -2.f, 2.f, 4.f}) {
 		const float c = line_cost(self, self.x + step, look, width);

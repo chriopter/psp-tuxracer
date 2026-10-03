@@ -1058,6 +1058,15 @@ void CCourse::GetSurfaceType(float x, float z, float weights[]) const {
 	}
 }
 
+int CCourse::GetDrawnTerrainIdx(float x, float z) const {
+	TVector2i idx0, idx1, idx2;
+	float u, v;
+	FindBarycentricCoords(x, z, &idx0, &idx1, &idx2, &u, &v);
+	const int a = Fields[idx0.x + nx*idx0.y].terrain, b = Fields[idx1.x + nx*idx1.y].terrain,
+	          c = Fields[idx2.x + nx*idx2.y].terrain;
+	return std::min(a, std::min(b, c));
+}
+
 int CCourse::GetTerrainIdx(float x, float z, float level) const {
 	TVector2i idx0, idx1, idx2;
 	float u, v;

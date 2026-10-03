@@ -222,7 +222,10 @@ void DrawWind(float dir, float speed, const CControl *ctrl) {
 	static const int texHeight = Tex.GetSFTexture(SPEEDMETER).getSize().y;
 	static const int texWidth = Tex.GetSFTexture(SPEEDMETER).getSize().x;
 
-	Tex.Draw(SPEEDMETER, HUD_EDGE, Winsys.resolution.height-HUD_EDGE-texHeight, 1.0);
+	// At its own size: the plain Draw takes the size the texture is stored
+	// at (128, the next power of two), which made the dial an eighth too
+	// large and pushed it over the lower edge of the screen.
+	Tex.Draw(SPEEDMETER, HUD_EDGE, Winsys.resolution.height-HUD_EDGE-texHeight, texWidth, texHeight);
 	glDisable(GL_TEXTURE_2D);
 
 

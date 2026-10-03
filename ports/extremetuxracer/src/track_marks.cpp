@@ -156,6 +156,7 @@ void DrawTrackmarks() {
 	static_assert(sizeof(TrackVertex)==36, "native PSP track vertex");
 	static std::vector<TrackVertex> batch;
 	batch.clear();
+	batch.reserve(1536 + 24);
 	int bound_type=-1;
 	auto flush = [&]() {
 		if (batch.empty()) return;
@@ -205,16 +206,20 @@ void DrawTrackmarks() {
 			away2 += d * d;
 		}
 		if (away2 > reach2) continue;
-		if (clip_aabb_to_view_frustum(TVector3d(chunk.min[0], chunk.min[1], chunk.min[2]),
-		                              TVector3d(chunk.max[0], chunk.max[1], chunk.max[2])) == NotVisible)
+		const clip_result_t chunk_vis = clip_aabb_to_view_frustum(TVector3d(chunk.min[0], chunk.min[1], chunk.min[2]),
+		                              TVector3d(chunk.max[0], chunk.max[1], chunk.max[2]));
+		if (chunk_vis == NotVisible)
 			continue;
+		// A run whose whole box is in view: none of its marks can be
+		// outside a plane or cross one, so none is tested or cut.
+		const bool chunk_inside = chunk_vis == NoClip;
 		const track_key_t* key = &track_keys[(&chunk - &track_chunks[0]) * TRACK_CHUNK];
 		for (int n = 0; n < chunk.count; ++n, ++key) {
 		if (PspProfileActive()) PspProfileAdd(PSP_N_TRACK_SEEN, 1);
 		// A mark is far shorter than TRACK_REACH: with its first corner
 		// that far outside a plane, the other three are outside it too.
 		bool far_outside = false;
-		for (unsigned p = 0; p < 6 && !far_outside; ++p)
+		for (unsigned p = 0; p < 6 && !far_outside && !chunk_inside; ++p)
 			far_outside = key->x*planes[p].nml.x + key->y*planes[p].nml.y +
 			              key->z*planes[p].nml.z + planes[p].d > TRACK_REACH;
 		if (far_outside) continue;
@@ -223,7 +228,7 @@ void DrawTrackmarks() {
 		const TVector3d positions[]={q.v1,q.v2,q.v4,q.v3};
 		unsigned boundary=0;
 		bool rejected=false;
-		for(unsigned p=0;p<6;++p) {
+		for(unsigned p=0;p<6 && !chunk_inside;++p) {
 			unsigned outside=0;
 			for(const auto& v:positions)
 				outside += v.x*planes[p].nml.x+v.y*planes[p].nml.y+
@@ -251,9 +256,15 @@ void DrawTrackmarks() {
 			flush(); textures[q.track_type]->Bind(); bound_type=q.track_type;
 		}
 		// Retain the original diagonal, UVs, normals and depth-dependent alpha.
-		for(unsigned j=1;j<3;++j) {
-			TrackVertex polygon[12]={vertices[0],vertices[j],vertices[j+1]};
-			int count=boundary ? clip_polygon(polygon,3,guards,boundary,interpolate) : 3;
+		if (!boundary) {
+			// Nothing to cut: the two triangles as they are. (The array
+			// of twelve for the cutting cost more than the mark.)
+			const TrackVertex two[6]={vertices[0],vertices[1],vertices[2],vertices[0],vertices[2],vertices[3]};
+			batch.insert(batch.end(), two, two+6);
+		} else for(unsigned j=1;j<3;++j) {
+			TrackVertex polygon[12];
+			polygon[0]=vertices[0]; polygon[1]=vertices[j]; polygon[2]=vertices[j+1];
+			int count=clip_polygon(polygon,3,guards,boundary,interpolate);
 			for(int k=1;k+1<count;++k) {
 				batch.push_back(polygon[0]);batch.push_back(polygon[k]);batch.push_back(polygon[k+1]);
 			}
@@ -313,6 +324,19 @@ void add_track_mark(const CControl *ctrl, int *id) {
 	TVector3d right_vector = -TRACK_WIDTH/2.0 * width_vector;
 	TVector3d left_wing =  ctrl->cpos - left_vector;
 	TVector3d right_wing = ctrl->cpos - right_vector;
+	// PSP: no trench where ice is what one sees. A triangle between ice
+	// and snow is drawn as one of them (its lowest id), and by the weights
+	// above a trench of snow was laid on what was drawn as ice. Asked at
+	// the middle and at both edges of the trench.
+	if (param.perf_level == 1) {
+		for (const TVector3d& at : {ctrl->cpos, left_wing, right_wing}) {
+			const int drawn = Course.GetDrawnTerrainIdx(at.x, at.z);
+			if (drawn >= 0 && !Course.TerrList[drawn].trackmarks) {
+				break_track_marks();
+				return;
+			}
+		}
+	}
 	float left_y = Course.FindYCoord(left_wing.x, left_wing.z);
 	float right_y = Course.FindYCoord(right_wing.x, right_wing.z);
 
