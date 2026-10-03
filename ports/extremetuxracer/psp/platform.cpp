@@ -18,6 +18,8 @@
 #include "race_select.h"
 #include "racing.h"
 #include "regist.h"
+#include "reset.h"
+#include "game_over.h"
 #include "controls_guide.h"
 #include "help.h"
 #include "states.h"
@@ -193,6 +195,14 @@ static void finish_benchmark() {
   fprintf(f, ",\"steering\":");
   statistics(benchmark_steering, f);
   std::sort(benchmark_work.begin(), benchmark_work.end());
+  // Whether the player crossed the line, and the race's time and frames:
+  // a race to the line runs on past the two minutes of figures.
+  State* after = State::manager.CurrentState();
+  fprintf(f, ",\"finished\":%s,\"race_time\":%.2f,\"race_frames\":%u,\"after\":\"%s\"", 
+          // Without the finish animations the line leads straight to the
+          // result (CControl::SetTuxPosition), and the flag stays unset.
+          g_game.finish || (after == &GameOver && !g_game.raceaborted) ? "true" : "false",
+          g_game.time, benchframe, after == &Paused ? "paused" : after == &GameOver ? "game over" : after == &Reset ? "reset" : "other");
   fprintf(f, ",\"work\":{\"median_us\":%u,\"p95_us\":%u,\"max_us\":%u},\"heap_peak_bytes\":%u,\"min_free_user_bytes\":%u}\n",
           benchmark_work.empty() ? 0 : benchmark_work[benchmark_work.size()/2],
           benchmark_work.empty() ? 0 : benchmark_work[(benchmark_work.size()-1)*95/100],
@@ -291,7 +301,7 @@ int main(int argc, char **argv) {
     fclose(bf);
     if (parsed >= 1 && benchmark > 0) {
       if (course[0]) benchcourse = course;
-      benchmark = std::max(60u, std::min(7200u, benchmark));
+      benchmark = std::max(60u, std::min(36000u, benchmark));   // ten minutes: a race to the line
       benchmark_recording = true;
       benchmark_times.reserve(7200);
       benchmark_work.reserve(7200);
@@ -810,22 +820,30 @@ void RenderWindow::display() {
   auto state = State::manager.CurrentState();
   if (state == &Racing && previous == state && last) {
     unsigned dt = now - last;
-    if (skip_interval) {
-      // The first interval follows the startup marker write and is not a
-      // complete display interval. Do not bias the measured FPS upward.
-      skip_interval = false;
-    } else if (benchmark_recording) {
-      benchmark_times.push_back(dt);
-      benchmark_work.push_back(before_present - last);
-      if (benchmark_times.size() % 60 == 1) {
+    // The first interval follows the startup marker write and is not a
+    // complete display interval. Do not bias the measured FPS upward.
+    const bool skipped = skip_interval;
+    skip_interval = false;
+    if (!skipped && benchmark_recording) {
+      // The heap is watched for the whole race, also a long one.
+      static unsigned frames_seen = 0;
+      if (frames_seen++ % 60 == 0) {
         heap_peak = std::max(heap_peak, (unsigned)mallinfo().uordblks);
         free_user_min = std::min(free_user_min, (unsigned)sceKernelTotalFreeMemSize());
       }
+    }
+    if (!skipped && benchmark_recording && benchmark_times.size() < 7200) {
+      // A race to the line runs on past two minutes; the figures are of
+      // its first two, so that no buffer grows on a heap that is short.
+      benchmark_times.push_back(dt);
+      benchmark_work.push_back(before_present - last);
       if (keys[Keyboard::Left] || keys[Keyboard::Right])
         benchmark_steering.push_back(dt);
       if (Mix_PlayingMusic())
         ++benchmark_music_frames;
     }
+  } else if (state == &Reset || (state == &Racing && previous == &Reset)) {
+    // Back onto the course (Triangle) is part of the race, not its end.
   } else {
     if (previous == &Racing)
       finish_benchmark();

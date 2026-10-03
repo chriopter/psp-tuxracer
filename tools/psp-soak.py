@@ -5,10 +5,15 @@
   tools/psp-soak.py record             walk every menu path once and keep its screens as references
   tools/psp-soak.py one <kind> [args]  one test, printed, not recorded (kinds: measured, finish, or a walk)
 
-Three kinds of test, drawn by the seed and the test's number:
+Kinds of test, drawn by the seed and the test's number:
   measured  a race of 600-1800 frames with the fixed benchmark input; random
             course, light, snow, wind, mirror and penguins
-  finish    a race driven by the autopilot towards the finish line
+  finish    a race driven by the autopilot to the finish line (up to ten minutes)
+  marathon  the same with everything at its worst: night, heavy snow, strong
+            wind, mirrored, five penguins
+  chaos     into a race through the menus, then forty seconds of random keys
+            (never Circle, so never back to the main menu and its saves)
+  abort     the game reset by PSPLink while it loads, then a measured race
   menu      a walk through the menus by key presses (remotejoy), each screen
             compared with a reference picture taken by "record"
 
@@ -32,7 +37,7 @@ GOLDEN = BENCH / 'golden'
 PSPSH = os.environ.get('PSPSH', str(Path.home() / '.local/opt/pspdev/bin/pspsh'))
 MODULE = 'Extreme Tux Racer'
 COURSES = sorted(p.name for p in (ROOT / 'ports/extremetuxracer/data/courses/default').iterdir() if p.is_dir())
-BUTTONS = {'select': 0x1, 'start': 0x8, 'up': 0x10, 'right': 0x20, 'down': 0x40, 'left': 0x80,
+BUTTONS = {'select': 0x1, 'start': 0x8, 'ltrigger': 0x100, 'rtrigger': 0x200, 'up': 0x10, 'right': 0x20, 'down': 0x40, 'left': 0x80,
            'triangle': 0x1000, 'circle': 0x2000, 'cross': 0x4000, 'square': 0x8000}
 
 
@@ -109,11 +114,15 @@ def wait_result(seconds):
     return None
 
 
-def race(n, rng, finish):
+def race(n, rng, finish, worst=False):
     course = rng.choice(COURSES)
-    cond = [rng.randrange(4), rng.randrange(4), rng.randrange(4), rng.randrange(2), rng.randrange(6)]
-    frames = 7200 if finish else rng.randrange(600, 1801, 300)
-    return run_race(frames, course, cond, finish)
+    cond = [3, 3, 3, 1, 5] if worst else \
+        [rng.randrange(4), rng.randrange(4), rng.randrange(4), rng.randrange(2), rng.randrange(6)]
+    frames = 36000 if finish else rng.randrange(600, 1801, 300)
+    record = run_race(frames, course, cond, finish)
+    if worst:
+        record['kind'] = 'marathon'
+    return record
 
 
 def run_race(frames, course, cond, finish):
@@ -125,20 +134,22 @@ def run_race(frames, course, cond, finish):
         (GAME / 'config/benchmark-capture').unlink(missing_ok=True)
     if not launch():
         return record | {'ok': False, 'reason': 'the game did not start'}
-    # Loading from host0 takes about 15 s; the slowest snow race ran near 20 FPS.
-    result = wait_result(60 + frames / 18)
+    # Loading from host0 takes about 15 s; the slowest snow race ran near 20
+    # FPS. A race to the line ends at the line, mostly within five minutes.
+    result = wait_result(60 + min(frames, 18000) / 18)
     if result is None:
         reason = 'no answer from PSPLink' if not alive() else 'no result in time'
         return record | {'ok': False, 'reason': reason}
     measured = result['all']
     record |= {'fps': measured['fps'], 'frames': measured['frames'], 'max_us': measured['max_us'],
                'heap': result['heap_peak_bytes'], 'free_user': result['min_free_user_bytes'], 'cpu_mhz': result['cpu_mhz']}
+    record['race_time'] = result.get('race_time')
     if finish:
-        record['reached_finish'] = measured['frames'] < frames - 10
+        record['reached_finish'] = bool(result.get('finished'))
         # The race log is the penguins' (src/opponents.cpp): none without them.
         if cond[4] and not (GAME / 'config/race-log.txt').exists():
             return record | {'ok': False, 'reason': 'no race log from the self-driven race'}
-    elif measured['frames'] < frames - 5:
+    elif measured['frames'] < min(frames, 7200) - 5:
         return record | {'ok': False, 'reason': f"only {measured['frames']} of {frames} frames"}
     if result['cpu_mhz'] != 333:
         return record | {'ok': False, 'reason': f"CPU at {result['cpu_mhz']} MHz"}
@@ -328,12 +339,51 @@ def walk_player(w, rng):
     to_menu(w)
     w.keys('circle:2'); w.screen('player')
 
+CHAOS_KEYS = ['cross', 'square', 'triangle', 'ltrigger', 'rtrigger', 'up', 'down', 'left', 'right', 'start']
+
+
+def chaos(w, rng):
+    """Into a race, then forty seconds of whatever: jumps, tricks, resets,
+    pauses, braking, steering, ending the race and starting the next."""
+    to_menu(w)
+    w.keys('down', 'cross:2')                        # Training
+    w.keys(*['right:0.3'] * rng.randrange(0, 22))    # any course
+    w.keys('down', 'down', 'down', 'down', 'down', 'down')   # the penguins' row
+    w.keys(*['right:0.3'] * rng.randrange(0, 6))
+    w.keys('cross:18')
+    w.racing()
+    end = time.time() + 40
+    while not w.problem and time.time() < end:
+        key = rng.choice(CHAOS_KEYS)
+        hold = rng.choice([0.05, 0.08, 0.2, 0.6, 1.5])
+        w.pad.send(1, BUTTONS[key])
+        if rng.random() < 0.3:                       # two at once: a trick, a jump while steering
+            w.pad.send(1, BUTTONS[rng.choice(CHAOS_KEYS[:5])])
+        time.sleep(hold)
+        w.pad.send(2, 0xFFFFFFFF)
+        time.sleep(rng.choice([0.02, 0.1, 0.3]))
+    # Whatever it ended in, the game must still be drawing: a second picture
+    # differs. The pause and the controls picture stand still by design, so
+    # out of them: Start closes the picture, Circle resumes from the pause.
+    for keys in ([], ['start:2'], ['circle:2'], ['start:2', 'circle:2']):
+        w.keys(*keys)
+        if w.problem:
+            return
+        first = screenshot(); time.sleep(0.7); second = screenshot()
+        if first is None or second is None:
+            w.problem = 'no picture after the keys'
+        elif difference(first, second) >= 0.3:
+            return
+    shutil.copy(HOST0 / 'shot.bmp', RUNS / 'fail-shot-chaos-end.bmp')
+    w.problem = w.problem or 'the picture stands still after the keys'
+
+
 WALKS = {f.__name__[5:]: f for f in (walk_practice, walk_pause, walk_reset, walk_event, walk_config,
                                     walk_score, walk_help, walk_credits, walk_player)}
 
 
-def run_walk(name, rng, recording=False):
-    record = {'kind': 'menu', 'walk': name}
+def run_walk(name, rng, recording=False, steps=None):
+    record = {'kind': 'chaos' if steps else 'menu', 'walk': name}
     (GAME / 'config/benchmark').unlink(missing_ok=True)
     (GAME / 'config/benchmark-capture').unlink(missing_ok=True)
     if not launch():
@@ -344,7 +394,7 @@ def run_walk(name, rng, recording=False):
     walk = Walk(name, recording)
     try:
         walk.pad = Pad()
-        WALKS[name](walk, rng)
+        (steps or WALKS[name])(walk, rng)
         walk.pad.close()
     except OSError as error:
         walk.problem = walk.problem or f'key channel: {error}'
@@ -355,16 +405,45 @@ def run_walk(name, rng, recording=False):
         return record | {'ok': False, 'reason': walk.problem}
     if MODULE not in pspsh('modlist'):
         return record | {'ok': False, 'reason': 'game or PSPLink gone after the walk'}
+    if 'xception' in log_text():
+        return record | {'ok': False, 'reason': 'an exception in the game log'}
     return record | {'ok': True}
+
+
+def aborted_start(n, rng):
+    """The game reset in the middle of loading, then started again for a race."""
+    wait = rng.uniform(1, 14)
+    record = {'kind': 'abort', 'reset_after': round(wait, 1)}
+    (GAME / 'config/benchmark').write_text('600 bunny_hill\n')     # saves are off in a benchmark
+    (GAME / 'config/benchmark-capture').unlink(missing_ok=True)
+    if not launch():
+        return record | {'ok': False, 'reason': 'the game did not start'}
+    time.sleep(wait)
+    if not fresh_psplink():
+        return record | {'ok': False, 'reason': 'no PSPLink after the reset in loading'}
+    return record | {k: v for k, v in run_race(600, rng.choice(COURSES), [0, 0, 0, 0, rng.randrange(6)], False).items()
+                     if k not in ('kind',)}
 
 
 def one_test(n, seed):
     rng = random.Random(seed * 1000003 + n)
     draw = rng.random()
-    if draw < 0.55:
+    if n <= 114:                    # the mix the first 114 were drawn from
+        if draw < 0.55:
+            return race(n, rng, finish=False)
+        if draw < 0.70:
+            return race(n, rng, finish=True)
+        return run_walk(rng.choice(sorted(WALKS)), rng)
+    if draw < 0.30:
         return race(n, rng, finish=False)
-    if draw < 0.70:
+    if draw < 0.55:
         return race(n, rng, finish=True)
+    if draw < 0.65:
+        return race(n, rng, finish=True, worst=True)
+    if draw < 0.80:
+        return run_walk('chaos', rng, steps=chaos)
+    if draw < 0.85:
+        return aborted_start(n, rng)
     return run_walk(rng.choice(sorted(WALKS)), rng)
 
 
@@ -385,7 +464,11 @@ def main():
         if not fresh_psplink():
             sys.exit('console does not come back')
         kind = sys.argv[2]
-        if kind in WALKS:
+        if kind == 'chaos':
+            print(run_walk('chaos', random.Random(int(sys.argv[3]) if len(sys.argv) > 3 else 1), steps=chaos))
+        elif kind == 'abort':
+            print(aborted_start(0, random.Random(int(sys.argv[3]) if len(sys.argv) > 3 else 1)))
+        elif kind in WALKS:
             print(run_walk(kind, random.Random(int(sys.argv[3]) if len(sys.argv) > 3 else 1)))
         else:
             frames, course, *cond = sys.argv[3:]

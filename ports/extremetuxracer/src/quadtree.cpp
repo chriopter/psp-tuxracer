@@ -16,7 +16,12 @@
 #include <climits>
 #include <cstring>
 
-#define TERRAIN_ERROR_SCALE 0.1f
+// Where two kinds of ground meet, the squares are split three times as far
+// off as the original 0.1 had them (2026-10-03): a coarse square takes the
+// texture of one of its corners, and on Frozen River a whole slope some
+// thirty metres off turned from ice to snow from one frame to the next.
+// Measured on the console: no cost in frame rate on the ice courses.
+#define TERRAIN_ERROR_SCALE 0.3f
 #define VERTEX_FORCE_THRESHOLD 100
 #define ERROR_MAGNIFICATION_THRESHOLD 20
 #define ERROR_MAGNIFICATION_AMOUNT 3
