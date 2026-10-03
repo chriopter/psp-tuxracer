@@ -137,7 +137,9 @@ void PspTraceResource(const char *phase, const char *path) {
           sceKernelTotalFreeMemSize(), sceKernelMaxFreeMemSize(),
           sceKernelCheckThreadStack(), (unsigned)__pspgl_vidmem_avail());
 }
+void PspRaceLogFlush();
 static void finish_benchmark() {
+  PspRaceLogFlush();
   fflush(stdout);
   fflush(stderr);
   if (!benchmark_recording || benchmark_times.empty())
@@ -162,21 +164,23 @@ static void finish_benchmark() {
   }
   auto statistics = [](std::vector<unsigned> &values, FILE *f) {
     uint64_t sum = 0;
-    unsigned slow = 0;
+    unsigned slow = 0, missed = 0;
     for (unsigned value : values) {
       sum += value;
       if (value > 35000)
         ++slow;
+      if (value > 25000)      // a frame that stood for two vertical blanks or more: seen as a jerk
+        ++missed;
     }
     std::sort(values.begin(), values.end());
     fprintf(f,
             "{\"frames\":%u,\"fps\":%.3f,\"median_us\":%u,\"p95_us\":%u,\"max_"
-            "us\":%u,\"over35ms\":%u}",
+            "us\":%u,\"over35ms\":%u,\"missed\":%u}",
             (unsigned)values.size(),
             sum ? values.size() * 1000000.f / sum : 0.f,
             values.empty() ? 0 : values[values.size() / 2],
             values.empty() ? 0 : values[(values.size() - 1) * 95 / 100],
-            values.empty() ? 0 : values.back(), slow);
+            values.empty() ? 0 : values.back(), slow, missed);
   };
   if (!sound_log.empty())
     if (FILE *log = fopen("config/sound-log.txt", "w")) {
@@ -830,13 +834,43 @@ static void check_course_objects() {
           g_game.finish ? 1 : 0, g_game.time);
 }
 
+// A trace run notes the frame rate of every race, also one that is played
+// by hand or by keys: a line in config/frame-stats.txt when the race is left
+// (nothing is written while it runs).
+static struct { unsigned frames, missed, slowest; uint64_t sum; } play;
+static void note_play_frame(State* state, State* previous, uint64_t now, uint64_t last) {
+  if (!trace_on || benchmark_recording) return;
+  if (state == &Racing && previous == &Racing && last) {
+    const unsigned dt = (unsigned)(now - last);
+    ++play.frames; play.sum += dt;
+    if (dt > 25000) ++play.missed;
+    if (dt > play.slowest) play.slowest = dt;
+  } else if (previous == &Racing && play.frames > 30) {
+    if (FILE* f = fopen("config/frame-stats.txt", "a")) {
+      fprintf(f, "%u %.3f %u %u\n", play.frames, play.frames * 1000000.0 / play.sum, play.slowest, play.missed);
+      fclose(f);
+    }
+    play = {};
+  }
+}
+
 void RenderWindow::display() {
   check_course_objects();
   ResetRenderMode();
   auto before_present = benchmark_recording ? sceKernelGetSystemTimeWide() : 0;
   eglSwapBuffers(egl_display, surface);
   // Never write profiling logs to the Memory Stick during normal play.
-  if (!benchmark_recording) return;
+  if (!benchmark_recording) {
+    static uint64_t play_last = 0;
+    static State* play_previous = nullptr;
+    if (trace_on) {
+      const uint64_t t = sceKernelGetSystemTimeWide();
+      State* st = State::manager.CurrentState();
+      note_play_frame(st, play_previous, t, play_last);
+      play_previous = st; play_last = t;
+    }
+    return;
+  }
   static uint64_t last = 0;
   static bool skip_interval = false;
   static State *previous = nullptr;

@@ -90,7 +90,8 @@ def fresh_psplink():
 
 def launch():
     for name in ('etr-errors.log', 'etr.log', 'config/benchmark-result.json', 'config/race-log.txt',
-                 'config/sound-log.txt', 'config/timing.log', 'config/frame-times-us.json', 'config/frame-work-us.json'):
+                 'config/sound-log.txt', 'config/timing.log', 'config/frame-times-us.json', 'config/frame-work-us.json',
+                 'config/frame-stats.txt'):
         (GAME / name).unlink(missing_ok=True)
     (GAME / 'config/trace').touch()
     script = BENCH / 'start.psh'
@@ -107,12 +108,10 @@ def log_text():
 
 
 def wait_result(seconds):
-    """The result, or None after the given time -- longer while a race to the
-    line still writes its log: it is running, only slowly."""
-    path, log = GAME / 'config/benchmark-result.json', GAME / 'config/race-log.txt'
-    end, last = time.time() + seconds, None
-    while time.time() < end or (log.exists() and time.time() - log.stat().st_mtime < 30
-                                and time.time() < end + 1800):
+    """The result, or None after the given time."""
+    path = GAME / 'config/benchmark-result.json'
+    end = time.time() + seconds
+    while time.time() < end:
         try:
             return json.loads(path.read_text())
         except (OSError, ValueError):
@@ -151,7 +150,10 @@ def run_race(frames, course, cond, finish):
         reason = 'no answer from PSPLink' if not alive() else 'no result in time'
         return record | {'ok': False, 'reason': reason}
     measured = result['all']
+    # The frame rate of every race: the mean, the middle and the slow end of
+    # the frame times, and how many frames stood for two blanks or more.
     record |= {'fps': measured['fps'], 'frames': measured['frames'], 'max_us': measured['max_us'],
+               'median_us': measured['median_us'], 'p95_us': measured['p95_us'], 'missed': measured.get('missed'),
                'heap': result['heap_peak_bytes'], 'free_user': result['min_free_user_bytes'], 'cpu_mhz': result['cpu_mhz']}
     record['race_time'] = result.get('race_time')
     if finish:
@@ -405,10 +407,13 @@ def run_walk(name, rng, recording=False, steps=None):
     try:
         walk.pad = Pad()
         (steps or WALKS[name])(walk, rng)
+        if steps and not walk.problem:
+            walk.keys('start:1.5')      # out of the race, so that the game notes its frame rate
         walk.pad.close()
     except OSError as error:
         walk.problem = walk.problem or f'key channel: {error}'
     record['screens'] = walk.seen
+    record |= play_frame_rate()
     if walk.problem:
         if not alive():
             walk.problem = 'no answer from PSPLink (' + walk.problem + ')'
@@ -418,6 +423,22 @@ def run_walk(name, rng, recording=False, steps=None):
     if 'xception' in log_text():
         return record | {'ok': False, 'reason': 'an exception in the game log'}
     return record | {'ok': True}
+
+
+def play_frame_rate():
+    """The frame rate of the races of a walk, as the game notes it when a
+    race is left (config/frame-stats.txt: frames, FPS, slowest frame in
+    microseconds, frames of two blanks or more)."""
+    try:
+        rows = [line.split() for line in (GAME / 'config/frame-stats.txt').read_text().splitlines()]
+    except OSError:
+        return {}
+    rows = [(int(a), float(b), int(c), int(d)) for a, b, c, d in rows]
+    frames = sum(row[0] for row in rows)
+    if not frames:
+        return {}
+    return {'frames': frames, 'fps': round(frames / sum(row[0] / row[1] for row in rows), 3),
+            'max_us': max(row[2] for row in rows), 'missed': sum(row[3] for row in rows)}
 
 
 def aborted_start(n, rng):

@@ -12,6 +12,7 @@
 #include "tux.h"
 #include "view.h"
 #include "ogl.h"
+#include <string>
 #include <vector>
 #include <cmath>
 #include <cstdlib>
@@ -21,6 +22,16 @@
 bool PspFixedStep();
 
 const std::vector<unsigned>& ObjectsNear(bool trees, float z, float reach);
+
+static std::vector<std::string> race_log;
+void PspRaceLogFlush() {
+	if (race_log.empty()) return;
+	if (FILE* log = std::fopen("config/race-log.txt", "w")) {
+		for (const auto& line : race_log) std::fprintf(log, "%s\n", line.c_str());
+		std::fclose(log);
+	}
+	race_log.clear();
+}
 
 namespace Opponents {
 
@@ -298,14 +309,16 @@ void Update(float dt, CControl* player) {
 		}
 	}
 	// A filmed run keeps a note of the race, twice a second: the player's
-	// speed, the pace of the field and each penguin's lead in metres.
-	if (PspFixedStep() && tick % 30 == 0)
-		if (FILE* log = std::fopen("config/race-log.txt", tick == 30 ? "w" : "a")) {
-			std::fprintf(log, "%u %.1f %.2f", tick, player_speed, level);
-			for (int i = 0; i < racing; ++i) std::fprintf(log, " %.1f/%.1f", (float)player->cpos.z - racers[i].z, racers[i].speed);
-			std::fprintf(log, "\n");
-			std::fclose(log);
-		}
+	// speed, the level and each penguin's lead in metres and its speed.
+	// Kept in memory and written when the race is over (PspRaceLogFlush):
+	// a file opened twice a second cost the frames it was to be about.
+	if (PspFixedStep() && tick % 30 == 0 && race_log.size() < 1500) {
+		char line[160];
+		int n = std::snprintf(line, sizeof line, "%u %.1f %.2f", tick, player_speed, level);
+		for (int i = 0; i < racing && n < (int)sizeof line - 16; ++i)
+			n += std::snprintf(line + n, sizeof line - n, " %.1f/%.1f", (float)player->cpos.z - racers[i].z, racers[i].speed);
+		race_log.push_back(line);
+	}
 	bumped = touching;
 	touching = false;
 	if (!g_game.finish) collide(dt, player, width);
