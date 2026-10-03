@@ -17,6 +17,9 @@ Kinds of test, drawn by the seed and the test's number:
   abort     the game reset by PSPLink while it loads, then a measured race
   menu      a walk through the menus by key presses (remotejoy), each screen
             compared with a reference picture taken by "record"
+  film      (tests past 600) a self-driven race of which ninety frames in a
+            row are written out by the game itself and kept as PNGs under
+            $BENCH/video/clips/sNNN: footage for the wall of the launch video
 
 Needs usbhostfs_pc running in $BENCH/host0, the staged game with its PRX in
 $BENCH/host0/etr-psp-test, remotejoy.prx in $BENCH/host0, and a relay in
@@ -434,6 +437,63 @@ def run_walk(name, rng, recording=False, steps=None):
     return record | {'ok': True}
 
 
+CLIPS = BENCH / 'video/clips'
+FILM_FRAMES = 90
+
+
+def write_png(path, rgb, width, height):
+    import zlib
+    def chunk(kind, data):
+        body = kind + data
+        return struct.pack('>I', len(data)) + body + struct.pack('>I', zlib.crc32(body))
+    rows = b''.join(b'\0' + rgb[y * width * 3:(y + 1) * width * 3] for y in range(height))
+    path.write_bytes(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+                     + chunk(b'IDAT', zlib.compress(rows, 6)) + chunk(b'IEND', b''))
+
+
+_rgb565 = None
+def film(n, rng):
+    """Ninety frames in a row of a self-driven race, dumped by the game
+    (config/benchmark-capture: raw 512x272 RGB565), kept as 480x272 PNGs."""
+    global _rgb565
+    from array import array
+    course = rng.choice(COURSES)
+    cond = [rng.randrange(4), rng.choice([0, 0, 1, 2, 3]), rng.randrange(4), rng.randrange(2), rng.randrange(6)]
+    first = rng.randrange(150, 1200, 30)
+    record = {'kind': 'film', 'course': course, 'cond': cond, 'first_frame': first}
+    for old in (GAME / 'config').glob('capture-*.raw'):
+        old.unlink()
+    (GAME / 'config/benchmark').write_text(f"{first + FILM_FRAMES + 30} {course} {' '.join(map(str, cond))}\n")
+    (GAME / 'config/benchmark-capture').write_text(' '.join(str(first + k) for k in range(FILM_FRAMES)) + '\n')
+    if not launch():
+        return record | {'ok': False, 'reason': 'the game did not start'}
+    result = wait_result(240 + first / 20)
+    if result is None:
+        return record | {'ok': False, 'reason': 'no answer from PSPLink' if not alive() else 'no result in time'}
+    record |= {'heap': result['heap_peak_bytes'], 'race_time': result.get('race_time'), 'reached_finish': bool(result.get('finished'))}
+    raws = sorted((GAME / 'config').glob('capture-*.raw'), key=lambda f: int(f.stem.split('-')[1]))
+    # a race that reached the line before the frames were due has fewer: still a race, but no clip
+    good = [f for f in raws if f.stat().st_size >= 512 * 272 * 2]
+    record['frames'] = len(good)
+    if len(good) >= 60:
+        if _rgb565 is None:
+            _rgb565 = [bytes(((p >> 0 & 31) * 255 // 31, (p >> 5 & 63) * 255 // 63, (p >> 11) * 255 // 31)) for p in range(65536)]
+        out = CLIPS / f's{n:03d}'
+        out.mkdir(parents=True, exist_ok=True)
+        for k, raw in enumerate(good):
+            pixels = array('H', raw.read_bytes()[:512 * 272 * 2])
+            rgb = b''.join(b''.join(_rgb565[p] for p in pixels[y * 512:y * 512 + 480]) for y in range(272))
+            write_png(out / f'f{k:03d}.png', rgb, 480, 272)
+        record['clip'] = out.name
+    elif not record['reached_finish']:
+        return record | {'ok': False, 'reason': f'only {len(good)} of {FILM_FRAMES} frames written'}
+    for raw in raws:
+        raw.unlink()
+    if MODULE not in pspsh('modlist'):
+        return record | {'ok': False, 'reason': 'game or PSPLink gone after the race'}
+    return record | {'ok': True}
+
+
 def play_frame_rate():
     """The frame rate of the races of a walk, as the game notes it when a
     race is left (config/frame-stats.txt: frames, FPS, slowest frame in
@@ -468,6 +528,8 @@ def aborted_start(n, rng):
 def one_test(n, seed):
     rng = random.Random(seed * 1000003 + n)
     draw = rng.random()
+    if n > 600:                     # footage for the wall, after the six hundred
+        return film(n, rng)
     if n <= 114:                    # the mix the first 114 were drawn from
         if draw < 0.55:
             return race(n, rng, finish=False)
@@ -570,6 +632,8 @@ def main():
             print(record)
             if not record['ok']:
                 print(pspsh('exprint', 10)); print(pspsh('thlist', 15))
+        elif kind == 'film':
+            print(film(int(sys.argv[3]) if len(sys.argv) > 3 else 999, random.Random(int(sys.argv[3]) if len(sys.argv) > 3 else 1)))
         elif kind == 'abort':
             print(aborted_start(0, random.Random(int(sys.argv[3]) if len(sys.argv) > 3 else 1)))
         elif kind in WALKS:
