@@ -254,6 +254,14 @@ class Walk:
             return
         golden = bmp_rows(reference)
         value = difference(shot, golden, BOXES.get(label))
+        # A screen that loads from the host can be late: look again before
+        # calling it wrong (test 425 showed the blank page of a load).
+        for _ in range(3):
+            if value <= LIMIT:
+                break
+            time.sleep(2)
+            shot = screenshot() or shot
+            value = difference(shot, golden, BOXES.get(label))
         self.seen.append((label, round(value, 1)))
         if value > LIMIT:
             shutil.copy(HOST0 / 'shot.bmp', RUNS / f'fail-shot-{label}.bmp')
