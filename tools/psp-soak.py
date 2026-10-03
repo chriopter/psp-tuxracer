@@ -437,6 +437,30 @@ def run_walk(name, rng, recording=False, steps=None):
     return record | {'ok': True}
 
 
+def frame_rate_before(first):
+    """The frame rate of a film test's race before its frames are written
+    out (writing them stalls the game): from the interval of every frame
+    (config/frame-times-us.json), the mean, the worst second, and the
+    frames that stood for two blanks or more."""
+    try:
+        times = json.loads((GAME / 'config/frame-times-us.json').read_text())[:max(0, first - 3)]
+    except (OSError, ValueError):
+        return {}
+    if len(times) < 60:
+        return {}
+    worst, window, start = 1e9, 0, 0
+    for end, t in enumerate(times):                 # the slowest stretch of about a second
+        window += t
+        while window - times[start] >= 1000000:
+            window -= times[start]
+            start += 1
+        if window >= 1000000:
+            worst = min(worst, (end - start + 1) * 1000000 / window)
+    return {'fps': round(len(times) * 1000000 / sum(times), 3), 'fps_frames': len(times),
+            'worst_second': round(worst, 1) if worst < 1e9 else None, 'max_us': max(times),
+            'missed': sum(1 for t in times if t > 25000)}
+
+
 CLIPS = BENCH / 'video/clips'
 FILM_FRAMES = 90
 
@@ -471,6 +495,7 @@ def film(n, rng):
     if result is None:
         return record | {'ok': False, 'reason': 'no answer from PSPLink' if not alive() else 'no result in time'}
     record |= {'heap': result['heap_peak_bytes'], 'race_time': result.get('race_time'), 'reached_finish': bool(result.get('finished'))}
+    record |= frame_rate_before(first)
     raws = sorted((GAME / 'config').glob('capture-*.raw'), key=lambda f: int(f.stem.split('-')[1]))
     # a race that reached the line before the frames were due has fewer: still a race, but no clip
     good = [f for f in raws if f.stat().st_size >= 512 * 272 * 2]
@@ -605,6 +630,20 @@ def report():
         if v:
             print(f"  {kind}: {len(v)} tests, mean {statistics.mean(r['fps'] for r in v):.1f} FPS, slowest {min(r['fps'] for r in v):.1f}, "
                   f"{100 * sum(r['missed'] for r in v) / sum(r['frames'] for r in v):.0f}% of frames")
+    films = [r for r in rows if r['kind'] == 'film' and r.get('fps')]
+    if films:
+        print(f"\nfilm tests with the frame rate of every frame before the capture: {len(films)}")
+        print('| Weather | Races | Slowest | Mean | Worst second | Frames of two blanks |\n|---|---|---|---|---|---|')
+        for snow, name in enumerate(('clear', 'light snow', 'medium snow', 'heavy snow')):
+            v = [r for r in films if r['cond'][1] == snow]
+            if v:
+                seconds = [r['worst_second'] for r in v if r.get('worst_second')]
+                print(f"| {name} | {len(v)} | {min(r['fps'] for r in v):.1f} | {statistics.mean(r['fps'] for r in v):.1f} | "
+                      f"{min(seconds):.1f} | {100 * sum(r['missed'] for r in v) / sum(r['fps_frames'] for r in v):.0f}% |")
+        slow = [r for r in films if r['fps'] < (50 if r['cond'][1] == 0 else 30)]
+        print(f"  below 50 FPS in clear weather or 30 in snow: {len(slow)}")
+        for r in sorted(slow, key=lambda r: r['fps']):
+            print(f"    {r['n']} {r['course']} {r['cond']}: {r['fps']:.1f} FPS, worst second {r.get('worst_second')}, build {r['build']}")
     lines = [r for r in rows if r['kind'] in ('finish', 'marathon') and r['n'] > 124]
     print(f"\nraces to the line: {sum(1 for r in lines if r.get('reached_finish'))} of {len(lines)} reached it")
     heaps = [r['heap'] for r in rows if r.get('heap')]
