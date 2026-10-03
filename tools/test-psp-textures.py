@@ -172,6 +172,7 @@ struct{int perf_level=1;float fov=60,forward_clip_distance=75;}param;
 struct TTerrType {bool trackmarks=true;int starttex=1,tracktex=2,stoptex=3;};
 struct {TTerrType TerrList[2];int terrain=1;
  int GetTerrainIdx(float,float,float){return terrain;}
+ int drawn=1; int GetDrawnTerrainIdx(float,float){return drawn;}   // what the triangle is drawn as
  float FindYCoord(float,float){return 0;}
  TPlane GetLocalCoursePlane(TVector3d){return {};}
  TVector3d FindCourseNormal(float,float){return {0,1,0};}
@@ -337,6 +338,11 @@ int main(){
  assert(!continuing_track && track_marks.quads.size()==2);
  Course.TerrList[1].trackmarks=true;UpdateTrackmarks(&ctrl);
  assert(track_marks.quads.back().track_type==TRACK_HEAD);
+ // Snow by the weights, but drawn as ice (terrain 0, no marks): no trench on what one sees as ice.
+ { const std::size_t before=track_marks.quads.size(); Course.TerrList[0].trackmarks=false; Course.drawn=0;
+   ctrl.cpos.z-=.2f;UpdateTrackmarks(&ctrl); assert(!continuing_track && track_marks.quads.size()==before);
+   Course.drawn=1; ctrl.cpos.z-=.2f;UpdateTrackmarks(&ctrl); assert(track_marks.quads.size()==before+1);
+   Course.TerrList[0].trackmarks=true; }
  Course.terrain=-1;UpdateTrackmarks(&ctrl);assert(!continuing_track);
  Course.terrain=1;
  for(unsigned i=0;i<MAX_TRACK_MARKS+10;++i){ctrl.cpos.z-=.2f;UpdateTrackmarks(&ctrl);}
