@@ -4,6 +4,7 @@
   tools/psp-soak.py <total> <seed>     run until results.jsonl holds <total> lines
   tools/psp-soak.py record             walk every menu path once and keep its screens as references
   tools/psp-soak.py one <kind> [args]  one test, printed, not recorded (kinds: measured, finish, or a walk)
+  tools/psp-soak.py report             the figures of results.jsonl for the documentation
 
 Kinds of test, drawn by the seed and the test's number:
   measured  a race of 600-1800 frames with the fixed benchmark input; random
@@ -504,8 +505,55 @@ def build_id():
     return hashlib.md5((GAME / 'extremetuxracer.prx').read_bytes()).hexdigest()[:8]
 
 
+def report():
+    """The figures for docs/psp-hardware-validation.md, from results.jsonl."""
+    import collections, statistics
+    rows = [json.loads(line) for line in (RUNS / 'results.jsonl').read_text().splitlines()]
+    kinds = collections.Counter((r['kind'], r['ok']) for r in rows)
+    print(f"{len(rows)} tests, {sum(1 for r in rows if not r['ok'])} counted as failed")
+    for kind in sorted({k for k, _ in kinds}):
+        print(f"  {kind}: {kinds[(kind, True)]} passed, {kinds[(kind, False)]} failed")
+    for r in rows:
+        if not r['ok']:
+            print(f"  failed {r['n']} ({r['kind']}, build {r['build']}): {r['reason']}")
+    builds = collections.Counter(r['build'] for r in rows)
+    print('builds:', ', '.join(f'{b} x{n}' for b, n in builds.items()))
+    last = list(builds)[-1]
+    # frame rates: only the builds with the objects where the course has them
+    good = [r for r in rows if r.get('fps') and r['n'] > 118]
+    races = [r for r in good if r['kind'] in ('measured', 'abort')]
+    print(f"\nmeasured races with the fixed benchmark input: {len(races)}")
+    print('| Weather | Races | Slowest | Mean |\n|---|---|---|---|')
+    for snow, name in enumerate(('clear', 'light snow', 'medium snow', 'heavy snow')):
+        v = [r['fps'] for r in races if r['cond'][1] == snow]
+        if v:
+            print(f"| {name} | {len(v)} | {min(v):.1f} FPS | {statistics.mean(v):.1f} FPS |")
+    print('\n| Course | Races | Slowest | Mean | Slowest in clear weather |\n|---|---|---|---|---|')
+    by = collections.defaultdict(list)
+    for r in races:
+        by[r['course']].append(r)
+    for course, v in sorted(by.items(), key=lambda kv: statistics.mean(r['fps'] for r in kv[1])):
+        clear = [r['fps'] for r in v if r['cond'][1] == 0]
+        print(f"| {course} | {len(v)} | {min(r['fps'] for r in v):.1f} | {statistics.mean(r['fps'] for r in v):.1f} | "
+              + (f"{min(clear):.1f}" if clear else '-') + ' |')
+    timed = [r for r in good if r.get('missed') is not None and r.get('frames')]
+    print('\nframes that stood for two blanks or more, by kind of test (since the game counts them):')
+    for kind in ('measured', 'finish', 'marathon', 'chaos', 'menu'):
+        v = [r for r in timed if r['kind'] == kind]
+        if v:
+            print(f"  {kind}: {len(v)} tests, mean {statistics.mean(r['fps'] for r in v):.1f} FPS, slowest {min(r['fps'] for r in v):.1f}, "
+                  f"{100 * sum(r['missed'] for r in v) / sum(r['frames'] for r in v):.0f}% of frames")
+    lines = [r for r in rows if r['kind'] in ('finish', 'marathon') and r['n'] > 124]
+    print(f"\nraces to the line: {sum(1 for r in lines if r.get('reached_finish'))} of {len(lines)} reached it")
+    heaps = [r['heap'] for r in rows if r.get('heap')]
+    print(f"largest heap peak: {max(heaps) / 1e6:.1f} MB")
+
+
 def main():
     RUNS.mkdir(parents=True, exist_ok=True)
+    if len(sys.argv) >= 2 and sys.argv[1] == 'report':
+        report()
+        return
     if len(sys.argv) >= 2 and sys.argv[1] == 'record':
         for name in sys.argv[2:] or sorted(WALKS):
             if not fresh_psplink():
