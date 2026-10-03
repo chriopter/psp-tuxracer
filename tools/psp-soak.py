@@ -107,9 +107,12 @@ def log_text():
 
 
 def wait_result(seconds):
-    path = GAME / 'config/benchmark-result.json'
-    end = time.time() + seconds
-    while time.time() < end:
+    """The result, or None after the given time -- longer while a race to the
+    line still writes its log: it is running, only slowly."""
+    path, log = GAME / 'config/benchmark-result.json', GAME / 'config/race-log.txt'
+    end, last = time.time() + seconds, None
+    while time.time() < end or (log.exists() and time.time() - log.stat().st_mtime < 30
+                                and time.time() < end + 1800):
         try:
             return json.loads(path.read_text())
         except (OSError, ValueError):
@@ -139,7 +142,9 @@ def run_race(frames, course, cond, finish):
         return record | {'ok': False, 'reason': 'the game did not start'}
     # Loading from host0 takes about 15 s; the slowest snow race ran near 20
     # FPS. A race to the line ends at the line, mostly within five minutes.
-    result = wait_result(60 + min(frames, 18000) / 18)
+    # Ten minutes of race at 20 FPS and more, for an autopilot caught in a
+    # hollow until the frame limit; on while a race with penguins logs.
+    result = wait_result(60 + frames / 20)
     if result is None:
         reason = 'no answer from PSPLink' if not alive() else 'no result in time'
         return record | {'ok': False, 'reason': reason}
