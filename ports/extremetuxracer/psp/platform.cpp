@@ -863,6 +863,7 @@ static void note_play_frame(State* state, State* previous, uint64_t now, uint64_
 // config/debug-nopacing turns it off, for measuring what a scene costs.
 static bool pace_half = false;
 bool PspPacedAtThirty() { return pace_half; }
+
 static void pace_frames() {
   static int off = -1;
   if (off < 0) off = access("config/debug-nopacing", F_OK) == 0;

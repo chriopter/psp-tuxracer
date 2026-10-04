@@ -197,7 +197,14 @@ void DrawTrackmarks() {
 	const float half_h = half_v * Winsys.resolution.width / Winsys.resolution.height;
 	const float reach = param.forward_clip_distance * std::sqrt(1.f + half_v*half_v + half_h*half_h) + 4.f;
 	const float reach2 = reach * reach;
-	for (const auto& chunk : track_chunks) {
+	// The newest runs first, and no more than MAX_DRAWN marks a frame: a
+	// penguin going round in a hollow lays its trench over itself, and a
+	// thousand marks in view were 15 ms of every frame (test 861 of the
+	// soak, 2026-10-04). What is left out is the oldest of a heap of them.
+	enum { MAX_DRAWN = 256 };
+	int drawn = 0;
+	for (auto it = track_chunks.rbegin(); it != track_chunks.rend() && drawn < MAX_DRAWN; ++it) {
+		const auto& chunk = *it;
 		float away2 = 0;
 		const float e[3] = {(float)eye.x, (float)eye.y, (float)eye.z};
 		for (int k = 0; k < 3; ++k) {
@@ -251,6 +258,7 @@ void DrawTrackmarks() {
 			             {normals[j].x,normals[j].y,normals[j].z},
 			             {positions[j].x,positions[j].y,positions[j].z}};
 		}
+		if (++drawn > MAX_DRAWN) break;
 		if (PspProfileActive()) PspProfileAdd(PSP_N_TRACK_DRAWN, 1);
 		if(bound_type!=q.track_type) {
 			flush(); textures[q.track_type]->Bind(); bound_type=q.track_type;

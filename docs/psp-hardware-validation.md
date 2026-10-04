@@ -105,6 +105,11 @@ What was done about it, each measured on the console:
   Bunny Hill: 1491 of 1497 frames at thirty, 8 changes between the two rates,
   where there were hundreds. The figures in the tables above are from before
   this.
+- **A heap of track marks**: test 861, a race to the line on Tux at Home in
+  heavy snow and wind, fell from 30 to 15 FPS once the autopilot went round in
+  a hollow: over a thousand marks in view, 700 drawn, 15 ms a frame. The
+  newest are drawn first, at most 256 a frame; the same race now holds 30 to
+  the end.
 
 ## Second round — 2026-10-01/02
 

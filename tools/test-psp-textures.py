@@ -276,11 +276,15 @@ static unsigned compare(){
  drawnV.clear();drawnVertices=0;drawnMaxZ=-1e30f;profileSums[PSP_N_TRACK_DRAWN]=profileSums[PSP_N_TRACK_SEEN]=0;
  DrawTrackmarks();
  const auto expected=brute_force();
- assert(drawn_marks()==expected);
- assert(profileSums[PSP_N_TRACK_DRAWN]==expected.size());
+ const auto drawn=drawn_marks();
+ // At most 256 a frame (a heap of marks in a hollow); then a part of those in view.
+ const std::size_t shown=std::min<std::size_t>(expected.size(),256);
+ assert(drawn.size()==shown);
+ for(auto* q:drawn) assert(expected.count(q));
+ assert(profileSums[PSP_N_TRACK_DRAWN]==shown);
  assert(profileSums[PSP_N_TRACK_SEEN]<=track_marks.quads.size());
- assert(drawnVertices>=6*expected.size());
- return expected.size();
+ assert(drawnVertices>=6*shown);
+ return shown;
 }
 // The keys and boxes drawing relies on describe the marks as they are now.
 static void check_index(){
