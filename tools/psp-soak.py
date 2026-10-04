@@ -553,7 +553,7 @@ def aborted_start(n, rng):
 def one_test(n, seed):
     rng = random.Random(seed * 1000003 + n)
     draw = rng.random()
-    if n > 600:                     # footage for the wall, after the six hundred
+    if 600 < n <= 817:              # footage for the wall, after the six hundred
         return film(n, rng)
     if n <= 114:                    # the mix the first 114 were drawn from
         if draw < 0.55:

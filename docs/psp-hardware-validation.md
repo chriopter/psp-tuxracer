@@ -6,6 +6,106 @@ Two rounds: the first on 2026-09-17 (below, unchanged), the second on
 sound on, default detail. Neither is a certification of every PSP model,
 firmware or course.
 
+## Third round — 2026-10-02/04
+
+The bench of the second round was lost with its machine (the harness and its
+675 raw results were never in a repository; the count of 669 above is what
+survives). The harness is now `tools/psp-soak.py`; `psp-soak.py report`
+prints the figures below from its `results.jsonl`.
+
+### The soak: 817 tests
+
+Each a fresh start of the game on the PSP-1000 through PSPLink and an action:
+
+| Kind | Tests | What |
+|---|---|---|
+| measured | 199 | a race of 600–1800 frames with the fixed benchmark input; random course, light, snow, wind, mirror, 0–5 penguins |
+| finish | 142 | a self-driven race to the finish line (up to 350 s of race) |
+| marathon | 45 | the same at night, heavy snow, strong wind, mirrored, five penguins |
+| menu | 118 | nine walks through the menus by key presses, each screen compared with a reference picture |
+| chaos | 72 | into a race through the menus, then forty seconds of random keys (jumps, tricks, resets, pauses, ending the race) |
+| abort | 24 | the game reset while it loads, then a race |
+| film | 217 | a self-driven race of which ninety frames are written out, with the frame rate of every frame before them |
+
+Four are counted as failed. Three were the harness: a race log asked of a
+race without penguins (82), a wait too short for an autopilot caught in a
+hollow (124), a screen compared while it still loaded (425). One was the
+game: test 117, the first crash below. Of 162 races to the line 134 reached
+it; the others were the autopilot standing in a hollow, the game running on.
+The freeze of test 583 of the second round did not come again in these 817.
+Largest heap peak: 13.0 MB of 15.3.
+
+### Found by it, and fixed
+
+- **Trees and herring were in the wrong places on every course.** The
+  staging makes each elevation map smaller; `items.lst` holds places on the
+  grid of the full map, and `nx - x` is unsigned. The objects of the first
+  part of a course were stretched over all of it and the rest stood far
+  outside; `trees.png` was read with the smaller grid's size. Present since
+  the first PSP build. The staging now puts the places on the smaller grid as
+  fractions (the same metres within 3e-6 of the course's length, checked for
+  every object of every course).
+- **A crash on Triangle** (FPU exception in `TVector3::Norm`): the reset chose
+  a reset point that stood 1.1e10 m outside, by the fault above. Traced on the
+  crashed console (FPU registers, the stack, the item list read from memory).
+  `Norm` now also leaves a vector alone whose square is subnormal — the PSP
+  takes the root of that as zero.
+- **A slope turned from ice to snow from one frame to the next** on Frozen
+  River, some thirty metres off: a coarse quadtree square takes the texture of
+  one corner. Squares are now split three times as far off where two kinds of
+  ground meet: 15 sudden steps in 300 consecutive frames instead of 47, the
+  large one gone.
+- **A trench of snow on ice**: the mark was laid by the ground's weights, the
+  triangle drawn by its lowest corner. Now by what is drawn, asked at the
+  middle and both edges of the trench.
+- **The wind dial ran over the lower edge of the screen**: drawn at the size
+  its texture is stored at (128) instead of its own (111).
+- **A long course name ran into its label** in the race selection.
+- **Collision and pace of the penguins**: see Computer penguins.
+
+### Frame rates
+
+With the objects where the courses have them there is more in view than in
+the second round, whose figures were measured with most trees missing.
+Measured races, fixed benchmark input, 166 of them:
+
+| Weather | Races | Slowest | Mean |
+|---|---|---|---|
+| clear | 59 | 42.7 FPS | 57.9 FPS |
+| light snow | 39 | 37.9 | 51.1 |
+| medium snow | 29 | 36.8 | 49.3 |
+| heavy snow | 39 | 31.8 | 38.9 |
+
+The 200 film tests, self-driven, every frame's interval:
+
+| Weather | Races | Slowest | Mean | Frames of two blanks or more |
+|---|---|---|---|---|
+| clear | 82 | 44.7 | 56.8 | 4 % |
+| light snow | 36 | 34.3 | 49.7 | 23 % |
+| medium snow | 52 | 32.7 | 47.9 | 29 % |
+| heavy snow | 30 | 30.3 | 36.6 | 67 % |
+
+Slowest courses by the mean of their measured races: Bumpy Ride 42.2, Tux at
+Home 43.1, Holy Grail 44.2; quickest: In Search of Vodka 58.7.
+
+What was done about it, each measured on the console:
+
+- Clear weather with penguins and trees (Explore Mountains, mirrored, five
+  penguins: 43.8 FPS) to 55–56: the penguins asked for the trees at every
+  point of every line they tried, 2.2 ms a frame; track marks wholly in view
+  are no longer tested and cut one by one; the HUD's numbers are formatted
+  without a string stream. What is left there is the GE and the trees: 59.6
+  FPS without them.
+- **Snow**: without the flakes heavy snow runs at 58 FPS; 3000 flakes give
+  36, 2000 about 45, 1500 about 52, whichever depth they are taken from. Their
+  number was kept, and the jerks taken out instead: a race that cannot hold
+  sixty is given an even thirty (two vertical blanks a frame) and goes back
+  to sixty when its frames would again make one blank (`pace_frames` in
+  `psp/platform.cpp`; `config/debug-nopacing` turns it off). Heavy snow on
+  Bunny Hill: 1491 of 1497 frames at thirty, 8 changes between the two rates,
+  where there were hundreds. The figures in the tables above are from before
+  this.
+
 ## Second round — 2026-10-01/02
 
 ### What changed, and what each change bought

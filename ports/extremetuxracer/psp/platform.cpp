@@ -854,11 +854,58 @@ static void note_play_frame(State* state, State* previous, uint64_t now, uint64_
   }
 }
 
+// An even picture in a race that cannot hold sixty frames a second: frames
+// that come now after one vertical blank and now after two are seen as
+// jerks, far more than a steady thirty. So when a quarter of the frames of
+// three quarters of a second took two blanks, every frame is given two; and
+// when the frames would again have made one blank each for a while, one
+// blank it is again. Falling snow is what brings this on (2026-10-04).
+// config/debug-nopacing turns it off, for measuring what a scene costs.
+static bool pace_half = false;
+bool PspPacedAtThirty() { return pace_half; }
+static void pace_frames() {
+  static int off = -1;
+  if (off < 0) off = access("config/debug-nopacing", F_OK) == 0;
+  static uint64_t last = 0, came_back = 0;
+  static unsigned frames = 0, late = 0, quick = 0, need = 90;
+  uint64_t now = sceKernelGetSystemTimeWide();
+  if (off || State::manager.CurrentState() != &Racing) {
+    pace_half = false; frames = late = quick = 0; last = now;
+    return;
+  }
+  const unsigned dt = last ? (unsigned)(now - last) : 0;
+  if (!pace_half) {
+    ++frames;
+    if (dt > 25000) ++late;
+    if (frames >= 45) {
+      if (late * 4 >= frames) {
+        pace_half = true; quick = frames = 0;
+        // back at sixty for under three seconds: it did not hold, try less soon
+        need = now - came_back < 3000000 ? std::min(need * 2, 900u) : 90;
+      }
+      frames = late = 0;
+    }
+  } else {
+    ++frames;
+    if (dt < 21000) {               // made one blank: wait for the second
+      ++quick;
+      sceDisplayWaitVblankStart();
+      now = sceKernelGetSystemTimeWide();
+    }
+    if (frames >= need) {
+      if (quick * 100 >= frames * 97) { pace_half = false; came_back = now; }
+      frames = quick = late = 0;
+    }
+  }
+  last = now;
+}
+
 void RenderWindow::display() {
   check_course_objects();
   ResetRenderMode();
   auto before_present = benchmark_recording ? sceKernelGetSystemTimeWide() : 0;
   eglSwapBuffers(egl_display, surface);
+  pace_frames();
   // Never write profiling logs to the Memory Stick during normal play.
   if (!benchmark_recording) {
     static uint64_t play_last = 0;

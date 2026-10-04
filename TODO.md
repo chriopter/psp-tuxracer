@@ -1,19 +1,24 @@
 # Remaining work
 
-State after the hardware round of 2026-10-01/02; measurements and method are
+State after the hardware round of 2026-10-02/04; measurements and method are
 in [hardware validation](docs/psp-hardware-validation.md).
 
 ## Stability
 
-- [ ] One unexplained freeze of the console in the soak (test 583); not
-      reproduced in five repeats. `config/trace` keeps the log unbuffered
-      for the next one.
-- [ ] Finish the 1020-test soak and record the final count.
+- [ ] One unexplained freeze of the console in the soak of the second round
+      (test 583); not reproduced in five repeats then, nor in the 817 tests of
+      the third round.
+- [x] The soak: 817 tests on the console (third round), with the 669 of the
+      second round 1486 starts of the game.
 
 ## Performance
 
-- [ ] Heavy snow at 60 FPS. It is at about 42 on Bunny Hill; the flakes'
-      update and the two curtains' fill are what is left.
+- [ ] Heavy snow at 60 FPS. It runs at an even 30 (frame pacing); 3000
+      flakes cost the GE what 60 would need, 1500 would give about 52.
+- [ ] Clear weather with many trees in view (Explore Mountains, Tux at Home):
+      55–57 FPS, the GE at the trees' alpha-tested sheets.
+- [ ] One run of Explore Mountains (mirrored, five penguins, clear) at 36.6
+      FPS among five at 55; not seen again, not explained.
 - [ ] The sky's side faces in video memory. Only the front face fits beside
       the terrain and the trees; a turn brings the others, read from ordinary
       memory, into the picture.
