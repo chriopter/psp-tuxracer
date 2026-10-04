@@ -1,3 +1,5 @@
+Version 1.0 — Extreme Tux Racer on the PSP, tested over a thousand times on a real one.
+
 The release in five lines:
 
 - 🐧 Race against one to five computer penguins — in Practice and in events, on the PSP only.

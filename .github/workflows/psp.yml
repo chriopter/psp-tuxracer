@@ -65,7 +65,7 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           COMMIT: ${{ github.sha }}
         run: gh run download "$RUN_ID" --name "extremetuxracer-psp-$COMMIT" --dir dist
-      - name: Publish next v0.x release with curated or delta notes
+      - name: Publish the next release (vX.Y.0) with curated or delta notes
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

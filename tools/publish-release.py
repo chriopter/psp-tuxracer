@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Publish complete v0.x.0 releases with concise, delta-only release notes."""
+"""Publish complete vX.Y.0 releases with concise, delta-only release notes.
+
+The next minor version of the highest major, or a new major when the
+repository says so in docs/release-major (one number, e.g. "1")."""
 import json
 import os
 from pathlib import Path
@@ -21,19 +24,27 @@ def upload_assets(version, assets):
                 time.sleep(5 * (attempt + 1))
 
 
-def next_version(releases):
+def next_version(releases, major=0):
+    """The next vMAJOR.N.0 for the major the repository is at (0 unless
+    docs/release-major says otherwise; tags of other majors are left alone)."""
     versions = []
     published = []
     for release in releases:
-        match = re.fullmatch(r'v0\.(\d+)\.(\d+)', release['tag_name'])
-        if match:
-            version = (int(match[1]), int(match[2]), release['tag_name'])
+        match = re.fullmatch(r'v(\d+)\.(\d+)\.(\d+)', release['tag_name'])
+        if match and int(match[1]) == major:
+            version = (int(match[2]), int(match[3]), release['tag_name'])
             versions.append(version)
             if not release.get('draft', False):
                 published.append(version)
+    # The notes start from the last release of this major, or of the one before.
+    older = [r for r in releases if not r.get('draft', False)
+             and re.fullmatch(rf'v{major - 1}\.\d+\.\d+', r['tag_name'])] if major else []
+    previous = max(published)[2] if published else (
+        max(older, key=lambda r: tuple(map(int, r['tag_name'][1:].split('.'))))['tag_name'] if older else None)
+    if not versions:
+        return (f'v{major}.0.0' if major else 'v0.1.0'), previous
     # Reserve abandoned draft versions too, avoiding tag collisions.
-    minor = max(versions)[0] + 1 if versions else 1
-    return f'v0.{minor}.0', max(published)[2] if published else None
+    return f'v{major}.{max(versions)[0] + 1}.0', previous
 
 
 def notes(commit, previous):
@@ -106,7 +117,9 @@ def main():
     if existing:
         version = existing['tag_name']
     else:
-        version, previous = next_version(releases)
+        wanted = Path('docs/release-major')
+        major = int(wanted.read_text().strip()) if wanted.is_file() else 0
+        version, previous = next_version(releases, major)
         path = Path('release-notes.md')
         path.write_text(notes(commit, previous) + '\n' + marker + '\n', encoding='utf-8')
         subprocess.run(['gh', 'release', 'create', version, '--draft',

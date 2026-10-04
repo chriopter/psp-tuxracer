@@ -21,6 +21,10 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(publish.next_version(releases), ('v0.11.0', 'v0.10.2'))
         releases.append({'tag_name': 'v0.11.0', 'draft': True})
         self.assertEqual(publish.next_version(releases), ('v0.12.0', 'v0.10.2'))
+        # a new major when the repository asks for it, then minors of it
+        fresh = [r for r in releases if r['tag_name'] != 'v1.0.0']
+        self.assertEqual(publish.next_version(fresh, 1), ('v1.0.0', 'v0.10.2'))
+        self.assertEqual(publish.next_version(fresh + [{'tag_name': 'v1.0.0'}], 1), ('v1.1.0', 'v1.0.0'))
 
     def test_real_commit_subjects_without_body_dump(self):
         with tempfile.TemporaryDirectory() as directory:
