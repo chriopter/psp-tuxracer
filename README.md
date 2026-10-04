@@ -2,10 +2,12 @@
 
 An unofficial PSP port of [Extreme Tux Racer](https://sourceforge.net/projects/extremetuxracer/), based on version 0.8.4. Race Tux down snowy mountains, collect fish, and beat the clock.
 
-![Downhill gameplay in PPSSPP](docs/images/descent-5s.gif)
+<img width="480" alt="Extreme Tux Racer on a real PSP-1000: races against penguins, snow at night, then a wall of PSPs for the more than 1,000 test runs" src="docs/images/etr-psp-launch.webp" />
 
-Tested in PPSSPP and on a physical PSP at 333 MHz. Two hardware-only startup
-exceptions are fixed; performance depends on the course and settings. See the
+[▶ The launch video in full quality](https://github.com/chriopter/psp-tuxracer/releases/download/v1.0.0/etr-psp-launch.mp4)
+
+Tested more than 1,000 times on a real PSP-1000 at 333 MHz, and in PPSSPP.
+Performance depends on the course and the weather; see the
 [hardware measurements and limitations](docs/psp-hardware-validation.md).
 
 ## Play
